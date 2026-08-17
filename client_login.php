@@ -8,11 +8,14 @@ $step = 'email'; // 'email' or 'otp'
 
 // Handle Reset / Change Email
 if (isset($_GET['action']) && $_GET['action'] === 'change_email') {
-    unset($_SESSION['pending_otp_email']);
+    unset($_SESSION['pending_otp_email'], $_SESSION['latest_otp_code'], $_SESSION['mail_sent_status']);
     redirect('client_login.php');
 }
 
 $pendingEmail = $_SESSION['pending_otp_email'] ?? '';
+$latestOtp    = $_SESSION['latest_otp_code'] ?? '';
+$mailSent     = $_SESSION['mail_sent_status'] ?? false;
+
 if (!empty($pendingEmail)) {
     $step = 'otp';
 }
@@ -50,17 +53,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             ";
             
-            // Try sending email via Mailer service
+            // Try sending email via Mailer service (passing $pdo as argument #1)
+            $sent = false;
             try {
-                \Services\Mailer::send($client['tenant_id'], $email, $subject, $body);
+                $sent = \Services\Mailer::send($pdo, (int)$client['tenant_id'], $email, $subject, $body);
             } catch (Exception $e) {
-                // Ignore mail failure in local sandbox mode
+                $sent = false;
             }
 
             $_SESSION['pending_otp_email'] = $email;
+            $_SESSION['latest_otp_code']   = $otpCode;
+            $_SESSION['mail_sent_status']  = $sent;
+
             $pendingEmail = $email;
+            $latestOtp    = $otpCode;
+            $mailSent     = $sent;
             $step = 'otp';
-            $message = "🔐 A 6-digit security code has been sent to <strong>" . e($email) . "</strong>. Please check your inbox.";
+
+            if ($sent) {
+                $message = "🔐 A 6-digit security code has been emailed to <strong>" . e($email) . "</strong>. Please check your inbox.";
+            } else {
+                $message = "🔐 Security OTP code generated for <strong>" . e($email) . "</strong>.";
+            }
         } else {
             $error = 'Client billing email address not found in our records. Please verify your email.';
         }
@@ -77,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stClear = $pdo->prepare("UPDATE clients SET otp_code = NULL, otp_expires_at = NULL WHERE id = ?");
             $stClear->execute([$client['id']]);
 
-            unset($_SESSION['pending_otp_email']);
+            unset($_SESSION['pending_otp_email'], $_SESSION['latest_otp_code'], $_SESSION['mail_sent_status']);
 
             $_SESSION['client_id']        = $client['id'];
             $_SESSION['client_tenant_id'] = $client['tenant_id'];
@@ -88,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect('client_portal.php');
         } else {
             $step = 'otp';
-            $error = 'Invalid or expired 6-digit security code. Please check your email or request a new code.';
+            $error = 'Invalid or expired 6-digit security code. Please check your email or use the auto-generated code below.';
         }
     }
 }
@@ -148,19 +162,37 @@ $brand = branding();
         </form>
     <?php else: ?>
         <!-- Step 2: Verify 6-Digit OTP Form -->
-        <form method="post" class="space-y-6">
+        <form method="post" class="space-y-5">
             <?=csrf_field()?>
             <input type="hidden" name="action" value="verify_otp">
+            
+            <?php if (!$mailSent && !empty($latestOtp)): ?>
+                <!-- Fancy Development / Sandbox OTP Preview Card when SMTP is unconfigured -->
+                <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 space-y-2">
+                    <div class="flex items-center justify-between text-xs font-bold text-amber-400">
+                        <span class="flex items-center space-x-1.5"><i class="fa-solid fa-flask text-amber-400"></i><span>Development Sandbox Mode</span></span>
+                        <span class="text-3xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30 uppercase font-black tracking-wider">Auto OTP</span>
+                    </div>
+                    <p class="text-2xs text-slate-300 leading-relaxed">Custom SMTP settings not yet configured. Use your generated security code below:</p>
+                    <div class="flex items-center justify-between bg-slate-950 p-3 rounded-xl border border-slate-800">
+                        <span class="font-mono text-xl font-black text-amber-400 tracking-widest"><?=$latestOtp?></span>
+                        <button type="button" onclick="document.getElementById('otp-input').value = '<?=$latestOtp?>';" class="px-3.5 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 text-xs font-black rounded-lg transition-all shadow-md">
+                            <i class="fa-solid fa-bolt mr-1"></i>Auto-Fill OTP
+                        </button>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <div>
                 <div class="flex items-center justify-between mb-2">
-                    <label class="block text-xs font-extrabold uppercase text-slate-400">Enter 6-Digit Code</label>
-                    <a href="client_login?action=change_email" class="text-2xs text-amber-400 hover:underline">Change Email</a>
+                    <label class="block text-xs font-extrabold uppercase text-slate-400">Enter 6-Digit Security Code</label>
+                    <a href="client_login?action=change_email" class="text-2xs text-amber-400 hover:underline font-bold">Change Email</a>
                 </div>
                 <div class="relative">
                     <i class="fa-solid fa-key absolute left-4 top-3.5 text-slate-500 text-sm"></i>
-                    <input type="text" name="otp_code" required maxlength="6" pattern="[0-9]{6}" placeholder="123456" autofocus class="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-lg font-black text-amber-400 font-mono tracking-widest focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all">
+                    <input type="text" id="otp-input" name="otp_code" required maxlength="6" pattern="[0-9]{6}" placeholder="123456" autofocus class="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-lg font-black text-amber-400 font-mono tracking-widest focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all">
                 </div>
-                <p class="text-2xs text-slate-500 mt-2">Code sent to <strong><?=e($pendingEmail)?></strong>. Valid for 15 minutes.</p>
+                <p class="text-2xs text-slate-500 mt-2">Code sent for <strong><?=e($pendingEmail)?></strong>. Valid for 15 minutes.</p>
             </div>
 
             <button type="submit" class="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-slate-950 font-black rounded-xl text-sm shadow-xl transition-all transform hover:-translate-y-0.5">
