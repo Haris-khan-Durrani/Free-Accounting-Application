@@ -56,6 +56,16 @@ page_start('Client Directory');
         <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Client Directory</h1>
         <p class="mt-1 text-xs sm:text-sm text-slate-500">Manage client accounts, TRN tax numbers, and billing currencies for <strong><?=e(tenant()['name'])?></strong>.</p>
     </div>
+    <div class="mt-4 sm:mt-0 flex items-center space-x-3">
+        <a href="client_import" class="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all space-x-1.5">
+            <i class="fa-solid fa-file-import text-amber-300"></i>
+            <span>Import Zoho / QB / CSV</span>
+        </a>
+        <a href="client_export" class="inline-flex items-center px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition-all space-x-1">
+            <i class="fa-solid fa-file-csv text-emerald-600"></i>
+            <span>Export CSV</span>
+        </a>
+    </div>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">

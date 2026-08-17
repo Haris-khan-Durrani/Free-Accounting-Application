@@ -40,7 +40,8 @@
 - **11 Curated Designs**: Modern Minimal, Corporate Executive, Creative Vibrant, Tech Glassmorphism, Sleek Dark, Compact Thermal Receipt, Dual Column, Bold Gold, Slate Clean, Architectural Blue, and Classic Legal.
 - **Drag & Drop Invoice Builder**: Reorder columns, customize brand colors, logos, digital signatures, and seal stamps.
 
-### 💼 Client Ledger, Self-Service Hub & Automation
+### 💼 Client CRM, Migration & Self-Service Hub
+- **Universal Client Importer (Zoho / QuickBooks / Xero)**: Migration wizard (`client_import.php`) with smart column auto-mapping to import client directories from Zoho Books, QuickBooks, Xero, FreshBooks, or Excel CSV files.
 - **Client Self-Service Portal**: Passwordless client login hub (`client_portal.php`) where clients view invoice history, download statements of account, and pay online.
 - **Auto-Recurring Invoices Cron Engine**: Automated background worker (`cron_recurring.php`) generating subscription billing invoices on weekly, monthly, or yearly schedules.
 - **WhatsApp Cloud API Integration**: Direct Meta WhatsApp Cloud API gateway (`whatsapp_settings.php`) for automated PDF invoice & payment link dispatches.
