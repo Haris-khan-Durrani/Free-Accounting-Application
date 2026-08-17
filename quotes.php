@@ -7,8 +7,35 @@ $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 $activeTenant = tenant();
 
-$st = $pdo->prepare("SELECT q.*, c.company_name FROM quotes q JOIN clients c ON c.id = q.client_id WHERE q.tenant_id = ? ORDER BY q.id DESC");
-$st->execute([$tid]);
+// Search & Pagination Logic for Proposals / Quotes
+$qSearch = trim($_GET['search'] ?? '');
+$qPage = max(1, (int)($_GET['page'] ?? 1));
+$qPerPage = 15;
+$qOffset = ($qPage - 1) * $qPerPage;
+
+$qWhere = "WHERE q.tenant_id = ?";
+$qParams = [$tid];
+
+if (!empty($qSearch)) {
+    $qWhere .= " AND (q.quote_number LIKE ? OR c.company_name LIKE ? OR q.notes LIKE ?)";
+    $sT = "%$qSearch%";
+    $qParams = array_merge($qParams, [$sT, $sT, $sT]);
+}
+
+$stCountQ = $pdo->prepare("SELECT COUNT(*) FROM quotes q JOIN clients c ON c.id = q.client_id $qWhere");
+$stCountQ->execute($qParams);
+$totalQRecords = (int)$stCountQ->fetchColumn();
+$totalQPages = max(1, (int)ceil($totalQRecords / $qPerPage));
+
+$st = $pdo->prepare("
+    SELECT q.*, c.company_name 
+    FROM quotes q 
+    JOIN clients c ON c.id = q.client_id 
+    $qWhere 
+    ORDER BY q.id DESC 
+    LIMIT $qPerPage OFFSET $qOffset
+");
+$st->execute($qParams);
 $quotes = $st->fetchAll();
 
 page_start('Proposals & Estimates');
@@ -29,9 +56,19 @@ page_start('Proposals & Estimates');
 
 <!-- Proposals Table (Desktop) + Touch Cards (Mobile) -->
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-12">
-    <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
-        <h2 class="text-base sm:text-lg font-bold text-slate-900">Proposals Log (<?=count($quotes)?>)</h2>
-        <a href="quote_form" class="text-xs font-extrabold text-amber-600 hover:underline">+ Draft Proposal</a>
+    <div class="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h2 class="text-base sm:text-lg font-bold text-slate-900">Proposals Log <span class="text-xs font-semibold text-slate-400">(<?=$totalQRecords?> total)</span></h2>
+        
+        <form method="get" class="flex items-center space-x-2">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                <input type="text" name="search" value="<?=e($qSearch)?>" placeholder="Search quote #, client..." class="pl-8 pr-4 py-1.5 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-amber-500 w-48 sm:w-64">
+            </div>
+            <?php if ($qSearch): ?>
+                <a href="quotes" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all">Clear</a>
+            <?php endif; ?>
+            <button type="submit" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs">Search</button>
+        </form>
     </div>
 
     <!-- Desktop Table View (Hidden on Mobile) -->
@@ -129,6 +166,35 @@ page_start('Proposals & Estimates');
             </div>
         <?php endforeach; ?>
     </div>
+
+    <!-- Proposals Pagination Controls -->
+    <?php if ($totalQPages > 1): ?>
+        <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-slate-600">
+            <div>
+                Showing <strong><?=min($qOffset + 1, $totalQRecords)?></strong> to <strong><?=min($qOffset + $qPerPage, $totalQRecords)?></strong> of <strong><?=$totalQRecords?></strong> proposals
+            </div>
+            
+            <div class="flex items-center space-x-1.5">
+                <?php if ($qPage > 1): ?>
+                    <a href="quotes?page=<?=$qPage - 1?><?=!empty($qSearch) ? '&search=' . urlencode($qSearch) : ''?>" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg text-slate-700 shadow-xs">
+                        <i class="fa-solid fa-chevron-left mr-1"></i>Prev
+                    </a>
+                <?php endif; ?>
+
+                <?php for ($p = 1; $p <= $totalQPages; $p++): ?>
+                    <a href="quotes?page=<?=$p?><?=!empty($qSearch) ? '&search=' . urlencode($qSearch) : ''?>" class="px-3 py-1.5 rounded-lg border <?= $p === $qPage ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100' ?>">
+                        <?=$p?>
+                    </a>
+                <?php endfor; ?>
+
+                <?php if ($qPage < $totalQPages): ?>
+                    <a href="quotes?page=<?=$qPage + 1?><?=!empty($qSearch) ? '&search=' . urlencode($qSearch) : ''?>" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg text-slate-700 shadow-xs">
+                        Next<i class="fa-solid fa-chevron-right ml-1"></i>
+                    </a>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 
 <?php page_end(); ?>

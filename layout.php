@@ -81,8 +81,9 @@ function page_start(string $title): void {
     if (!empty($_SESSION['user_id'])) {
         echo '<nav class="hidden lg:flex items-center space-x-1.5">';
         echo '<a href="index" class="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-chart-pie text-blue-400"></i><span>Dashboard</span></a>';
+        echo '<a href="invoices" class="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-file-invoice text-amber-400"></i><span>Invoices</span></a>';
         echo '<a href="clients" class="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-users text-emerald-400"></i><span>Clients</span></a>';
-        echo '<a href="quotes" class="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-file-signature text-amber-400"></i><span>Proposals</span></a>';
+        echo '<a href="quotes" class="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-file-signature text-sky-400"></i><span>Proposals</span></a>';
         echo '<a href="expenses" class="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-receipt text-rose-400"></i><span>Expenses</span></a>';
         
         // Reports Dropdown Menu
@@ -228,6 +229,11 @@ function page_start(string $title): void {
         echo '<a href="index" class="flex flex-col items-center text-slate-400 hover:text-amber-400 py-1 transition-colors">';
         echo '<i class="fa-solid fa-chart-pie text-lg mb-0.5"></i>';
         echo '<span class="text-[10px] font-bold">Home</span>';
+        echo '</a>';
+
+        echo '<a href="invoices" class="flex flex-col items-center text-slate-400 hover:text-amber-400 py-1 transition-colors">';
+        echo '<i class="fa-solid fa-file-invoice text-lg mb-0.5"></i>';
+        echo '<span class="text-[10px] font-bold">Invoices</span>';
         echo '</a>';
 
         echo '<a href="clients" class="flex flex-col items-center text-slate-400 hover:text-amber-400 py-1 transition-colors">';
