@@ -34,69 +34,77 @@ $templateId = $invoice['template_id'] ?: $brand['default_invoice_template'] ?: '
 page_start('View Invoice ' . $invoice['invoice_number']);
 ?>
 
-<div class="md:flex md:items-center md:justify-between mb-8">
+<div class="lg:flex lg:items-center lg:justify-between mb-8 pb-6 border-b border-slate-200/80 gap-4">
     <div>
         <div class="flex items-center space-x-3">
-            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Invoice <?=e($invoice['invoice_number'])?></h1>
+            <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Invoice <?=e($invoice['invoice_number'])?></h1>
             <?php
             $statusClasses = [
-                'paid' => 'bg-emerald-100 text-emerald-800',
-                'partially_paid' => 'bg-amber-100 text-amber-900',
-                'sent' => 'bg-blue-100 text-blue-800',
-                'draft' => 'bg-sky-100 text-sky-800',
-                'overdue' => 'bg-rose-100 text-rose-800',
-                'void' => 'bg-slate-200 text-slate-700 line-through',
-                'cancelled' => 'bg-slate-100 text-slate-800'
+                'paid' => 'bg-emerald-100 text-emerald-800 border-emerald-300',
+                'partially_paid' => 'bg-amber-100 text-amber-900 border-amber-300',
+                'sent' => 'bg-blue-100 text-blue-800 border-blue-300',
+                'draft' => 'bg-sky-100 text-sky-800 border-sky-300',
+                'overdue' => 'bg-rose-100 text-rose-800 border-rose-300',
+                'void' => 'bg-slate-200 text-slate-700 line-through border-slate-300',
+                'cancelled' => 'bg-slate-100 text-slate-800 border-slate-300'
             ];
-            $stClass = $statusClasses[$invoice['status']] ?? 'bg-slate-100 text-slate-800';
+            $stClass = $statusClasses[$invoice['status']] ?? 'bg-slate-100 text-slate-800 border-slate-200';
             ?>
-            <span class="px-3 py-1 rounded-full text-xs font-extrabold <?=$stClass?>"><?=strtoupper(e(str_replace('_', ' ', $invoice['status'])))?></span>
+            <span class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border <?=$stClass?>"><?=str_replace('_', ' ', $invoice['status'])?></span>
         </div>
-        <p class="mt-1 text-sm text-slate-500">Issued to <strong><?=e($invoice['company_name'])?></strong> on <?=e(date('d M Y', strtotime($invoice['invoice_date'])))?>.</p>
+        <p class="mt-1 text-xs sm:text-sm text-slate-500">Issued to <strong><?=e($invoice['company_name'])?></strong> on <?=e(date('d M Y', strtotime($invoice['invoice_date'])))?>.</p>
     </div>
 
-    <div class="mt-4 flex flex-wrap md:mt-0 gap-2">
-        <a href="invoice_send_email?id=<?=$invoice['id']?>" onclick="return confirm('Email this tax invoice directly to <?=e($invoice['email'])?>?')" class="inline-flex items-center px-4 py-2 border border-transparent shadow-md text-sm font-extrabold rounded-xl text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 transition-all">
-            <i class="fa-solid fa-paper-plane mr-2"></i>Send Email
+    <!-- Action Buttons Row -->
+    <div class="mt-4 lg:mt-0 flex flex-wrap items-center gap-2.5">
+        <a href="invoice_form?id=<?=$invoice['id']?>" class="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all space-x-1.5">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>Edit Invoice</span>
+        </a>
+
+        <a href="invoice_send_email?id=<?=$invoice['id']?>" onclick="return confirm('Email this tax invoice directly to <?=e($invoice['email'])?>?')" class="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all space-x-1.5">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>Send Email</span>
         </a>
 
         <?php if ($invoice['status'] !== 'void' && $balanceDue > 0): ?>
-            <button onclick="document.getElementById('record-payment-modal').classList.remove('hidden')" class="inline-flex items-center px-4 py-2 border border-transparent shadow-md text-sm font-extrabold rounded-xl text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700">
-                <i class="fa-solid fa-money-bill-wave mr-2"></i>+ Record Payment
+            <button onclick="document.getElementById('record-payment-modal').classList.remove('hidden')" class="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all space-x-1.5">
+                <i class="fa-solid fa-circle-plus"></i>
+                <span>Record Payment</span>
             </button>
         <?php endif; ?>
 
+        <a href="client_statement?client_id=<?=$invoice['client_id']?>" class="inline-flex items-center px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition-all space-x-1">
+            <i class="fa-solid fa-file-invoice-dollar text-amber-500"></i>
+            <span>Statement</span>
+        </a>
+
+        <a href="invoice_print?id=<?=$invoice['id']?>" target="_blank" class="inline-flex items-center px-3.5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition-all space-x-1">
+            <i class="fa-solid fa-print text-slate-500"></i>
+            <span>Print / PDF</span>
+        </a>
+
         <?php if ($invoice['status'] !== 'void'): ?>
-            <a href="invoice_payment?action=void&id=<?=$invoice['id']?>&csrf=<?=e(csrf_token())?>" onclick="return confirm('Void this invoice? This will mark the balance due as zero without deleting the document history.')" class="inline-flex items-center px-3.5 py-2 border border-slate-300 shadow-sm text-sm font-bold rounded-xl text-slate-700 bg-white hover:bg-slate-50">
-                <i class="fa-solid fa-ban mr-1.5 text-slate-500"></i>Void
+            <a href="invoice_payment?action=void&id=<?=$invoice['id']?>&csrf=<?=e(csrf_token())?>" onclick="return confirm('Void this invoice? This will mark the balance due as zero without deleting document history.')" class="inline-flex items-center px-3 py-2.5 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 font-bold text-xs rounded-xl border border-slate-200 transition-all space-x-1" title="Void Invoice">
+                <i class="fa-solid fa-ban text-2xs"></i>
+                <span>Void</span>
             </a>
         <?php endif; ?>
-
-        <a href="client_statement?client_id=<?=$invoice['client_id']?>" class="inline-flex items-center px-3.5 py-2 border border-slate-300 shadow-sm text-sm font-bold rounded-xl text-slate-700 bg-white hover:bg-slate-50">
-            <i class="fa-solid fa-file-invoice-dollar mr-1.5 text-amber-500"></i>Statement
-        </a>
-
-        <a href="invoice_print?id=<?=$invoice['id']?>" target="_blank" class="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-50">
-            <i class="fa-solid fa-print mr-2"></i>Print / PDF
-        </a>
-        <a href="invoice_form?id=<?=$invoice['id']?>" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-semibold rounded-xl text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700">
-            <i class="fa-solid fa-pen-to-square mr-2"></i>Edit
-        </a>
     </div>
 </div>
 
 <!-- Financial Summary Bar -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 max-w-4xl mx-auto">
-    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
-        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Total Invoice Value</span>
-        <strong class="text-2xl font-black text-slate-900 font-mono"><?=money((float)$invoice['total'], $invoice['currency'])?></strong>
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8 max-w-5xl mx-auto">
+    <div class="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-5 border border-slate-800 shadow-xl">
+        <span class="text-3xs font-extrabold text-amber-400 uppercase tracking-widest block mb-1">Total Invoice Value</span>
+        <strong class="text-2xl font-black text-white font-mono"><?=money((float)$invoice['total'], $invoice['currency'])?></strong>
     </div>
-    <div class="bg-white rounded-2xl p-5 border border-emerald-200 shadow-sm">
-        <span class="text-xs font-bold text-emerald-600 uppercase tracking-wider block mb-1">Total Payments Received</span>
+    <div class="bg-white rounded-2xl p-5 border border-emerald-200 shadow-md">
+        <span class="text-3xs font-extrabold text-emerald-600 uppercase tracking-widest block mb-1">Total Payments Received</span>
         <strong class="text-2xl font-black text-emerald-600 font-mono"><?=money($totalPaid, $invoice['currency'])?></strong>
     </div>
-    <div class="bg-white rounded-2xl p-5 border border-amber-200 shadow-sm">
-        <span class="text-xs font-bold text-amber-600 uppercase tracking-wider block mb-1">Remaining Balance Due</span>
+    <div class="bg-white rounded-2xl p-5 border border-amber-200 shadow-md">
+        <span class="text-3xs font-extrabold text-amber-600 uppercase tracking-widest block mb-1">Remaining Balance Due</span>
         <strong class="text-2xl font-black text-amber-600 font-mono"><?=money($balanceDue, $invoice['currency'])?></strong>
     </div>
 </div>
