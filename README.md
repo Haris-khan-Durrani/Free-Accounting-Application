@@ -40,7 +40,10 @@
 - **11 Curated Designs**: Modern Minimal, Corporate Executive, Creative Vibrant, Tech Glassmorphism, Sleek Dark, Compact Thermal Receipt, Dual Column, Bold Gold, Slate Clean, Architectural Blue, and Classic Legal.
 - **Drag & Drop Invoice Builder**: Reorder columns, customize brand colors, logos, digital signatures, and seal stamps.
 
-### 💼 Client Ledger & Email Dispatch
+### 💼 Client Ledger, Self-Service Hub & Automation
+- **Client Self-Service Portal**: Passwordless client login hub (`client_portal.php`) where clients view invoice history, download statements of account, and pay online.
+- **Auto-Recurring Invoices Cron Engine**: Automated background worker (`cron_recurring.php`) generating subscription billing invoices on weekly, monthly, or yearly schedules.
+- **WhatsApp Cloud API Integration**: Direct Meta WhatsApp Cloud API gateway (`whatsapp_settings.php`) for automated PDF invoice & payment link dispatches.
 - **Statement of Account**: Full financial ledger per client detailing invoices, payments received, running balance, and PDF print formatting.
 - **1-Click SMTP Email Dispatch**: Deliver HTML invoices with online payment buttons using tenant custom SMTP settings (Gmail, Office 365, cPanel, SES).
 
@@ -48,6 +51,7 @@
 - **Security Throttling Engine**: IP-based rate limiting that locks out brute-force bot attempts after 5 failed logins for 15 minutes.
 - **Two-Factor Authentication (2FA)**: 6-digit OTP security verification via email.
 - **1-Click SQL Database Backup**: Export raw `.sql` database dumps for archiving.
+- **CBUAE Live Exchange Rate Sync**: Daily automated fetch (`cron_exchange_rates.php`) updating AED exchange rates for foreign currencies.
 
 ### ⚡ Live Dynamic Calculation Engine
 - Sticky summary cards on invoice and proposal creation forms that calculate Subtotal, Discounts (Fixed or %), VAT Tax, and Grand Total live as line items change.

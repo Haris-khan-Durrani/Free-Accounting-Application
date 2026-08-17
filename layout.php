@@ -179,6 +179,7 @@ function page_start(string $title): void {
         // Group 4: Security & Integrations
         echo '<div>';
         echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-shield-halved text-slate-400 text-3xs"></i><span>Security & Integrations</span></div>';
+        echo '<a href="whatsapp_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-emerald-50/70 hover:text-emerald-600 rounded-lg transition-colors"><i class="fa-brands fa-whatsapp w-5 text-emerald-500 text-center"></i><span>WhatsApp Cloud API</span></a>';
         echo '<a href="security" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-indigo-600 rounded-lg transition-colors"><i class="fa-solid fa-shield-halved w-5 text-indigo-500 text-center"></i><span>2FA & Security</span></a>';
         echo '<a href="email_settings" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-server w-5 text-amber-500 text-center"></i><span>Custom SMTP</span></a>';
         echo '<a href="api_keys" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-key w-5 text-amber-500 text-center"></i><span>API Key Manager</span></a>';
