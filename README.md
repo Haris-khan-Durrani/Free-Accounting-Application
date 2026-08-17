@@ -11,6 +11,74 @@
 
 ---
 
+## 🏗️ System Architecture & Workflow Diagram
+
+The diagram below illustrates the end-to-end multi-tenant architecture, client email OTP authentication, double-entry general ledger, UAE FTA tax compliance engine, payment gateway webhooks, and background automation cron workers:
+
+```mermaid
+graph TD
+    %% User Roles & Access
+    subgraph Clients_Portal ["👤 Client Self-Service Portal"]
+        C1["Client User"] -->|1. Enter Email| CP1["client_login.php<br/>(Request OTP)"]
+        CP1 -->|2. Send 6-Digit Email Code| Mailer["Services/Mailer.php<br/>(Custom SMTP)"]
+        Mailer -->|3. Email Dispatched| C1
+        C1 -->|4. Verify Code| CP2["client_login.php<br/>(Verify OTP)"]
+        CP2 -->|5. Authenticated Access| Portal["client_portal.php<br/>(Self-Service Hub)"]
+        Portal -->|View Ledger & Pay| Gateways["Payment Gateways<br/>(Stripe, PayPal, NI, Bank Wire)"]
+    end
+
+    subgraph Core_App ["⚡ OneSol Multi-Tenant Engine"]
+        Admin["Super Admin / Workspace User"] -->|HTTP / Domain Router| Layout["layout.php<br/>(Topbar & Mega Menu)"]
+        
+        Layout -->|Subaccounts & Branches| TenantManager["subaccounts.php<br/>(Multi-Tenant Isolation)"]
+        Layout -->|Whitelabel Branding| DomainEngine["domain_settings.php<br/>(Custom Subdomains & SSL)"]
+        
+        Layout -->|Tax Invoices & Quotes| InvEngine["invoices.php & quotes.php<br/>(Tax Invoices & Proposals)"]
+        Layout -->|Auto-Subscription Billing| SubEngine["recurring_invoices.php<br/>(Weekly/Monthly Profiles)"]
+        Layout -->|Client CRM & Import| ClientCRM["clients.php & client_import.php<br/>(Zoho / QB / Xero Importer)"]
+        Layout -->|Expenses & Receipts| ExpEngine["expenses.php<br/>(Expense Tracking)"]
+        
+        Layout -->|11 PDF Layout Designs| TemplateEngine["invoice_customize.php<br/>(Template Renderer & Builder)"]
+    end
+
+    subgraph Background_Workers ["🤖 Automation & Cron Jobs"]
+        CronWorker["cron_recurring.php<br/>(Daily Background Worker)"] -->|Generate Due Invoices| InvEngine
+        CronWorker -->|Post GL Entries| Ledger
+        CronWorker -->|Send Client Receipts| Mailer
+    end
+
+    subgraph Accounting_GL ["📚 Double-Entry Accounting & UAE Tax Engine"]
+        InvEngine -->|Post Sales Journal| Ledger["Services/AccountingService.php<br/>(Chart of Accounts & GL)"]
+        ExpEngine -->|Post Expense Journal| Ledger
+        Gateways -->|Async Webhook Sync| WebhookEngine["api/v1/webhooks/stripe.php<br/>& stripe_return.php"]
+        WebhookEngine -->|Record Payment & Update Status| Ledger
+        
+        Ledger -->|Filing Data| VAT201["reports_vat201.php<br/>(UAE FTA VAT 201 Return)"]
+        Ledger -->|Audit Export| FAF["export_faf.php<br/>(FTA Audit File .faf)"]
+        Ledger -->|9% Liability| CTax["reports_corporate_tax.php<br/>(UAE Corporate Tax Engine)"]
+        Ledger -->|P&L, Balance Sheet, Aging| Reports["reports_pnl.php & reports_balance_sheet.php"]
+    end
+
+    subgraph Integrations ["🔌 External Integrations & API"]
+        Layout -->|Meta WhatsApp Cloud API| WhatsApp["whatsapp_settings.php<br/>(Automated WhatsApp PDF)"]
+        Layout -->|Automations Engine| N8N["automation.php<br/>(n8n Workflow Automation)"]
+        Layout -->|Scoped REST API| APIKeys["api_keys.php<br/>(API Key Manager & REST API v1)"]
+    end
+
+    %% Styles
+    classDef primary fill:#0f172a,stroke:#f59e0b,stroke-width:2px,color:#ffffff;
+    classDef success fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ffffff;
+    classDef accent fill:#312e81,stroke:#6366f1,stroke-width:2px,color:#ffffff;
+    classDef warning fill:#78350f,stroke:#f59e0b,stroke-width:2px,color:#ffffff;
+
+    class Layout,Portal,Ledger primary;
+    class VAT201,FAF,CTax success;
+    class SubEngine,CronWorker warning;
+    class Gateways,WebhookEngine,WhatsApp,N8N accent;
+```
+
+---
+
 ## 🌟 Key Features & Capabilities
 
 ### 🇦🇪 UAE FTA Tax & Corporate Tax Compliance
