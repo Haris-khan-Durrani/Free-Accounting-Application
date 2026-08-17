@@ -124,6 +124,32 @@ page_start('Payment Gateway Credentials');
                 </select>
             </div>
         </div>
+
+        <!-- Stripe Real-Time Fallback & Webhook Sync Box -->
+        <div class="mt-6 pt-4 border-t border-slate-100 bg-slate-900 text-white rounded-xl p-4 text-xs font-mono space-y-3">
+            <div class="flex items-center space-x-2 text-amber-400 font-extrabold font-sans">
+                <i class="fa-solid fa-link text-sm"></i>
+                <span>Stripe Gateway Fallback & Webhook Integration URLs</span>
+            </div>
+
+            <div class="space-y-2 text-2xs">
+                <div>
+                    <span class="text-slate-400 block font-sans font-bold">1. Stripe Fallback Return Callback URL (Copy & Paste in Stripe Dashboard):</span>
+                    <div class="bg-slate-950 p-2 rounded-lg text-emerald-300 border border-slate-800 flex items-center justify-between mt-1">
+                        <code><?=(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . ($_SERVER['HTTP_HOST'] ?? 'localhost')?>/invoice/stripe_return?invoice_id={INVOICE_ID}</code>
+                        <button type="button" onclick="navigator.clipboard.writeText(this.previousElementSibling.innerText); alert('Stripe Fallback URL Copied!')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded text-3xs font-sans font-bold">Copy</button>
+                    </div>
+                </div>
+
+                <div>
+                    <span class="text-slate-400 block font-sans font-bold">2. Stripe Webhook Endpoint URL (Events: checkout.session.completed, payment_intent.succeeded):</span>
+                    <div class="bg-slate-950 p-2 rounded-lg text-amber-300 border border-slate-800 flex items-center justify-between mt-1">
+                        <code><?=(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . ($_SERVER['HTTP_HOST'] ?? 'localhost')?>/invoice/api/v1/webhooks/stripe</code>
+                        <button type="button" onclick="navigator.clipboard.writeText(this.previousElementSibling.innerText); alert('Stripe Webhook URL Copied!')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded text-3xs font-sans font-bold">Copy</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Card 2: Network International (NGenius UAE) -->
