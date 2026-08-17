@@ -13,8 +13,10 @@
 
 ## 🌟 Key Features & Capabilities
 
-### 🇦🇪 UAE FTA Tax & VAT 201 Compliance
+### 🇦🇪 UAE FTA Tax & Corporate Tax Compliance
 - **Official FTA VAT 201 Declaration Return**: Formatted to match UAE Federal Tax Authority (FTA) Form 201 layout with Box 1a–1g breakdowns across all 7 Emirates (Dubai, Abu Dhabi, Sharjah, Ajman, UAQ, RAK, Fujairah).
+- **Official FTA Audit File (.faf) Generator**: 1-Click export of the pipe-delimited `.faf` text audit file required by FTA auditors containing Header, Sales, and Purchase ledgers.
+- **UAE Corporate Tax (9%) & Threshold Estimator**: Compliant with Federal Decree-Law No. 47 of 2022 — tracks the AED 375,000 Small Business Relief (SBR) threshold & 9% Corporate Tax liability.
 - **Tax Invoice & TRN Validation**: Supports 15-digit Seller & Buyer TRN numbers, 5% standard VAT rate, zero-rated exports (0%), and exempt items.
 - **Dual AED Currency Engine**: Native support for AED (UAE Dirham) with automatic CBUAE conversion rates for foreign currencies (USD, EUR, GBP, SAR).
 
