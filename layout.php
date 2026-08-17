@@ -51,44 +51,49 @@ function page_start(string $title): void {
             echo '<a href="billing" class="ml-2 underline hover:text-amber-200">View SaaS Plans</a>';
             echo '</div>';
         }
-    }
+    }    // Header Bar (Ultra-Sleek Glassmorphism Topbar)
+    $currScript = basename($_SERVER['SCRIPT_NAME']);
+    $activeClass = fn($pages) => in_array($currScript, (array)$pages) 
+        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30 font-black' 
+        : 'text-slate-300 hover:text-white hover:bg-slate-800/70 font-semibold';
 
-    // Header Bar
-    echo '<header class="bg-slate-950/95 backdrop-blur-md text-white sticky top-0 z-40 border-b border-slate-800/80 shadow-lg">';
+    echo '<header class="bg-slate-950/90 backdrop-blur-xl text-white sticky top-0 z-40 border-b border-slate-800/80 shadow-2xl">';
     echo '<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">';
     
     // Left: Brand Logo & Workspace Switcher
-    echo '<div class="flex items-center space-x-3">';
-    echo '<a href="index" class="flex items-center space-x-2.5 group">';
+    echo '<div class="flex items-center space-x-2.5 sm:space-x-3.5">';
+    echo '<a href="index" class="flex items-center space-x-2.5 group flex-shrink-0">';
     if (!empty($brand['logo_url'])) {
-        echo '<img src="' . e($brand['logo_url']) . '" alt="Logo" class="h-7 w-auto rounded bg-white p-0.5 object-contain">';
+        echo '<img src="' . e($brand['logo_url']) . '" alt="Logo" class="h-7 w-auto rounded bg-white p-0.5 object-contain shadow-xs">';
     } else {
-        echo '<div class="h-7 w-7 rounded-lg bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center font-bold text-white text-xs shadow-sm"><i class="fa-solid fa-bolt"></i></div>';
+        echo '<div class="h-7 w-7 rounded-lg bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center font-black text-slate-950 text-xs shadow-sm"><i class="fa-solid fa-bolt"></i></div>';
     }
-    echo '<span class="font-extrabold text-base tracking-tight text-white group-hover:text-amber-400 transition-colors">' . e($brand['company_name']) . '</span>';
+    echo '<span class="font-extrabold text-sm sm:text-base tracking-tight text-white group-hover:text-amber-400 transition-colors whitespace-nowrap">' . e($brand['company_name']) . '</span>';
     echo '</a>';
     
     if (!empty($_SESSION['user_id'])) {
-        echo '<a href="subaccounts" class="inline-flex items-center space-x-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white px-3 py-1 rounded-full text-xs font-semibold border border-slate-800 transition-all">';
-        echo '<i class="fa-solid fa-building text-amber-400 text-2xs"></i>';
-        echo '<span class="truncate max-w-[100px] sm:max-w-[140px]">' . e($activeTenant['name']) . '</span>';
-        echo '<i class="fa-solid fa-chevron-down text-[10px] text-slate-500"></i>';
+        echo '<div class="h-4 w-px bg-slate-800 hidden sm:block"></div>';
+        echo '<a href="subaccounts" class="inline-flex items-center space-x-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white px-2.5 py-1 rounded-xl text-2xs sm:text-xs font-bold border border-slate-800/90 transition-all shadow-xs">';
+        echo '<i class="fa-solid fa-building text-amber-400 text-3xs"></i>';
+        echo '<span class="truncate max-w-[90px] sm:max-w-[130px]">' . e($activeTenant['name']) . '</span>';
+        echo '<i class="fa-solid fa-chevron-down text-[9px] text-slate-500"></i>';
         echo '</a>';
     }
     echo '</div>';
 
     // Right: Desktop Navigation Links
     if (!empty($_SESSION['user_id'])) {
-        echo '<nav class="hidden lg:flex items-center space-x-1.5">';
-        echo '<a href="index" class="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-chart-pie text-blue-400"></i><span>Dashboard</span></a>';
-        echo '<a href="invoices" class="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-file-invoice text-amber-400"></i><span>Invoices</span></a>';
-        echo '<a href="clients" class="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-users text-emerald-400"></i><span>Clients</span></a>';
-        echo '<a href="quotes" class="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-file-signature text-sky-400"></i><span>Proposals</span></a>';
-        echo '<a href="expenses" class="inline-flex items-center space-x-1.5 px-3 py-2 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-receipt text-rose-400"></i><span>Expenses</span></a>';
+        echo '<nav class="hidden lg:flex items-center space-x-1 sm:space-x-1.5">';
+        echo '<a href="index" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs transition-all ' . $activeClass(['index.php', 'index']) . '"><i class="fa-solid fa-chart-pie text-blue-400 text-2xs"></i><span>Dashboard</span></a>';
+        echo '<a href="invoices" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs transition-all ' . $activeClass(['invoices.php', 'invoices', 'invoice_view.php']) . '"><i class="fa-solid fa-file-invoice text-amber-400 text-2xs"></i><span>Invoices</span></a>';
+        echo '<a href="clients" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs transition-all ' . $activeClass(['clients.php', 'clients', 'client_import.php']) . '"><i class="fa-solid fa-users text-emerald-400 text-2xs"></i><span>Clients</span></a>';
+        echo '<a href="quotes" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs transition-all ' . $activeClass(['quotes.php', 'quotes', 'quote_view.php']) . '"><i class="fa-solid fa-file-signature text-sky-400 text-2xs"></i><span>Proposals</span></a>';
+        echo '<a href="expenses" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs transition-all ' . $activeClass(['expenses.php', 'expenses', 'expense_form.php']) . '"><i class="fa-solid fa-receipt text-rose-400 text-2xs"></i><span>Expenses</span></a>';
         
         // Reports Dropdown Menu
+        $isReportsActive = str_contains($currScript, 'reports_') || $currScript === 'export_faf.php';
         echo '<div class="relative group py-2">';
-        echo '<button class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-folder-open text-purple-400"></i><span>Reports</span><i class="fa-solid fa-chevron-down text-[10px] ml-0.5 opacity-70"></i></button>';
+        echo '<button class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs transition-all ' . ($isReportsActive ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30 font-black' : 'text-slate-300 hover:text-white hover:bg-slate-800/70 font-semibold') . '"><i class="fa-solid fa-folder-open text-purple-400 text-2xs"></i><span>Reports</span><i class="fa-solid fa-chevron-down text-[9px] ml-0.5 opacity-70"></i></button>';
         echo '<div class="absolute right-0 top-full pt-1 w-72 hidden group-hover:block z-50">';
         echo '<div class="bg-white rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden py-1 max-h-[85vh] overflow-y-auto">';
         
@@ -141,11 +146,11 @@ function page_start(string $title): void {
         echo '</div>';
 
         // Direct Settings Link in Top Header Bar
-        echo '<a href="settings" class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold text-amber-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-sliders text-amber-400"></i><span>Settings</span></a>';
+        echo '<a href="settings" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs transition-all ' . $activeClass(['settings.php', 'settings', 'branding.php', 'payment_settings.php']) . '"><i class="fa-solid fa-sliders text-amber-400 text-2xs"></i><span>Settings</span></a>';
 
         // Management Dropdown Menu (Compact 2-Column Mega Menu)
         echo '<div class="relative group py-2">';
-        echo '<button class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-gear text-cyan-400"></i><span>Management</span><i class="fa-solid fa-chevron-down text-[10px] ml-0.5 opacity-70"></i></button>';
+        echo '<button class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/70 transition-all"><i class="fa-solid fa-gear text-cyan-400 text-2xs"></i><span>Management</span><i class="fa-solid fa-chevron-down text-[9px] ml-0.5 opacity-70"></i></button>';
         echo '<div class="absolute right-0 top-full pt-1 w-[520px] hidden group-hover:block z-50">';
         echo '<div class="bg-white rounded-2xl shadow-2xl border border-slate-200/90 p-3 grid grid-cols-2 gap-3">';
         
@@ -158,21 +163,22 @@ function page_start(string $title): void {
         echo '<a href="settings" class="flex items-center px-2.5 py-1.5 text-xs font-extrabold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors mb-1"><i class="fa-solid fa-sliders w-5 text-amber-500 text-center"></i><span>Master Settings Hub</span></a>';
         echo '<a href="domain_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-blue-50/70 hover:text-blue-600 rounded-lg transition-colors"><i class="fa-solid fa-globe w-5 text-blue-500 text-center"></i><span>Whitelabel Domain & SSL</span></a>';
         echo '<a href="subaccounts" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors"><i class="fa-solid fa-sitemap w-5 text-blue-500 text-center"></i><span>Workspaces & Branches</span></a>';
-        echo '<a href="branding" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-pink-600 rounded-lg transition-colors"><i class="fa-solid fa-palette w-5 text-pink-500 text-center"></i><span>Dynamic Branding & Colors</span></a>';
-        echo '<a href="users" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-indigo-600 rounded-lg transition-colors"><i class="fa-solid fa-user-shield w-5 text-indigo-500 text-center"></i><span>Team & Roles</span></a>';
+        echo '<a href="branding" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-palette w-5 text-amber-500 text-center"></i><span>Branding & Logo Setup</span></a>';
         echo '</div>';
 
-        // Group 2: Invoice Customization
+        // Group 2: Subscription & Billing
         echo '<div>';
-        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-wand-magic-sparkles text-slate-400 text-3xs"></i><span>Invoice Customization</span></div>';
-        echo '<a href="invoice_customize" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-paint-roller w-5 text-amber-500 text-center"></i><span>Template Customizer</span></a>';
-        echo '<a href="invoice_builder" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-layer-group w-5 text-amber-500 text-center"></i><span>Drag & Drop Builder</span></a>';
+        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-crown text-slate-400 text-3xs"></i><span>SaaS Subscription & Plan</span></div>';
+        echo '<a href="billing" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-credit-card w-5 text-amber-500 text-center"></i><span>Subscription Plan</span></a>';
+        echo '<a href="users" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors"><i class="fa-solid fa-users-gear w-5 text-blue-500 text-center"></i><span>Team Members</span></a>';
+        echo '<a href="recurring_invoices" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-purple-600 rounded-lg transition-colors"><i class="fa-solid fa-rotate w-5 text-purple-500 text-center"></i><span>Auto-Subscription Billing</span></a>';
         echo '</div>';
 
-        // Group 3: System & Backup
+        // Group 3: Core Catalog
         echo '<div>';
-        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-database text-slate-400 text-3xs"></i><span>System & Backup</span></div>';
-        echo '<a href="backup_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-database w-5 text-amber-500 text-center"></i><span>Database Backup (.sql)</span></a>';
+        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-box text-slate-400 text-3xs"></i><span>Products & Expenses</span></div>';
+        echo '<a href="items" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-emerald-600 rounded-lg transition-colors"><i class="fa-solid fa-box w-5 text-emerald-500 text-center"></i><span>Product Catalog</span></a>';
+        echo '<a href="expense_categories" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-rose-600 rounded-lg transition-colors"><i class="fa-solid fa-tags w-5 text-rose-500 text-center"></i><span>Expense Categories</span></a>';
         echo '<a href="cache_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-emerald-600 rounded-lg transition-colors"><i class="fa-solid fa-bolt w-5 text-emerald-500 text-center"></i><span>Redis Cache Engine</span></a>';
         echo '</div>';
 
@@ -184,8 +190,8 @@ function page_start(string $title): void {
         // Group 4: Security & Integrations
         echo '<div>';
         echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-shield-halved text-slate-400 text-3xs"></i><span>Security & Integrations</span></div>';
-        echo '<a href="payment_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-purple-50/70 hover:text-purple-600 rounded-lg transition-colors"><i class="fa-solid fa-credit-card w-5 text-purple-500 text-center"></i><span>Workspace Payment Gateways</span></a>';
-        echo '<a href="whatsapp_settings" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-emerald-50/70 hover:text-emerald-600 rounded-lg transition-colors"><i class="fa-brands fa-whatsapp w-5 text-emerald-500 text-center"></i><span>WhatsApp Cloud API</span></a>';
+        echo '<a href="payment_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-purple-50/70 hover:text-purple-600 rounded-lg transition-colors"><i class="fa-solid fa-credit-card w-5 text-purple-500 text-center"></i><span>Payment Gateways</span></a>';
+        echo '<a href="whatsapp_settings" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-emerald-50/70 hover:text-emerald-600 rounded-lg transition-colors"><i class="fa-brands fa-whatsapp w-5 text-emerald-500 text-center"></i><span>WhatsApp API</span></a>';
         echo '<a href="security" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-indigo-600 rounded-lg transition-colors"><i class="fa-solid fa-shield-halved w-5 text-indigo-500 text-center"></i><span>2FA & Security</span></a>';
         echo '<a href="email_settings" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-server w-5 text-amber-500 text-center"></i><span>Custom SMTP</span></a>';
         echo '<a href="api_keys" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-key w-5 text-amber-500 text-center"></i><span>API Key Manager</span></a>';
@@ -194,14 +200,6 @@ function page_start(string $title): void {
 
         // Group 5: SaaS Admin & Help
         echo '<div>';
-        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-crown text-amber-500 text-3xs"></i><span>SaaS Admin & Help</span></div>';
-        echo '<a href="billing" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-crown w-5 text-amber-500 text-center"></i><span>Subscription & Billing</span></a>';
-        echo '<a href="tenants_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-emerald-600 rounded-lg transition-colors"><i class="fa-solid fa-users-gear w-5 text-emerald-500 text-center"></i><span>Tenant Manager (API)</span></a>';
-        echo '<a href="subscriptions_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-purple-600 rounded-lg transition-colors"><i class="fa-solid fa-layer-group w-5 text-purple-500 text-center"></i><span>SaaS Plans Tiers</span></a>';
-        echo '<a href="guide" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-amber-900 bg-amber-50 hover:bg-amber-100/80 rounded-lg transition-colors mt-1"><i class="fa-solid fa-book-open w-5 text-amber-500 text-center"></i><span>User Guide & Docs</span></a>';
-        echo '</div>';
-
-        echo '</div>';
 
         echo '</div>';
         echo '</div>';
