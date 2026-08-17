@@ -110,6 +110,8 @@ function page_start(string $title): void {
         echo '</div>';
         echo '<div class="py-1">';
         echo '<a href="reports_vat201" class="flex items-center px-4 py-2 text-xs font-bold text-slate-900 hover:bg-emerald-50/60 hover:text-emerald-700 transition-colors"><i class="fa-solid fa-file-invoice-dollar w-6 text-emerald-600 text-center"></i><span>UAE FTA VAT 201 Declaration</span></a>';
+        echo '<a href="reports_corporate_tax" class="flex items-center px-4 py-2 text-xs font-bold text-slate-900 hover:bg-blue-50/60 hover:text-blue-700 transition-colors"><i class="fa-solid fa-percent w-6 text-blue-600 text-center"></i><span>UAE Corporate Tax (9%)</span></a>';
+        echo '<a href="export_faf" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-amber-50/60 hover:text-amber-700 transition-colors"><i class="fa-solid fa-file-arrow-down w-6 text-amber-500 text-center"></i><span>Export FTA Audit File (.faf)</span></a>';
         echo '<a href="reports_tax" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-indigo-50/60 hover:text-indigo-600 transition-colors"><i class="fa-solid fa-calculator w-6 text-indigo-500 text-center"></i><span>VAT Return Summary</span></a>';
         echo '</div>';
 
