@@ -44,8 +44,38 @@ if (isset($_GET['edit'])) {
     $edit = $st->fetch();
 }
 
-$stClients = $pdo->prepare('SELECT c.*, COUNT(i.id) invoice_count FROM clients c LEFT JOIN invoices i ON i.client_id = c.id WHERE c.tenant_id = ? GROUP BY c.id ORDER BY c.company_name ASC');
-$stClients->execute([$tid]);
+// Search & Pagination Logic
+$search = trim($_GET['search'] ?? '');
+$page = max(1, (int)($_GET['page'] ?? 1));
+$perPage = 15;
+$offset = ($page - 1) * $perPage;
+
+$whereClause = "WHERE c.tenant_id = ?";
+$queryParams = [$tid];
+
+if (!empty($search)) {
+    $whereClause .= " AND (c.company_name LIKE ? OR c.contact_name LIKE ? OR c.email LIKE ? OR c.phone LIKE ? OR c.tax_number LIKE ?)";
+    $sTerm = "%$search%";
+    $queryParams = array_merge($queryParams, [$sTerm, $sTerm, $sTerm, $sTerm, $sTerm]);
+}
+
+// Count total matching records
+$stCount = $pdo->prepare("SELECT COUNT(*) FROM clients c $whereClause");
+$stCount->execute($queryParams);
+$totalRecords = (int)$stCount->fetchColumn();
+$totalPages = max(1, (int)ceil($totalRecords / $perPage));
+
+// Fetch paginated records
+$stClients = $pdo->prepare("
+    SELECT c.*, COUNT(i.id) invoice_count 
+    FROM clients c 
+    LEFT JOIN invoices i ON i.client_id = c.id 
+    $whereClause 
+    GROUP BY c.id 
+    ORDER BY c.company_name ASC 
+    LIMIT $perPage OFFSET $offset
+");
+$stClients->execute($queryParams);
 $clients = $stClients->fetchAll();
 
 page_start('Client Directory');
@@ -121,8 +151,22 @@ page_start('Client Directory');
 
     <!-- Client Directory List (Desktop Table + Mobile Touch Cards) -->
     <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-fit mb-12">
-        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
-            <h2 class="text-base font-bold text-slate-900">Active Client Accounts (<?=count($clients)?>)</h2>
+        <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h2 class="text-base font-bold text-slate-900">
+                Active Client Accounts <span class="text-xs font-semibold text-slate-400">(<?=$totalRecords?> total)</span>
+            </h2>
+
+            <!-- Real-time Search Form -->
+            <form method="get" class="flex items-center space-x-2">
+                <div class="relative flex-grow">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    <input type="text" name="search" value="<?=e($search)?>" placeholder="Search company, contact, TRN, email..." class="pl-8 pr-4 py-1.5 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-amber-500 w-48 sm:w-64">
+                </div>
+                <?php if ($search): ?>
+                    <a href="clients" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all">Clear</a>
+                <?php endif; ?>
+                <button type="submit" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs">Search</button>
+            </form>
         </div>
 
         <!-- Desktop Table View (Hidden on Mobile) -->
@@ -191,6 +235,35 @@ page_start('Client Directory');
                 </div>
             <?php endforeach; ?>
         </div>
+
+        <!-- Pagination Controls -->
+        <?php if ($totalPages > 1): ?>
+            <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-slate-600">
+                <div>
+                    Showing <strong><?=min($offset + 1, $totalRecords)?></strong> to <strong><?=min($offset + $perPage, $totalRecords)?></strong> of <strong><?=$totalRecords?></strong> clients
+                </div>
+                
+                <div class="flex items-center space-x-1.5">
+                    <?php if ($page > 1): ?>
+                        <a href="clients?page=<?=$page - 1?><?=!empty($search) ? '&search=' . urlencode($search) : ''?>" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg text-slate-700 shadow-xs">
+                            <i class="fa-solid fa-chevron-left mr-1"></i>Prev
+                        </a>
+                    <?php endif; ?>
+
+                    <?php for ($p = 1; $p <= $totalPages; $p++): ?>
+                        <a href="clients?page=<?=$p?><?=!empty($search) ? '&search=' . urlencode($search) : ''?>" class="px-3 py-1.5 rounded-lg border <?= $p === $page ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100' ?>">
+                            <?=$p?>
+                        </a>
+                    <?php endfor; ?>
+
+                    <?php if ($page < $totalPages): ?>
+                        <a href="clients?page=<?=$page + 1?><?=!empty($search) ? '&search=' . urlencode($search) : ''?>" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg text-slate-700 shadow-xs">
+                            Next<i class="fa-solid fa-chevron-right ml-1"></i>
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
 </div>
 

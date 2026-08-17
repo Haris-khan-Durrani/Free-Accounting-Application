@@ -116,9 +116,35 @@ $expCatRows = $stExpCat->fetchAll();
 $expCatLabels = array_column($expCatRows, 'category_name');
 $expCatTotals = array_map('floatval', array_column($expCatRows, 'total'));
 
-// 8. Recent Invoices Log for Filtered Date Range
-$stRows = $pdo->prepare('SELECT i.*, c.company_name FROM invoices i JOIN clients c ON c.id = i.client_id WHERE i.tenant_id = ? AND i.invoice_date BETWEEN ? AND ? ORDER BY i.id DESC LIMIT 20');
-$stRows->execute([$tid, $startDate, $endDate]);
+// 8. Recent Invoices Log with Search & Pagination
+$invSearch = trim($_GET['inv_search'] ?? '');
+$invPage = max(1, (int)($_GET['inv_page'] ?? 1));
+$invPerPage = 15;
+$invOffset = ($invPage - 1) * $invPerPage;
+
+$invWhere = "WHERE i.tenant_id = ? AND i.invoice_date BETWEEN ? AND ?";
+$invParams = [$tid, $startDate, $endDate];
+
+if (!empty($invSearch)) {
+    $invWhere .= " AND (i.invoice_number LIKE ? OR c.company_name LIKE ? OR i.notes LIKE ?)";
+    $sT = "%$invSearch%";
+    $invParams = array_merge($invParams, [$sT, $sT, $sT]);
+}
+
+$stInvCount = $pdo->prepare("SELECT COUNT(*) FROM invoices i JOIN clients c ON c.id = i.client_id $invWhere");
+$stInvCount->execute($invParams);
+$totalInvRecords = (int)$stInvCount->fetchColumn();
+$totalInvPages = max(1, (int)ceil($totalInvRecords / $invPerPage));
+
+$stRows = $pdo->prepare("
+    SELECT i.*, c.company_name 
+    FROM invoices i 
+    JOIN clients c ON c.id = i.client_id 
+    $invWhere 
+    ORDER BY i.id DESC 
+    LIMIT $invPerPage OFFSET $invOffset
+");
+$stRows->execute($invParams);
 $rows = $stRows->fetchAll();
 
 page_start('Dashboard');
@@ -365,14 +391,30 @@ page_start('Dashboard');
 
 <!-- Invoice Management Log (Desktop Table + Fancy Mobile Touch Cards) -->
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-12">
-    <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+    <div class="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h2 class="text-base sm:text-lg font-bold text-slate-900">Recent Invoices</h2>
+            <h2 class="text-base sm:text-lg font-bold text-slate-900">Recent Invoices <span class="text-xs font-semibold text-slate-400">(<?=$totalInvRecords?> total)</span></h2>
             <p class="text-xs text-slate-500">Active billing log for <strong><?=e($activeTenant['name'])?></strong></p>
         </div>
-        <a href="invoice_form" class="text-xs font-extrabold text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl transition-all">
-            + New
-        </a>
+
+        <div class="flex items-center space-x-3">
+            <form method="get" class="flex items-center space-x-2">
+                <input type="hidden" name="start_date" value="<?=e($startDate)?>">
+                <input type="hidden" name="end_date" value="<?=e($endDate)?>">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    <input type="text" name="inv_search" value="<?=e($invSearch)?>" placeholder="Search invoice #, client name..." class="pl-8 pr-4 py-1.5 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-amber-500 w-48 sm:w-64">
+                </div>
+                <?php if ($invSearch): ?>
+                    <a href="index" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all">Clear</a>
+                <?php endif; ?>
+                <button type="submit" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs">Search</button>
+            </form>
+
+            <a href="invoice_form" class="text-xs font-extrabold text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl transition-all whitespace-nowrap">
+                + New Invoice
+            </a>
+        </div>
     </div>
 
     <!-- Desktop Table View (Hidden on Mobile) -->
@@ -485,6 +527,35 @@ page_start('Dashboard');
             </div>
         <?php endforeach; ?>
     </div>
+
+    <!-- Invoice Pagination Controls -->
+    <?php if ($totalInvPages > 1): ?>
+        <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-slate-600">
+            <div>
+                Showing <strong><?=min($invOffset + 1, $totalInvRecords)?></strong> to <strong><?=min($invOffset + $invPerPage, $totalInvRecords)?></strong> of <strong><?=$totalInvRecords?></strong> invoices
+            </div>
+            
+            <div class="flex items-center space-x-1.5">
+                <?php if ($invPage > 1): ?>
+                    <a href="index?inv_page=<?=$invPage - 1?>&start_date=<?=urlencode($startDate)?>&end_date=<?=urlencode($endDate)?><?=!empty($invSearch) ? '&inv_search=' . urlencode($invSearch) : ''?>" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg text-slate-700 shadow-xs">
+                        <i class="fa-solid fa-chevron-left mr-1"></i>Prev
+                    </a>
+                <?php endif; ?>
+
+                <?php for ($p = 1; $p <= $totalInvPages; $p++): ?>
+                    <a href="index?inv_page=<?=$p?>&start_date=<?=urlencode($startDate)?>&end_date=<?=urlencode($endDate)?><?=!empty($invSearch) ? '&inv_search=' . urlencode($invSearch) : ''?>" class="px-3 py-1.5 rounded-lg border <?= $p === $invPage ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100' ?>">
+                        <?=$p?>
+                    </a>
+                <?php endfor; ?>
+
+                <?php if ($invPage < $totalInvPages): ?>
+                    <a href="index?inv_page=<?=$invPage + 1?>&start_date=<?=urlencode($startDate)?>&end_date=<?=urlencode($endDate)?><?=!empty($invSearch) ? '&inv_search=' . urlencode($invSearch) : ''?>" class="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg text-slate-700 shadow-xs">
+                        Next<i class="fa-solid fa-chevron-right ml-1"></i>
+                    </a>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 
 <script>
