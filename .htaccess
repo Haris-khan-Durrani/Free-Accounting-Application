@@ -1,0 +1,16 @@
+RewriteEngine On
+RewriteBase /invoice/OneSol_Invoice_Manager_PHP_MySQL/onesol_invoice_manager/
+
+# Explicit REST API Endpoint Routing
+RewriteRule ^api/?$ api.php [NC,L]
+RewriteRule ^api/v1/?$ api.php [NC,L]
+
+# 1. Map clean extensionless URLs (e.g. /billing) internally to .php files
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^([^\.]+)$ $1.php [NC,L]
+
+# 2. Redirect explicit .php requests to clean extensionless URLs
+RewriteCond %{THE_REQUEST} \s/+(.+?)\.php[\s?] [NC]
+RewriteRule ^(.+?)\.php$ $1 [R=301,L,NE]
