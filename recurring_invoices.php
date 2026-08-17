@@ -7,6 +7,7 @@ $tid = tenant_id();
 $activeTenant = tenant();
 
 // Run Migrations to ensure recurring_invoices table exists
+require_once __DIR__ . '/migrate.php';
 run_migrations($pdo);
 
 $message = '';

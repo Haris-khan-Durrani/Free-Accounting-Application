@@ -166,7 +166,14 @@ function page_start(string $title): void {
         echo '<a href="branding" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-palette w-5 text-amber-500 text-center"></i><span>Branding & Logo Setup</span></a>';
         echo '</div>';
 
-        // Group 2: Subscription & Billing
+        // Group 2: Invoice Design & Templates
+        echo '<div>';
+        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-wand-magic-sparkles text-slate-400 text-3xs"></i><span>Invoice Design & Templates</span></div>';
+        echo '<a href="invoice_customize" class="flex items-center px-2.5 py-1.5 text-xs font-extrabold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors mb-1"><i class="fa-solid fa-paint-roller w-5 text-amber-500 text-center"></i><span>Template Selector (11 Designs)</span></a>';
+        echo '<a href="invoice_builder" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-layer-group w-5 text-amber-500 text-center"></i><span>Drag & Drop Builder</span></a>';
+        echo '</div>';
+
+        // Group 3: SaaS Subscription & Plan
         echo '<div>';
         echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-crown text-slate-400 text-3xs"></i><span>SaaS Subscription & Plan</span></div>';
         echo '<a href="billing" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-credit-card w-5 text-amber-500 text-center"></i><span>Subscription Plan</span></a>';
