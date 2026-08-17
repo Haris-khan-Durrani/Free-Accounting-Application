@@ -107,7 +107,22 @@ function run_migrations(PDO $pdo): string {
         INDEX idx_active (is_active)
     ) ENGINE=InnoDB");
 
-    $output[] = "Database schema updated successfully with Scoped API Keys table.";
+    // Recurring Invoices Subscription Table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS recurring_invoices (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        tenant_id INT UNSIGNED NOT NULL,
+        client_id INT UNSIGNED NOT NULL,
+        frequency ENUM('weekly', 'monthly', 'quarterly', 'yearly') NOT NULL DEFAULT 'monthly',
+        next_issue_date DATE NOT NULL,
+        status ENUM('active', 'paused', 'cancelled') NOT NULL DEFAULT 'active',
+        template_json TEXT NOT NULL,
+        last_generated_at DATETIME NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_tenant (tenant_id),
+        INDEX idx_status (status)
+    ) ENGINE=InnoDB");
+
+    $output[] = "Database schema updated successfully with Scoped API Keys & Recurring Invoices tables.";
 
     return implode("<br>", $output);
 }

@@ -40,12 +40,13 @@
 - **11 Curated Designs**: Modern Minimal, Corporate Executive, Creative Vibrant, Tech Glassmorphism, Sleek Dark, Compact Thermal Receipt, Dual Column, Bold Gold, Slate Clean, Architectural Blue, and Classic Legal.
 - **Drag & Drop Invoice Builder**: Reorder columns, customize brand colors, logos, digital signatures, and seal stamps.
 
-### 🔍 Data Management, Search & Pagination
+### 🔄 Auto-Subscription Billing Engine
+- **Subscription Billing Manager (`recurring_invoices.php`)**: Full UI dashboard for setting up automated recurring client subscriptions (Weekly, Monthly, Quarterly, Yearly) with automatic VAT calculations.
+- **Background Cron Worker (`cron_recurring.php`)**: Automated worker executing subscription cycles, posting double-entry accounting general ledger entries, generating tax invoices, and emailing PDF receipts to clients.
 - **Global Search & Pagination Engine**: Instant keyword search and multi-page pagination across Client CRM Directory (`clients.php`), Executive Invoices Log (`index.php`), and Expense Receipts (`expenses.php`).
 - **Stripe Fallback & Webhook Sync**: `stripe_return.php` and `api/v1/webhooks/stripe.php` automatically record online credit card payments, update invoice status, post general ledger entries, and send email receipts in real-time.
 - **Universal Client Importer (Zoho / QuickBooks / Xero)**: Migration wizard (`client_import.php`) with smart column auto-mapping to import client directories from Zoho Books, QuickBooks, Xero, FreshBooks, or Excel CSV files.
 - **Client Self-Service Portal**: Passwordless client login hub (`client_portal.php`) where clients view invoice history, download statements of account, and pay online.
-- **Auto-Recurring Invoices Cron Engine**: Automated background worker (`cron_recurring.php`) generating subscription billing invoices on weekly, monthly, or yearly schedules.
 - **WhatsApp Cloud API Integration**: Direct Meta WhatsApp Cloud API gateway (`whatsapp_settings.php`) for automated PDF invoice & payment link dispatches.
 - **Statement of Account**: Full financial ledger per client detailing invoices, payments received, running balance, and PDF print formatting.
 - **1-Click SMTP Email Dispatch**: Deliver HTML invoices with online payment buttons using tenant custom SMTP settings (Gmail, Office 365, cPanel, SES).
