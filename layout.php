@@ -139,14 +139,14 @@ function page_start(string $title): void {
         echo '</div>';
         echo '</div>';
 
+        // Direct Settings Link in Top Header Bar
+        echo '<a href="settings" class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold text-amber-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-sliders text-amber-400"></i><span>Settings</span></a>';
+
         // Management Dropdown Menu (Compact 2-Column Mega Menu)
         echo '<div class="relative group py-2">';
         echo '<button class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-gear text-cyan-400"></i><span>Management</span><i class="fa-solid fa-chevron-down text-[10px] ml-0.5 opacity-70"></i></button>';
         echo '<div class="absolute right-0 top-full pt-1 w-[520px] hidden group-hover:block z-50">';
         echo '<div class="bg-white rounded-2xl shadow-2xl border border-slate-200/90 p-3 grid grid-cols-2 gap-3">';
-        
-        // Master Settings Direct Link
-        echo '<a href="settings" class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold text-amber-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-sliders text-amber-400"></i><span>Settings</span></a>';
         
         // Left Column
         echo '<div class="space-y-3">';
@@ -154,6 +154,7 @@ function page_start(string $title): void {
         // Group 1: Workspaces & Branding
         echo '<div>';
         echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-building text-slate-400 text-3xs"></i><span>Workspaces & Branding</span></div>';
+        echo '<a href="settings" class="flex items-center px-2.5 py-1.5 text-xs font-extrabold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors mb-1"><i class="fa-solid fa-sliders w-5 text-amber-500 text-center"></i><span>Master Settings Hub</span></a>';
         echo '<a href="domain_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-blue-50/70 hover:text-blue-600 rounded-lg transition-colors"><i class="fa-solid fa-globe w-5 text-blue-500 text-center"></i><span>Whitelabel Domain & SSL</span></a>';
         echo '<a href="subaccounts" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors"><i class="fa-solid fa-sitemap w-5 text-blue-500 text-center"></i><span>Workspaces & Branches</span></a>';
         echo '<a href="branding" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-pink-600 rounded-lg transition-colors"><i class="fa-solid fa-palette w-5 text-pink-500 text-center"></i><span>Dynamic Branding & Colors</span></a>';
