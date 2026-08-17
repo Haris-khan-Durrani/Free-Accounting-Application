@@ -145,6 +145,9 @@ function page_start(string $title): void {
         echo '<div class="absolute right-0 top-full pt-1 w-[520px] hidden group-hover:block z-50">';
         echo '<div class="bg-white rounded-2xl shadow-2xl border border-slate-200/90 p-3 grid grid-cols-2 gap-3">';
         
+        // Master Settings Direct Link
+        echo '<a href="settings" class="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-extrabold text-amber-300 hover:text-white hover:bg-slate-800/80 transition-all"><i class="fa-solid fa-sliders text-amber-400"></i><span>Settings</span></a>';
+        
         // Left Column
         echo '<div class="space-y-3">';
         

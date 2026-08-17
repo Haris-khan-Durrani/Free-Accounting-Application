@@ -340,7 +340,7 @@ details[open] > summary .faq-arrow { transform: rotate(180deg); }
         <div class="flex items-center space-x-2">
             <i class="fa-solid fa-list-ul text-slate-500"></i>
             <span class="font-extrabold text-slate-800 text-sm">Table of Contents</span>
-            <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-2xs font-bold">20 Chapters</span>
+            <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-2xs font-bold">24 Chapters</span>
         </div>
         <button onclick="document.getElementById('toc-grid').classList.toggle('hidden')" class="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center space-x-1 transition-colors">
             <span id="toc-toggle-label">Collapse</span>
@@ -370,6 +370,10 @@ details[open] > summary .faq-arrow { transform: rotate(180deg); }
             ['ch18', 'globe',               'bg-blue-600',   'text-blue-600',   'bg-blue-50   border-blue-200',   '18', 'Whitelabel Domain',      'Binding custom domain (billing.company.com), DNS CNAME & real-time test.'],
             ['ch19', 'file-invoice-dollar', 'bg-amber-600',  'text-amber-600',  'bg-amber-50  border-amber-200',  '19', 'Client Ledger Statement', 'Full client statement of account, ledger breakdown & 1-click email.'],
             ['ch20', 'database',            'bg-purple-600', 'text-purple-600', 'bg-purple-50 border-purple-200', '20', 'SQL Backup & Live Calc',  '1-Click .sql database dump download & sticky real-time invoice calculation.'],
+            ['ch21', 'rotate',              'bg-amber-600',  'text-amber-600',  'bg-amber-50  border-amber-200',  '21', 'Auto-Recurring Billing',  'Automated subscription cron engine (cron_recurring.php) generating invoices.'],
+            ['ch22', 'user-lock',           'bg-emerald-600','text-emerald-600','bg-emerald-50 border-emerald-200','22','Client Portal Hub',       'Passwordless client login hub (client_portal.php) for online payments.'],
+            ['ch23', 'whatsapp',            'bg-emerald-500','text-emerald-500','bg-emerald-50 border-emerald-200','23','WhatsApp Cloud API',     'Meta WhatsApp Cloud API gateway (whatsapp_settings.php) for instant dispatch.'],
+            ['ch24', 'coins',               'bg-cyan-600',   'text-cyan-600',   'bg-cyan-50   border-cyan-200',   '24', 'CBUAE Live FX Sync',     'Automated exchange rate sync (cron_exchange_rates.php) for USD, EUR to AED.'],
         ];
         foreach ($chapters as $i => [$id, $icon, $bg, $tc, $cardBg, $num, $title, $desc]) {
             $border = $i > 0 && $i % 3 !== 0 ? '' : '';
@@ -1209,6 +1213,86 @@ faq("How do I contact support if I have an issue not covered in this guide?", "P
 
     <p class="text-xs text-slate-600 leading-relaxed mb-4">
         Workspace administrators can download raw <code>.sql</code> database dumps anytime for local archiving and disaster recovery. On invoice and proposal forms, sticky <strong>Real-Time Summary Cards</strong> calculate subtotal, discounts (fixed or %), VAT tax, and grand totals live as values change.
+    </p>
+</section>
+
+<!-- CHAPTER 21: AUTO-RECURRING INVOICES CRON ENGINE -->
+<section id="ch21" class="guide-topic bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm scroll-mt-20">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-100 mb-6 gap-3">
+        <div class="flex items-center space-x-3">
+            <div class="h-10 w-10 rounded-xl bg-amber-600 text-white flex items-center justify-center font-bold text-lg">
+                <i class="fa-solid fa-rotate"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-extrabold text-slate-900">Chapter 21: Auto-Recurring Subscription Billing Engine</h2>
+                <p class="text-xs text-slate-500">Automated background cron worker (cron_recurring.php) for subscription billing schedules.</p>
+            </div>
+        </div>
+        <?php launch_btn('cron_recurring.php?key=onesol_cron_secret_2026', 'bolt', 'Trigger Cron', 'bg-amber-600') ?>
+    </div>
+
+    <p class="text-xs text-slate-600 leading-relaxed mb-4">
+        Set up automated subscription schedules for retainers or monthly client contracts. The background cron script <code>cron_recurring.php</code> auto-generates sequential tax invoices, posts double-entry journal entries, and emails client PDFs automatically.
+    </p>
+</section>
+
+<!-- CHAPTER 22: CLIENT SELF-SERVICE PORTAL -->
+<section id="ch22" class="guide-topic bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm scroll-mt-20">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-100 mb-6 gap-3">
+        <div class="flex items-center space-x-3">
+            <div class="h-10 w-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg">
+                <i class="fa-solid fa-user-lock"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-extrabold text-slate-900">Chapter 22: Client Self-Service Portal Hub</h2>
+                <p class="text-xs text-slate-500">Dedicated passwordless login portal (client_portal.php) for client statement access & online checkout.</p>
+            </div>
+        </div>
+        <?php launch_btn('client_login', 'right-to-bracket', 'Client Portal Portal', 'bg-emerald-600') ?>
+    </div>
+
+    <p class="text-xs text-slate-600 leading-relaxed mb-4">
+        Clients can sign into their dedicated self-service hub using their registered billing email to view outstanding balances, download financial Statements of Account, inspect line items, and complete online card payments.
+    </p>
+</section>
+
+<!-- CHAPTER 23: WHATSAPP CLOUD API GATEWAY -->
+<section id="ch23" class="guide-topic bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm scroll-mt-20">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-100 mb-6 gap-3">
+        <div class="flex items-center space-x-3">
+            <div class="h-10 w-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center font-bold text-lg">
+                <i class="fa-brands fa-whatsapp"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-extrabold text-slate-900">Chapter 23: Meta WhatsApp Cloud API Gateway</h2>
+                <p class="text-xs text-slate-500">Automated WhatsApp payment reminder & PDF invoice link dispatches.</p>
+            </div>
+        </div>
+        <?php launch_btn('whatsapp_settings', 'whatsapp', 'WhatsApp Settings', 'bg-emerald-500') ?>
+    </div>
+
+    <p class="text-xs text-slate-600 leading-relaxed mb-4">
+        Connect your Meta WhatsApp Cloud API credentials (Phone Number ID & Access Token) under <strong>WhatsApp Settings</strong> to dispatch automated payment links and PDF tax invoices directly to client WhatsApp numbers.
+    </p>
+</section>
+
+<!-- CHAPTER 24: CBUAE LIVE EXCHANGE RATE SYNC -->
+<section id="ch24" class="guide-topic bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm scroll-mt-20">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-slate-100 mb-6 gap-3">
+        <div class="flex items-center space-x-3">
+            <div class="h-10 w-10 rounded-xl bg-cyan-600 text-white flex items-center justify-center font-bold text-lg">
+                <i class="fa-solid fa-coins"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-extrabold text-slate-900">Chapter 24: CBUAE Live Exchange Rate Auto-Sync</h2>
+                <p class="text-xs text-slate-500">Automated daily exchange rate synchronization for USD, EUR, GBP, SAR to AED.</p>
+            </div>
+        </div>
+        <?php launch_btn('cron_exchange_rates', 'arrows-rotate', 'Sync FX Rates', 'bg-cyan-600') ?>
+    </div>
+
+    <p class="text-xs text-slate-600 leading-relaxed mb-4">
+        Automated daily background worker <code>cron_exchange_rates.php</code> queries official central bank rates to keep multi-currency foreign exchange rates (USD, EUR, GBP, SAR, INR to AED) updated in real-time.
     </p>
 </section>
 
