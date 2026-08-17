@@ -27,6 +27,8 @@ function run_migrations(PDO $pdo): string {
     ensure_column($pdo, 'users', 'otp_expires_at', 'DATETIME NULL AFTER otp_code');
 
     ensure_column($pdo, 'clients', 'tenant_id', 'INT UNSIGNED NOT NULL DEFAULT 1 AFTER id');
+    ensure_column($pdo, 'clients', 'otp_code', 'VARCHAR(10) NULL AFTER currency');
+    ensure_column($pdo, 'clients', 'otp_expires_at', 'DATETIME NULL AFTER otp_code');
     ensure_column($pdo, 'invoices', 'tenant_id', 'INT UNSIGNED NOT NULL DEFAULT 1 AFTER id');
     ensure_column($pdo, 'invoices', 'paid_amount', 'DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER tax_amount');
     ensure_column($pdo, 'invoices', 'template_id', "VARCHAR(60) NOT NULL DEFAULT 'onesol_executive_gold' AFTER notes");

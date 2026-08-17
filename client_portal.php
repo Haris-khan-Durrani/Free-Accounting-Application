@@ -120,21 +120,22 @@ $totalDue = max(0, (float)$summary['total_due']);
         </div>
     </div>
 
+    <?php $clientCurr = !empty($client['currency']) ? $client['currency'] : 'AED'; ?>
     <!-- Summary Metrics Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl">
             <span class="text-3xs font-extrabold text-slate-400 uppercase tracking-widest">Total Invoiced Amount</span>
-            <div class="text-2xl font-black text-blue-400 mt-1"><?=e($brand['currency'] ?: 'AED')?> <?=number_format($totalInvoiced, 2)?></div>
+            <div class="text-2xl font-black text-blue-400 mt-1"><?=money((float)$totalInvoiced, $clientCurr)?></div>
             <span class="text-2xs text-slate-500">Gross billing across all periods</span>
         </div>
         <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl">
             <span class="text-3xs font-extrabold text-slate-400 uppercase tracking-widest">Total Payments Made</span>
-            <div class="text-2xl font-black text-emerald-400 mt-1"><?=e($brand['currency'] ?: 'AED')?> <?=number_format($totalPaid, 2)?></div>
+            <div class="text-2xl font-black text-emerald-400 mt-1"><?=money((float)$totalPaid, $clientCurr)?></div>
             <span class="text-2xs text-slate-500">Confirmed receipts & deposits</span>
         </div>
         <div class="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl">
             <span class="text-3xs font-extrabold text-slate-400 uppercase tracking-widest">Outstanding Balance Due</span>
-            <div class="text-2xl font-black text-amber-400 mt-1"><?=e($brand['currency'] ?: 'AED')?> <?=number_format($totalDue, 2)?></div>
+            <div class="text-2xl font-black text-amber-400 mt-1"><?=money((float)$totalDue, $clientCurr)?></div>
             <span class="text-2xs text-slate-500">Pending payment balance</span>
         </div>
     </div>
