@@ -75,10 +75,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!$installed || !empty($_GET['force
             $existingUserId = $stUser->fetchColumn();
 
             if ($existingUserId) {
-                $stUp = $pdo->prepare("UPDATE users SET name = 'OneSol Admin', password_hash = ?, role = 'superadmin' WHERE id = ?");
+                $stUp = $pdo->prepare("UPDATE users SET name = 'OneSol Admin', password_hash = ?, role = 'admin' WHERE id = ?");
                 $stUp->execute([$hash, $existingUserId]);
             } else {
-                $stIns = $pdo->prepare("INSERT INTO users (tenant_id, name, email, password_hash, role) VALUES (1, 'OneSol Admin', ?, ?, 'superadmin')");
+                $stIns = $pdo->prepare("INSERT INTO users (tenant_id, name, email, password_hash, role) VALUES (1, 'OneSol Admin', ?, ?, 'admin')");
                 $stIns->execute([$email, $hash]);
             }
 

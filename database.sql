@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(120) NOT NULL,
   email VARCHAR(190) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
-  role ENUM('owner','admin','accountant','sales','viewer') NOT NULL DEFAULT 'owner',
+  role VARCHAR(50) NOT NULL DEFAULT 'owner',
   phone VARCHAR(60) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_users_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE SET NULL
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS user_tenants (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id INT UNSIGNED NOT NULL,
   tenant_id INT UNSIGNED NOT NULL,
-  role ENUM('owner','admin','accountant','sales','viewer') NOT NULL DEFAULT 'admin',
+  role VARCHAR(50) NOT NULL DEFAULT 'admin',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uk_user_tenant (user_id, tenant_id),
   CONSTRAINT fk_ut_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
