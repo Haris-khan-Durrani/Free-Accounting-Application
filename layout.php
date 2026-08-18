@@ -83,17 +83,17 @@ function page_start(string $title): void {
 
     // Right: Desktop Navigation Links
     if (!empty($_SESSION['user_id'])) {
-        echo '<nav class="hidden lg:flex items-center space-x-1 sm:space-x-1.5">';
-        echo '<a href="index" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs transition-all ' . $activeClass(['index.php', 'index']) . '"><i class="fa-solid fa-chart-pie text-blue-400 text-2xs"></i><span>Dashboard</span></a>';
-        echo '<a href="invoices" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs transition-all ' . $activeClass(['invoices.php', 'invoices', 'invoice_view.php']) . '"><i class="fa-solid fa-file-invoice text-amber-400 text-2xs"></i><span>Invoices</span></a>';
-        echo '<a href="clients" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs transition-all ' . $activeClass(['clients.php', 'clients', 'client_import.php']) . '"><i class="fa-solid fa-users text-emerald-400 text-2xs"></i><span>Clients</span></a>';
-        echo '<a href="quotes" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs transition-all ' . $activeClass(['quotes.php', 'quotes', 'quote_view.php']) . '"><i class="fa-solid fa-file-signature text-sky-400 text-2xs"></i><span>Proposals</span></a>';
-        echo '<a href="expenses" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs transition-all ' . $activeClass(['expenses.php', 'expenses', 'expense_form.php']) . '"><i class="fa-solid fa-receipt text-rose-400 text-2xs"></i><span>Expenses</span></a>';
+        echo '<nav class="hidden xl:flex items-center space-x-1 sm:space-x-1.5 whitespace-nowrap flex-shrink-0">';
+        echo '<a href="index" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['index.php', 'index']) . '"><i class="fa-solid fa-chart-pie text-blue-400 text-2xs"></i><span>Dashboard</span></a>';
+        echo '<a href="invoices" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['invoices.php', 'invoices', 'invoice_view.php']) . '"><i class="fa-solid fa-file-invoice text-amber-400 text-2xs"></i><span>Invoices</span></a>';
+        echo '<a href="clients" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['clients.php', 'clients', 'client_import.php']) . '"><i class="fa-solid fa-users text-emerald-400 text-2xs"></i><span>Clients</span></a>';
+        echo '<a href="quotes" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['quotes.php', 'quotes', 'quote_view.php']) . '"><i class="fa-solid fa-file-signature text-sky-400 text-2xs"></i><span>Proposals</span></a>';
+        echo '<a href="expenses" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['expenses.php', 'expenses', 'expense_form.php']) . '"><i class="fa-solid fa-receipt text-rose-400 text-2xs"></i><span>Expenses</span></a>';
         
         // Reports Dropdown Menu
         $isReportsActive = str_contains($currScript, 'reports_') || $currScript === 'export_faf.php';
         echo '<div class="relative group py-2">';
-        echo '<button class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs transition-all ' . ($isReportsActive ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30 font-black' : 'text-slate-300 hover:text-white hover:bg-slate-800/70 font-semibold') . '"><i class="fa-solid fa-folder-open text-purple-400 text-2xs"></i><span>Reports</span><i class="fa-solid fa-chevron-down text-[9px] ml-0.5 opacity-70"></i></button>';
+        echo '<button class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . ($isReportsActive ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30 font-black' : 'text-slate-300 hover:text-white hover:bg-slate-800/70 font-semibold') . '"><i class="fa-solid fa-folder-open text-purple-400 text-2xs"></i><span>Reports</span><i class="fa-solid fa-chevron-down text-[9px] ml-0.5 opacity-70"></i></button>';
         echo '<div class="absolute right-0 top-full pt-1 w-72 hidden group-hover:block z-50">';
         echo '<div class="bg-white rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden py-1 max-h-[85vh] overflow-y-auto">';
         
@@ -146,11 +146,11 @@ function page_start(string $title): void {
         echo '</div>';
 
         // Direct Settings Link in Top Header Bar
-        echo '<a href="settings" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs transition-all ' . $activeClass(['settings.php', 'settings', 'branding.php', 'payment_settings.php']) . '"><i class="fa-solid fa-sliders text-amber-400 text-2xs"></i><span>Settings</span></a>';
+        echo '<a href="settings" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['settings.php', 'settings', 'branding.php', 'payment_settings.php']) . '"><i class="fa-solid fa-sliders text-amber-400 text-2xs"></i><span>Settings</span></a>';
 
         // Management Dropdown Menu (Compact 2-Column Mega Menu)
         echo '<div class="relative group py-2">';
-        echo '<button class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/70 transition-all"><i class="fa-solid fa-gear text-cyan-400 text-2xs"></i><span>Management</span><i class="fa-solid fa-chevron-down text-[9px] ml-0.5 opacity-70"></i></button>';
+        echo '<button class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap font-semibold text-slate-300 hover:text-white hover:bg-slate-800/70 transition-all"><i class="fa-solid fa-gear text-cyan-400 text-2xs"></i><span>Management</span><i class="fa-solid fa-chevron-down text-[9px] ml-0.5 opacity-70"></i></button>';
         echo '<div class="absolute right-0 top-full pt-1 w-[520px] hidden group-hover:block z-50">';
         echo '<div class="bg-white rounded-2xl shadow-2xl border border-slate-200/90 p-3 grid grid-cols-2 gap-3">';
         
@@ -220,16 +220,16 @@ function page_start(string $title): void {
         echo '</div>';
         echo '</div>';
 
-        // + New Invoice Button
-        echo '<a href="invoice_form" class="ml-2 whitespace-nowrap inline-flex items-center px-3.5 py-2 border border-transparent text-xs font-extrabold rounded-lg shadow-sm text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 transition-all transform hover:-translate-y-0.5">';
-        echo '<i class="fa-solid fa-plus mr-1.5 text-2xs"></i>New Invoice';
+        // Action Button: Create New Invoice
+        echo '<a href="invoice_form" class="ml-1.5 whitespace-nowrap flex-shrink-0 inline-flex items-center px-3 py-1.5 border border-amber-400/40 text-xs font-black rounded-xl shadow-md text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 transition-all transform hover:-translate-y-0.5">';
+        echo '<i class="fa-solid fa-plus mr-1 text-2xs"></i>New Invoice';
         echo '</a>';
 
-        echo '<a href="logout" class="ml-1 text-rose-400 hover:text-rose-300 p-2 text-xs font-bold" title="Logout"><i class="fa-solid fa-right-from-bracket text-sm"></i></a>';
+        echo '<a href="logout" class="ml-1 text-slate-400 hover:text-rose-400 p-1.5 text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0" title="Logout"><i class="fa-solid fa-right-from-bracket text-sm"></i></a>';
         echo '</nav>';
 
         // Mobile Menu Button
-        echo '<button onclick="toggleMobileAppMenu()" class="lg:hidden text-amber-400 hover:text-amber-300 p-2 text-xl focus:outline-none"><i class="fa-solid fa-grid-2"></i><i class="fa-solid fa-ellipsis-vertical text-lg ml-1"></i></button>';
+        echo '<button onclick="toggleMobileAppMenu()" class="xl:hidden text-amber-400 hover:text-amber-300 p-2 text-xl focus:outline-none"><i class="fa-solid fa-bars-staggered"></i></button>';
     }
 
     echo '</div>';
