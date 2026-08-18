@@ -542,10 +542,10 @@ input:focus, select:focus, textarea:focus {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 12mm;
+    margin: 12mm 10mm 12mm 10mm;
   }
 
-  /* 1. Hide UI Navigation, Header, Actions & Forms */
+  /* 1. Hide Non-Print Elements */
   header,
   footer,
   nav,
@@ -558,27 +558,23 @@ input:focus, select:focus, textarea:focus {
   .palette-sidebar,
   button,
   .btn,
-  form,
   #mobile-app-modal,
   .trial-banner,
-  .flash-alert,
-  input,
-  select,
-  textarea {
+  .flash-alert {
     display: none !important;
   }
 
   /* 2. Reset Document Layout */
   html, body {
     background: #ffffff !important;
-    color: #000000 !important;
+    color: #0f172a !important;
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
     height: auto !important;
     min-height: auto !important;
     overflow: visible !important;
-    font-size: 11pt !important;
+    font-size: 10pt !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -593,9 +589,9 @@ input:focus, select:focus, textarea:focus {
   }
 
   /* 4. Reset Cards and Content Boxes */
-  .card, .bg-white, .bg-slate-900, .bg-slate-950, .stat-card {
+  .card, .bg-white, .stat-card {
     background: #ffffff !important;
-    color: #000000 !important;
+    color: #0f172a !important;
     border: 1px solid #cbd5e1 !important;
     box-shadow: none !important;
     margin-bottom: 12px !important;
@@ -604,19 +600,33 @@ input:focus, select:focus, textarea:focus {
     page-break-inside: avoid !important;
   }
 
-  /* 5. Tables */
+  /* 5. Professional Financial Tables */
   table {
     width: 100% !important;
     border-collapse: collapse !important;
     margin-top: 10px !important;
     margin-bottom: 10px !important;
+    page-break-inside: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tfoot {
+    display: table-footer-group !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   th, td {
     border: 1px solid #cbd5e1 !important;
     padding: 6px 10px !important;
-    color: #000000 !important;
-    font-size: 10pt !important;
+    color: #0f172a !important;
+    font-size: 9.5pt !important;
   }
 
   th {
@@ -627,22 +637,14 @@ input:focus, select:focus, textarea:focus {
   }
 
   /* 6. Typography & Color Adjustments */
-  h1, h2, h3, h4, h5, h6, p, span, div, strong, td, th {
-    color: #000000 !important;
-  }
-
-  .text-emerald-600, .text-emerald-500, .text-green-600 { color: #047857 !important; }
-  .text-rose-600, .text-red-600 { color: #b91c1c !important; }
-  .text-amber-600, .text-amber-500 { color: #d97706 !important; }
+  .text-emerald-600, .text-emerald-500, .text-green-600, .text-emerald-700 { color: #047857 !important; }
+  .text-rose-600, .text-red-600, .text-rose-700 { color: #b91c1c !important; }
+  .text-amber-600, .text-amber-500, .text-amber-700 { color: #d97706 !important; }
+  .text-blue-600, .text-blue-700 { color: #1d4ed8 !important; }
 
   .badge, span.rounded-full, span.rounded-xl {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     border: 1px solid #cbd5e1 !important;
-  }
-
-  tr, .stat-card, .card {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
   }
 }
