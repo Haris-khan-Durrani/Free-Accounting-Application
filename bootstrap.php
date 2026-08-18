@@ -42,7 +42,7 @@ spl_autoload_register(function ($class) {
 
 if (!file_exists(__DIR__ . '/config.php')) {
     if (basename($_SERVER['PHP_SELF'] ?? '') !== 'install.php' && basename($_SERVER['PHP_SELF'] ?? '') !== 'install') {
-        header('Location: install');
+        header('Location: install.php');
         exit;
     }
     return;
