@@ -177,11 +177,12 @@ function page_start(string $title): void {
         echo '<div>';
         echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-crown text-slate-400 text-3xs"></i><span>SaaS Subscription & Plan</span></div>';
         echo '<a href="billing" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-credit-card w-5 text-amber-500 text-center"></i><span>Subscription Plan</span></a>';
+        echo '<a href="recurring_invoices" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors mb-1"><i class="fa-solid fa-rotate w-5 text-purple-600 text-center"></i><span>Auto-Subscription Billing</span></a>';
+        echo '<a href="subscriptions_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-layer-group w-5 text-amber-500 text-center"></i><span>Create SaaS Plan Tiers</span></a>';
         echo '<a href="users" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors"><i class="fa-solid fa-users-gear w-5 text-blue-500 text-center"></i><span>Team Members</span></a>';
-        echo '<a href="recurring_invoices" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-purple-600 rounded-lg transition-colors"><i class="fa-solid fa-rotate w-5 text-purple-500 text-center"></i><span>Auto-Subscription Billing</span></a>';
         echo '</div>';
 
-        // Group 3: Core Catalog
+        // Group 4: Core Catalog
         echo '<div>';
         echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-box text-slate-400 text-3xs"></i><span>Products & Expenses</span></div>';
         echo '<a href="items" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-emerald-600 rounded-lg transition-colors"><i class="fa-solid fa-box w-5 text-emerald-500 text-center"></i><span>Product Catalog</span></a>';
@@ -194,7 +195,7 @@ function page_start(string $title): void {
         // Right Column
         echo '<div class="space-y-3">';
 
-        // Group 4: Security & Integrations
+        // Group 5: Security & Integrations
         echo '<div>';
         echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-shield-halved text-slate-400 text-3xs"></i><span>Security & Integrations</span></div>';
         echo '<a href="payment_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-purple-50/70 hover:text-purple-600 rounded-lg transition-colors"><i class="fa-solid fa-credit-card w-5 text-purple-500 text-center"></i><span>Payment Gateways</span></a>';
@@ -205,8 +206,15 @@ function page_start(string $title): void {
         echo '<a href="automation" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-purple-600 rounded-lg transition-colors"><i class="fa-solid fa-diagram-project w-5 text-purple-500 text-center"></i><span>n8n Automations</span></a>';
         echo '</div>';
 
-        // Group 5: SaaS Admin & Help
+        // Group 6: SaaS Admin & Help
         echo '<div>';
+        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-crown text-amber-500 text-3xs"></i><span>SaaS Admin & Help</span></div>';
+        echo '<a href="subscriptions_admin" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors mb-1"><i class="fa-solid fa-crown w-5 text-amber-600 text-center"></i><span>Create & Edit SaaS Plans</span></a>';
+        echo '<a href="tenants_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-emerald-600 rounded-lg transition-colors"><i class="fa-solid fa-users-gear w-5 text-emerald-500 text-center"></i><span>Subscriber Accounts</span></a>';
+        echo '<a href="super_admin_gateways" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-indigo-600 rounded-lg transition-colors"><i class="fa-solid fa-credit-card w-5 text-indigo-500 text-center"></i><span>Super Admin Gateways</span></a>';
+        echo '<a href="guide" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors"><i class="fa-solid fa-book-open w-5 text-blue-500 text-center"></i><span>Interactive User Guide</span></a>';
+        echo '<a href="audit_log" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-slate-900 rounded-lg transition-colors"><i class="fa-solid fa-clock-rotate-left w-5 text-slate-400 text-center"></i><span>System Audit Log</span></a>';
+        echo '</div>';
 
         echo '</div>';
         echo '</div>';

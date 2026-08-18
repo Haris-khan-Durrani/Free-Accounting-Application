@@ -167,6 +167,38 @@ page_start('Master System & Workspace Settings');
         </div>
     </a>
 
+    <!-- Card 10: Create & Edit SaaS Plans -->
+    <a href="subscriptions_admin" class="group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-amber-500/50 transition-all">
+        <div class="flex items-center justify-between mb-4">
+            <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
+                <i class="fa-solid fa-crown"></i>
+            </div>
+            <span class="text-3xs font-extrabold px-2 py-1 bg-amber-100 text-amber-900 rounded-md uppercase">SaaS Plans</span>
+        </div>
+        <h3 class="font-extrabold text-base text-slate-900 group-hover:text-amber-600 transition-colors">Create & Edit SaaS Plans</h3>
+        <p class="text-xs text-slate-500 mt-1">Build Starter, Pro & Enterprise tiers, configure invoice limits, user seats, and monthly/yearly pricing.</p>
+        <div class="mt-4 pt-3 border-t border-slate-100 text-2xs font-extrabold text-amber-600 flex items-center justify-between">
+            <span>Manage SaaS Plans</span>
+            <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+        </div>
+    </a>
+
+    <!-- Card 11: Auto-Subscription Billing -->
+    <a href="recurring_invoices" class="group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-purple-500/50 transition-all">
+        <div class="flex items-center justify-between mb-4">
+            <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
+                <i class="fa-solid fa-rotate"></i>
+            </div>
+            <span class="text-3xs font-extrabold px-2 py-1 bg-purple-100 text-purple-900 rounded-md uppercase">Recurring</span>
+        </div>
+        <h3 class="font-extrabold text-base text-slate-900 group-hover:text-purple-600 transition-colors">Auto-Subscription Billing</h3>
+        <p class="text-xs text-slate-500 mt-1">Set up automated recurring client subscriptions, invoice generation schedules, and auto-email PDF receipts.</p>
+        <div class="mt-4 pt-3 border-t border-slate-100 text-2xs font-extrabold text-purple-600 flex items-center justify-between">
+            <span>Manage Subscriptions</span>
+            <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+        </div>
+    </a>
+
 </div>
 
 <?php page_end(); ?>
