@@ -156,3 +156,7 @@ function log_audit(PDO $pdo, string $action, string $entityType, ?int $entityId 
         $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
     ]);
 }
+
+// Initialize Modular Plugin Engine for Active Tenant
+\Services\PluginEngine::init($pdo);
+

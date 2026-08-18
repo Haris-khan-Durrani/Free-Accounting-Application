@@ -206,12 +206,15 @@ function page_start(string $title): void {
 
         // Group 6: SaaS Admin & Help
         echo '<div>';
-        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-crown text-amber-500 text-3xs"></i><span>SaaS Admin & Help</span></div>';
+        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-crown text-amber-500 text-3xs"></i><span>SaaS Admin & Extensions</span></div>';
+        echo '<a href="plugins_admin" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-puzzle-piece w-5 text-purple-600 text-center"></i><span>Plug & Play Extensions</span></a>';
         echo '<a href="tenants_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-users-gear w-5 text-emerald-500 text-center"></i><span>Subscriber Accounts</span></a>';
         echo '<a href="super_admin_gateways" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-credit-card w-5 text-indigo-500 text-center"></i><span>Super Admin Gateways</span></a>';
-        echo '<a href="cache_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-bolt w-5 text-emerald-500 text-center"></i><span>Redis Cache Engine</span></a>';
         echo '<a href="guide" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-book-open w-5 text-blue-500 text-center"></i><span>Interactive User Guide</span></a>';
         echo '<a href="audit_log" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-slate-900 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-clock-rotate-left w-5 text-slate-400 text-center"></i><span>System Audit Log</span></a>';
+        
+        // Execute Plugin Menu Hooks
+        \Services\PluginEngine::do_action('management_menu_items');
         echo '</div>';
 
         echo '</div>';

@@ -119,7 +119,23 @@ page_start('Master System & Workspace Settings');
         </div>
     </a>
 
-    <!-- Card 7: REST API Keys -->
+    <!-- Card 7: Plug & Play Extensions -->
+    <a href="plugins_admin" class="group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-purple-500/50 transition-all">
+        <div class="flex items-center justify-between mb-4">
+            <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
+                <i class="fa-solid fa-puzzle-piece"></i>
+            </div>
+            <span class="text-3xs font-extrabold px-2 py-1 bg-purple-100 text-purple-800 rounded-md uppercase">Plug & Play</span>
+        </div>
+        <h3 class="font-extrabold text-base text-slate-900 group-hover:text-purple-600 transition-colors">Plug & Play Extensions</h3>
+        <p class="text-xs text-slate-500 mt-1">Upload custom .zip plugin features, custom discounts, and third-party modules.</p>
+        <div class="mt-4 pt-3 border-t border-slate-100 text-2xs font-extrabold text-purple-600 flex items-center justify-between">
+            <span>Manage Plugins</span>
+            <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+        </div>
+    </a>
+
+    <!-- Card 8: REST API Keys -->
     <a href="api_keys" class="group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-amber-500/50 transition-all">
         <div class="flex items-center justify-between mb-4">
             <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">

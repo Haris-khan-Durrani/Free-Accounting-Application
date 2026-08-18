@@ -1,0 +1,8 @@
+{
+    "name": "Sample Promotional Discount Plugin",
+    "slug": "sample_custom_discount",
+    "version": "1.0.0",
+    "author": "OneSol Enterprise SDK",
+    "description": "Starter sample plugin that adds custom discount logic and injects a custom widget link into the topbar Management menu.",
+    "main": "plugin.php"
+}
