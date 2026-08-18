@@ -41,13 +41,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'test_smtp') {
-        $testRecipient = trim($_POST['test_email'] ?? $_SESSION['user_email'] ?? $fromEmail);
-        
-        // Save transiently to test
-        $st = $pdo->prepare("UPDATE tenants SET smtp_host = ?, smtp_port = ?, smtp_encryption = ?, smtp_username = ?, smtp_password = ?, from_email = ?, from_name = ? WHERE id = ?");
-        $st->execute([$smtpHost, $smtpPort, $smtpEncryption, $smtpUsername, $encryptedPass, $fromEmail, $fromName, $tid]);
-
-        \Core\Tenant::forgetCache($tid);
+        $testRecipient = trim($_POST['test_email'] ?? $_SESSION['user_email'] ?? $activeTenant['from_email'] ?? '');
+        $smtpHost = $activeTenant['smtp_host'] ?? '';
+        $smtpPort = (int)($activeTenant['smtp_port'] ?: 587);
+        $smtpEncryption = $activeTenant['smtp_encryption'] ?? 'tls';
+        $fromEmail = $activeTenant['from_email'] ?? '';
+        $fromName = $activeTenant['from_name'] ?? $activeTenant['name'];
 
         $subject = "SMTP Test Connection - " . e($activeTenant['name']);
         $htmlBody = "
@@ -72,11 +71,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Throwable $e) {
             $testResult = ['success' => false, 'message' => "SMTP Connection Exception: " . e($e->getMessage())];
         }
-
-        // Refresh activeTenant array
-        $stT = $pdo->prepare("SELECT * FROM tenants WHERE id = ?");
-        $stT->execute([$tid]);
-        $activeTenant = $stT->fetch();
     }
 }
 
@@ -168,17 +162,10 @@ page_start('Tenant Custom SMTP Email Settings');
         <form method="post" class="space-y-4">
             <?=csrf_field()?>
             <input type="hidden" name="action" value="test_smtp">
-            <input type="hidden" name="smtp_host" value="<?=e($activeTenant['smtp_host'] ?? '')?>">
-            <input type="hidden" name="smtp_port" value="<?=e((string)($activeTenant['smtp_port'] ?: 587))?>">
-            <input type="hidden" name="smtp_encryption" value="<?=e($activeTenant['smtp_encryption'] ?? 'tls')?>">
-            <input type="hidden" name="smtp_username" value="<?=e($activeTenant['smtp_username'] ?? '')?>">
-            <input type="hidden" name="smtp_password" value="<?=e($activeTenant['smtp_password'] ?? '')?>">
-            <input type="hidden" name="from_email" value="<?=e($activeTenant['from_email'] ?? '')?>">
-            <input type="hidden" name="from_name" value="<?=e($activeTenant['from_name'] ?? '')?>">
 
             <div>
                 <label class="block text-xs font-extrabold text-slate-700 uppercase mb-1.5">Recipient Email</label>
-                <input type="email" name="test_email" value="admin@onesol.ae" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-900">
+                <input type="email" name="test_email" value="<?=e($_SESSION['user_email'] ?? 'admin@onesol.ae')?>" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-900">
             </div>
 
             <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2.5 border border-emerald-500 text-xs font-extrabold rounded-xl text-emerald-700 bg-emerald-50 hover:bg-emerald-100 shadow-xs">
