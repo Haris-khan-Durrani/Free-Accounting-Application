@@ -57,11 +57,11 @@ function page_start(string $title): void {
         ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30 font-black' 
         : 'text-slate-300 hover:text-white hover:bg-slate-800/70 font-semibold';
 
-    echo '<header class="bg-slate-950/90 backdrop-blur-xl text-white sticky top-0 z-40 border-b border-slate-800/80 shadow-2xl">';
-    echo '<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">';
+    echo '<header class="bg-slate-950/95 backdrop-blur-xl text-white sticky top-0 z-40 border-b border-slate-800/80 shadow-2xl">';
+    echo '<div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">';
     
     // Left: Brand Logo & Workspace Switcher
-    echo '<div class="flex items-center space-x-2.5 sm:space-x-3.5">';
+    echo '<div class="flex items-center space-x-3 sm:space-x-4 flex-shrink-0 mr-4 lg:mr-8">';
     echo '<a href="index" class="flex items-center space-x-2.5 group flex-shrink-0">';
     if (!empty($brand['logo_url'])) {
         echo '<img src="' . e($brand['logo_url']) . '" alt="Logo" class="h-7 w-auto rounded bg-white p-0.5 object-contain shadow-xs">';
@@ -83,7 +83,7 @@ function page_start(string $title): void {
 
     // Right: Desktop Navigation Links
     if (!empty($_SESSION['user_id'])) {
-        echo '<nav class="hidden xl:flex items-center space-x-1 sm:space-x-1.5 whitespace-nowrap flex-shrink-0">';
+        echo '<nav class="hidden xl:flex items-center space-x-1 sm:space-x-2 whitespace-nowrap flex-shrink-0">';
         echo '<a href="index" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['index.php', 'index']) . '"><i class="fa-solid fa-chart-pie text-blue-400 text-2xs"></i><span>Dashboard</span></a>';
         echo '<a href="invoices" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['invoices.php', 'invoices', 'invoice_view.php']) . '"><i class="fa-solid fa-file-invoice text-amber-400 text-2xs"></i><span>Invoices</span></a>';
         echo '<a href="clients" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['clients.php', 'clients', 'client_import.php']) . '"><i class="fa-solid fa-users text-emerald-400 text-2xs"></i><span>Clients</span></a>';
