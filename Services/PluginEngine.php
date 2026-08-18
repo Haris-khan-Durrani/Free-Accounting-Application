@@ -113,15 +113,26 @@ class PluginEngine {
             $st->execute([$tenantId]);
             $val = $st->fetchColumn();
             return json_decode($val ?: '[]', true) ?: [];
-        } catch (PDOException $ex) {
+        } catch (Throwable $ex) {
             // Auto-migrate legacy settings table schema if tenant_id is missing
             try { $pdo->exec("ALTER TABLE settings ADD COLUMN tenant_id INT UNSIGNED NOT NULL DEFAULT 1"); } catch (Throwable $t) {}
             try { $pdo->exec("ALTER TABLE settings DROP PRIMARY KEY, ADD PRIMARY KEY (tenant_id, setting_key)"); } catch (Throwable $t) {}
 
-            $st = $pdo->prepare("SELECT setting_value FROM settings WHERE tenant_id = ? AND setting_key = 'active_plugins' LIMIT 1");
-            $st->execute([$tenantId]);
-            $val = $st->fetchColumn();
-            return json_decode($val ?: '[]', true) ?: [];
+            try {
+                $st = $pdo->prepare("SELECT setting_value FROM settings WHERE tenant_id = ? AND setting_key = 'active_plugins' LIMIT 1");
+                $st->execute([$tenantId]);
+                $val = $st->fetchColumn();
+                return json_decode($val ?: '[]', true) ?: [];
+            } catch (Throwable $ex2) {
+                try {
+                    $st = $pdo->prepare("SELECT setting_value FROM settings WHERE setting_key = 'active_plugins' LIMIT 1");
+                    $st->execute();
+                    $val = $st->fetchColumn();
+                    return json_decode($val ?: '[]', true) ?: [];
+                } catch (Throwable $ex3) {
+                    return [];
+                }
+            }
         }
     }
 
