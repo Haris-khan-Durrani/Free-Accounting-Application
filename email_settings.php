@@ -33,6 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $st = $pdo->prepare("UPDATE tenants SET smtp_host = ?, smtp_port = ?, smtp_encryption = ?, smtp_username = ?, smtp_password = ?, from_email = ?, from_name = ? WHERE id = ?");
         $st->execute([$smtpHost, $smtpPort, $smtpEncryption, $smtpUsername, $encryptedPass, $fromEmail, $fromName, $tid]);
 
+        \Core\Tenant::forgetCache($tid);
+
         log_audit($pdo, 'update_smtp', 'tenants', $tid, "Updated SMTP server configuration for tenant #$tid");
         flash('success', 'Custom SMTP email settings saved successfully!');
         redirect('email_settings');
@@ -44,6 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Save transiently to test
         $st = $pdo->prepare("UPDATE tenants SET smtp_host = ?, smtp_port = ?, smtp_encryption = ?, smtp_username = ?, smtp_password = ?, from_email = ?, from_name = ? WHERE id = ?");
         $st->execute([$smtpHost, $smtpPort, $smtpEncryption, $smtpUsername, $encryptedPass, $fromEmail, $fromName, $tid]);
+
+        \Core\Tenant::forgetCache($tid);
 
         $subject = "SMTP Test Connection - " . e($activeTenant['name']);
         $htmlBody = "
