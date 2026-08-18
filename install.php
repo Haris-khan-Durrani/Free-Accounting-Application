@@ -1,6 +1,14 @@
 <?php
 session_start();
+
+if (!function_exists('e')) {
+    function e(?string $value): string {
+        return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
+    }
+}
+
 $error = '';
+
 $success = '';
 
 $configExists = file_exists(__DIR__ . '/config.php');
