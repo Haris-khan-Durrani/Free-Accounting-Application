@@ -15,9 +15,21 @@ if (\Core\SecurityThrottle::isLockedOut()) {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    $stmt = $pdo->prepare('SELECT u.*, t.require_2fa FROM users u LEFT JOIN tenants t ON t.id = u.tenant_id WHERE u.email = ? LIMIT 1');
-    $stmt->execute([$email]);
-    $u = $stmt->fetch();
+    try {
+        $stmt = $pdo->prepare('SELECT u.*, t.require_2fa FROM users u LEFT JOIN tenants t ON t.id = u.tenant_id WHERE u.email = ? LIMIT 1');
+        $stmt->execute([$email]);
+        $u = $stmt->fetch();
+    } catch (PDOException $ex) {
+        // Auto-migrate missing 2FA columns if legacy schema is present
+        try { $pdo->exec("ALTER TABLE tenants ADD COLUMN require_2fa TINYINT(1) NOT NULL DEFAULT 0"); } catch (Throwable $t) {}
+        try { $pdo->exec("ALTER TABLE users ADD COLUMN two_factor_enabled TINYINT(1) NOT NULL DEFAULT 0"); } catch (Throwable $t) {}
+        try { $pdo->exec("ALTER TABLE users ADD COLUMN otp_code VARCHAR(10) NULL"); } catch (Throwable $t) {}
+        try { $pdo->exec("ALTER TABLE users ADD COLUMN otp_expires_at DATETIME NULL"); } catch (Throwable $t) {}
+
+        $stmt = $pdo->prepare('SELECT u.*, t.require_2fa FROM users u LEFT JOIN tenants t ON t.id = u.tenant_id WHERE u.email = ? LIMIT 1');
+        $stmt->execute([$email]);
+        $u = $stmt->fetch();
+    }
 
     if ($u && password_verify($password, $u['password_hash'])) {
         \Core\SecurityThrottle::clearAttempts();

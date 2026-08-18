@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS tenants (
   code VARCHAR(60) NOT NULL UNIQUE,
   currency VARCHAR(10) NOT NULL DEFAULT 'USD',
   country_code VARCHAR(10) NOT NULL DEFAULT 'US',
+  require_2fa TINYINT(1) NOT NULL DEFAULT 0,
   status ENUM('active','suspended') NOT NULL DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
@@ -18,6 +19,9 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash VARCHAR(255) NOT NULL,
   role VARCHAR(50) NOT NULL DEFAULT 'owner',
   phone VARCHAR(60) NULL,
+  two_factor_enabled TINYINT(1) NOT NULL DEFAULT 0,
+  otp_code VARCHAR(10) NULL,
+  otp_expires_at DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_users_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
