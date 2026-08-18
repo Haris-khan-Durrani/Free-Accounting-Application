@@ -62,6 +62,8 @@ try {
 }
 
 // Auto-migrate legacy tables silently
+try { $pdo->exec("ALTER TABLE invoices ADD COLUMN paid_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER tax_amount"); } catch (Throwable $t) {}
+try { $pdo->exec("ALTER TABLE invoices MODIFY COLUMN status ENUM('draft','sent','partially_paid','paid','overdue','void','cancelled') NOT NULL DEFAULT 'draft'"); } catch (Throwable $t) {}
 try { $pdo->exec("ALTER TABLE settings ADD COLUMN tenant_id INT UNSIGNED NOT NULL DEFAULT 1"); } catch (Throwable $t) {}
 try { $pdo->exec("ALTER TABLE settings DROP PRIMARY KEY, ADD PRIMARY KEY (tenant_id, setting_key)"); } catch (Throwable $t) {}
 try { $pdo->exec("ALTER TABLE tenants ADD COLUMN require_2fa TINYINT(1) NOT NULL DEFAULT 0"); } catch (Throwable $t) {}
