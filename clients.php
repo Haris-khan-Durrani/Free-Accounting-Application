@@ -82,7 +82,7 @@ page_start('Client Directory');
 ?>
 
 <!-- Executive Header & Global Actions -->
-<div class="sm:flex sm:items-center sm:justify-between mb-8 pb-6 border-b border-slate-200/80">
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8 pb-6 border-b border-slate-200/80">
     <div>
         <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 text-3xs font-black uppercase tracking-widest mb-2">
             <i class="fa-solid fa-address-book"></i>
@@ -93,7 +93,7 @@ page_start('Client Directory');
             Manage corporate billing accounts, TRN tax registration IDs, and regional currency profiles for <strong><?=e(tenant()['name'])?></strong>.
         </p>
     </div>
-    <div class="mt-4 sm:mt-0 flex items-center space-x-3 shrink-0">
+    <div class="flex flex-wrap items-center gap-3 shrink-0">
         <a href="client_import" class="inline-flex items-center px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-md transition-all space-x-2 border border-slate-800">
             <i class="fa-solid fa-file-import text-amber-400 text-sm"></i>
             <span>Import Zoho / QB / CSV</span>
@@ -105,9 +105,9 @@ page_start('Client Directory');
     </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-    <!-- Client Form (Left Column) -->
-    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative overflow-hidden">
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
+    <!-- Client Form (Left Column on XL, Full Width on Mobile/Tablet) -->
+    <div class="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200 shadow-sm relative overflow-hidden">
         <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
             <div class="flex items-center space-x-2.5">
                 <div class="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-sm font-bold">
@@ -181,8 +181,8 @@ page_start('Client Directory');
         </form>
     </div>
 
-    <!-- Client Directory List (Right Column - 2 Spans) -->
-    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-12">
+    <!-- Client Directory List (Right Column on XL - 2 Spans) -->
+    <div class="xl:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-12 w-full">
         <!-- Table Topbar -->
         <div class="p-5 bg-slate-50/60 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div class="flex items-center space-x-2.5">
@@ -195,29 +195,29 @@ page_start('Client Directory');
             </div>
 
             <!-- Search Form -->
-            <form method="get" class="flex items-center space-x-2">
+            <form method="get" class="flex items-center space-x-2 w-full sm:w-auto">
                 <div class="relative flex-grow">
                     <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
-                    <input type="text" name="search" value="<?=e($search)?>" placeholder="Search company, contact, TRN..." class="pl-9 pr-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 w-48 sm:w-64 transition-all">
+                    <input type="text" name="search" value="<?=e($search)?>" placeholder="Search company, contact, TRN..." class="pl-9 pr-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 w-full sm:w-64 transition-all">
                 </div>
                 <?php if ($search): ?>
                     <a href="clients" class="px-3 py-2 bg-slate-200/80 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-extrabold transition-all">Clear</a>
                 <?php endif; ?>
-                <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-extrabold shadow-xs transition-all">Search</button>
+                <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-extrabold shadow-xs transition-all shrink-0">Search</button>
             </form>
         </div>
 
-        <!-- Desktop Table View -->
-        <div class="hidden sm:block overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+        <!-- Desktop & Tablet Responsive Table View -->
+        <div class="hidden md:block overflow-x-auto w-full">
+            <table class="w-full text-left border-collapse min-w-[700px]">
                 <thead>
                     <tr class="bg-slate-50 border-b border-slate-200 text-2xs font-extrabold text-slate-400 uppercase tracking-wider">
-                        <th class="px-5 py-3.5">Company Account</th>
-                        <th class="px-5 py-3.5">Contact Details</th>
-                        <th class="px-5 py-3.5">Tax / TRN ID</th>
-                        <th class="px-5 py-3.5">Currency</th>
-                        <th class="px-5 py-3.5 text-center">Invoices</th>
-                        <th class="px-5 py-3.5 text-right">Actions</th>
+                        <th class="px-5 py-3.5 whitespace-nowrap min-w-[200px]">Company Account</th>
+                        <th class="px-5 py-3.5 whitespace-nowrap min-w-[160px]">Contact Details</th>
+                        <th class="px-5 py-3.5 whitespace-nowrap min-w-[130px]">TRN / Tax ID</th>
+                        <th class="px-5 py-3.5 whitespace-nowrap min-w-[90px]">Currency</th>
+                        <th class="px-5 py-3.5 whitespace-nowrap text-center min-w-[90px]">Invoices</th>
+                        <th class="px-5 py-3.5 whitespace-nowrap text-right min-w-[170px]">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 text-sm">
@@ -236,14 +236,14 @@ page_start('Client Directory');
                         ?>
                         <tr class="hover:bg-slate-50/80 transition-all">
                             <!-- Company -->
-                            <td class="px-5 py-4">
+                            <td class="px-5 py-4 whitespace-nowrap">
                                 <div class="flex items-center space-x-3">
                                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 text-amber-400 flex items-center justify-center font-black text-xs shrink-0 shadow-inner border border-slate-700/50">
                                         <?=$initials?>
                                     </div>
                                     <div>
-                                        <div class="font-extrabold text-slate-900 tracking-tight"><?=e($c['company_name'])?></div>
-                                        <div class="text-2xs text-slate-400 font-medium flex items-center mt-0.5">
+                                        <div class="font-extrabold text-slate-900 tracking-tight leading-snug"><?=e($c['company_name'])?></div>
+                                        <div class="text-2xs text-slate-400 font-medium flex items-center mt-0.5 whitespace-nowrap">
                                             <i class="fa-solid fa-location-dot text-slate-300 mr-1"></i><?=e($c['country'] ?: 'UAE')?>
                                         </div>
                                     </div>
@@ -251,12 +251,12 @@ page_start('Client Directory');
                             </td>
 
                             <!-- Contact -->
-                            <td class="px-5 py-4 text-xs">
+                            <td class="px-5 py-4 text-xs whitespace-nowrap">
                                 <?php if ($c['contact_name']): ?>
                                     <div class="font-bold text-slate-800"><?=e($c['contact_name'])?></div>
                                 <?php endif; ?>
                                 <?php if ($c['email']): ?>
-                                    <a href="mailto:<?=e($c['email'])?>" class="text-amber-600 hover:underline font-semibold block text-2xs"><?=e($c['email'])?></a>
+                                    <a href="mailto:<?=e($c['email'])?>" class="text-amber-600 hover:underline font-semibold block text-2xs"><?=$c['email']?></a>
                                 <?php endif; ?>
                                 <?php if (!$c['contact_name'] && !$c['email']): ?>
                                     <span class="text-slate-400 italic">No contact recorded</span>
@@ -264,7 +264,7 @@ page_start('Client Directory');
                             </td>
 
                             <!-- Tax / TRN ID -->
-                            <td class="px-5 py-4 text-xs">
+                            <td class="px-5 py-4 text-xs whitespace-nowrap">
                                 <?php if ($c['tax_number']): ?>
                                     <span class="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 font-mono font-bold border border-slate-200/80 text-2xs">
                                         <?=e($c['tax_number'])?>
@@ -275,14 +275,14 @@ page_start('Client Directory');
                             </td>
 
                             <!-- Currency -->
-                            <td class="px-5 py-4">
+                            <td class="px-5 py-4 whitespace-nowrap">
                                 <span class="px-2.5 py-1 rounded-full text-2xs font-extrabold bg-blue-50 text-blue-700 border border-blue-200/80">
                                     <?=e($c['currency'] ?: 'AED')?>
                                 </span>
                             </td>
 
                             <!-- Invoices Count -->
-                            <td class="px-5 py-4 text-center">
+                            <td class="px-5 py-4 text-center whitespace-nowrap">
                                 <a href="index.php?client_id=<?=$c['id']?>" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-black bg-slate-100 hover:bg-amber-500/10 text-slate-700 hover:text-amber-700 border border-slate-200/80 hover:border-amber-500/30 transition-all">
                                     <i class="fa-solid fa-file-invoice text-amber-500 mr-1 text-3xs"></i>
                                     <span><?=e((string)$c['invoice_count'])?></span>
@@ -308,8 +308,8 @@ page_start('Client Directory');
             </table>
         </div>
 
-        <!-- Mobile Touch Cards View -->
-        <div class="sm:hidden divide-y divide-slate-100">
+        <!-- Mobile Touch Cards View (visible on < 768px screens) -->
+        <div class="md:hidden divide-y divide-slate-100">
             <?php if (empty($clients)): ?>
                 <div class="p-6 text-center text-slate-400">
                     <i class="fa-solid fa-users text-3xl mb-2 text-slate-300 block"></i>
@@ -317,20 +317,46 @@ page_start('Client Directory');
                 </div>
             <?php endif; ?>
             <?php foreach ($clients as $c): ?>
-                <div class="p-4 hover:bg-slate-50 transition-colors">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="font-black text-slate-900 text-sm"><?=e($c['company_name'])?></div>
-                        <span class="px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-blue-50 text-blue-700"><?=e($c['currency'] ?: 'AED')?></span>
+                <?php 
+                    $nameParts = explode(' ', trim($c['company_name']));
+                    $initials = strtoupper(substr($nameParts[0], 0, 1) . (isset($nameParts[1]) ? substr($nameParts[1], 0, 1) : substr($nameParts[0], 1, 1)));
+                ?>
+                <div class="p-4 hover:bg-slate-50 transition-colors space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 text-amber-400 flex items-center justify-center font-black text-xs shrink-0 shadow-inner border border-slate-700/50">
+                                <?=$initials?>
+                            </div>
+                            <div>
+                                <div class="font-extrabold text-slate-900 text-sm leading-tight"><?=e($c['company_name'])?></div>
+                                <div class="text-2xs text-slate-400 font-medium"><i class="fa-solid fa-location-dot mr-1"></i><?=e($c['country'] ?: 'UAE')?></div>
+                            </div>
+                        </div>
+                        <span class="px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-blue-50 text-blue-700 border border-blue-200"><?=e($c['currency'] ?: 'AED')?></span>
                     </div>
-                    <div class="flex justify-between items-end text-xs">
+
+                    <div class="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-100">
                         <div>
-                            <div class="text-slate-600 font-semibold"><?=e($c['contact_name'] ?: 'No Contact')?></div>
-                            <div class="text-2xs text-slate-400"><?=e($c['email'] ?: '')?></div>
+                            <span class="text-3xs uppercase font-extrabold text-slate-400 block mb-0.5">Contact</span>
+                            <div class="text-slate-700 font-semibold truncate"><?=e($c['contact_name'] ?: 'No contact')?></div>
+                            <?php if ($c['email']): ?>
+                                <div class="text-2xs text-amber-600 truncate"><?=e($c['email'])?></div>
+                            <?php endif; ?>
                         </div>
-                        <div class="flex items-center space-x-2">
-                            <a href="client_statement?client_id=<?=$c['id']?>" class="px-2.5 py-1 bg-amber-50 text-amber-700 text-2xs font-extrabold rounded-lg border border-amber-200">Statement</a>
-                            <a href="clients?edit=<?=$c['id']?>" class="px-2.5 py-1 bg-slate-100 text-slate-700 text-2xs font-extrabold rounded-lg">Edit</a>
+                        <div>
+                            <span class="text-3xs uppercase font-extrabold text-slate-400 block mb-0.5">TRN / Tax ID</span>
+                            <div class="text-2xs font-mono font-bold text-slate-800"><?=e($c['tax_number'] ?: 'N/A')?></div>
+                            <div class="text-2xs text-slate-500 mt-0.5"><i class="fa-solid fa-file-invoice text-amber-500 mr-1"></i><strong><?=e((string)$c['invoice_count'])?></strong> Invoices</div>
                         </div>
+                    </div>
+
+                    <div class="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                        <a href="client_statement?client_id=<?=$c['id']?>" class="flex-1 py-1.5 text-center text-xs font-extrabold rounded-xl bg-amber-50 text-amber-700 border border-amber-200">
+                            Statement
+                        </a>
+                        <a href="clients?edit=<?=$c['id']?>" class="flex-1 py-1.5 text-center text-xs font-extrabold rounded-xl bg-slate-100 text-slate-700 border border-slate-200">
+                            Edit Profile
+                        </a>
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -338,7 +364,7 @@ page_start('Client Directory');
 
         <!-- Pagination Controls -->
         <?php if ($totalPages > 1): ?>
-            <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-slate-600">
+            <div class="px-5 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs font-bold text-slate-600">
                 <div>
                     Showing <strong><?=min($offset + 1, $totalRecords)?></strong> to <strong><?=min($offset + $perPage, $totalRecords)?></strong> of <strong><?=$totalRecords?></strong> clients
                 </div>
@@ -351,7 +377,7 @@ page_start('Client Directory');
                     <?php endif; ?>
 
                     <?php for ($p = 1; $p <= $totalPages; $p++): ?>
-                        <a href="clients?page=<?=$p?><?=!empty($search) ? '&search=' . urlencode($search) : ''?>" class="px-3 py-1.5 rounded-lg border <?= $p === $page ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100' ?>">
+                        <a href="clients?page=<?=$p?><?=!empty($search) ? '&search=' . urlencode($search) : ''?>" class="px-3 py-1.5 rounded-lg border <?= $p === $page ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-300 hover:bg-slate-100 text-slate-700' ?>">
                             <?=$p?>
                         </a>
                     <?php endfor; ?>
