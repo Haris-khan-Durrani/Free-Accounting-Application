@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $currency = trim($_POST['currency'] ?? 'AED');
         $planId = (int)($_POST['plan_id'] ?? 2);
         $trialMonths = max(1, (int)($_POST['trial_months'] ?? 4));
+        $isUnlimited = (int)($_POST['is_unlimited'] ?? 0);
 
         if (!$name || !$code) {
             flash('error', 'Company name and workspace code are required.');
@@ -23,19 +24,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $apiKey = 'os_' . bin2hex(random_bytes(16));
-        $trialEndsAt = date('Y-m-d', strtotime("+$trialMonths months"));
+        $subStatus = ($isUnlimited === 1) ? 'lifetime' : 'trial';
+        $trialEndsAt = ($isUnlimited === 1) ? null : date('Y-m-d', strtotime("+$trialMonths months"));
 
         try {
-            $st = $pdo->prepare("INSERT INTO tenants (name, code, currency, status, plan_id, subscription_status, trial_ends_at, api_key, custom_trial_months) VALUES (?, ?, ?, 'active', ?, 'trial', ?, ?, ?)");
-            $st->execute([$name, strtolower($code), $currency, $planId, $trialEndsAt, $apiKey, $trialMonths]);
+            $st = $pdo->prepare("INSERT INTO tenants (name, code, currency, status, plan_id, subscription_status, trial_ends_at, api_key, custom_trial_months) VALUES (?, ?, ?, 'active', ?, ?, ?, ?, ?)");
+            $st->execute([$name, strtolower($code), $currency, $planId, $subStatus, $trialEndsAt, $apiKey, $trialMonths]);
             $tenantId = (int)$pdo->lastInsertId();
 
             \Core\Tenant::seedAccounts($pdo, $tenantId);
 
-            flash('success', "Tenant Workspace '$name' created successfully with a $trialMonths-month free trial.");
+            $msg = ($isUnlimited === 1) 
+                ? "Tenant Workspace '$name' created with Permanent Internal Unlimited Access." 
+                : "Tenant Workspace '$name' created with a $trialMonths-month free trial.";
+            flash('success', $msg);
         } catch (PDOException $e) {
             flash('error', 'Failed to create workspace. Workspace code must be unique.');
         }
+        redirect('tenants_admin');
+    }
+
+    if ($action === 'toggle_unlimited') {
+        $targetTenantId = (int)($_POST['tenant_id'] ?? 0);
+        $currentStatus = $_POST['current_status'] ?? '';
+        $newStatus = ($currentStatus === 'lifetime') ? 'trial' : 'lifetime';
+        $newExpiry = ($newStatus === 'trial') ? date('Y-m-d', strtotime('+4 months')) : null;
+
+        $st = $pdo->prepare("UPDATE tenants SET subscription_status = ?, trial_ends_at = ? WHERE id = ?");
+        $st->execute([$newStatus, $newExpiry, $targetTenantId]);
+
+        flash('success', ($newStatus === 'lifetime') ? "Permanent Internal Unlimited Access granted to workspace." : "Switched workspace to standard trial mode (+4 Mo).");
         redirect('tenants_admin');
     }
 
@@ -174,10 +192,26 @@ page_start('SaaS Tenant & Trial Manager (REST API)');
                         <td class="px-6 py-4 text-right space-x-1">
                             <form method="post" class="inline">
                                 <?=csrf_field()?>
+                                <input type="hidden" name="action" value="toggle_unlimited">
+                                <input type="hidden" name="tenant_id" value="<?=$t['id']?>">
+                                <input type="hidden" name="current_status" value="<?=e($t['subscription_status'])?>">
+                                <?php if ($isLifetime): ?>
+                                    <button type="submit" class="px-2.5 py-1 text-2xs font-extrabold text-purple-800 bg-purple-100 hover:bg-purple-200 rounded-lg border border-purple-300" title="Click to convert to standard trial">
+                                        <i class="fa-solid fa-infinity mr-1"></i>Unlimited (Active)
+                                    </button>
+                                <?php else: ?>
+                                    <button type="submit" class="px-2.5 py-1 text-2xs font-extrabold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200" title="Grant Permanent Internal Unlimited Access">
+                                        <i class="fa-solid fa-bolt mr-1"></i>Grant Unlimited
+                                    </button>
+                                <?php endif; ?>
+                            </form>
+
+                            <form method="post" class="inline">
+                                <?=csrf_field()?>
                                 <input type="hidden" name="action" value="extend_trial">
                                 <input type="hidden" name="tenant_id" value="<?=$t['id']?>">
                                 <input type="hidden" name="trial_months" value="4">
-                                <button type="submit" class="px-2.5 py-1 text-2xs font-extrabold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200">+4 Months Free</button>
+                                <button type="submit" class="px-2.5 py-1 text-2xs font-extrabold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200">+4 Mo Free</button>
                             </form>
                         </td>
                     </tr>
@@ -221,6 +255,17 @@ page_start('SaaS Tenant & Trial Manager (REST API)');
                     <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Free Trial Months</label>
                     <input type="number" name="trial_months" value="4" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-bold text-slate-900">
                 </div>
+            </div>
+
+            <!-- Unlimited Internal Access Checkbox -->
+            <div class="p-3.5 bg-purple-50 rounded-xl border border-purple-200">
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="checkbox" name="is_unlimited" value="1" class="w-4 h-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500">
+                    <div>
+                        <div class="text-xs font-extrabold text-purple-900">Assign Permanent Internal Unlimited Access</div>
+                        <div class="text-2xs text-purple-700">Bypasses trial expiration dates and invoice/user quotas for internal corporate use.</div>
+                    </div>
+                </label>
             </div>
 
             <div class="pt-3 flex justify-end space-x-3">

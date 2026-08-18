@@ -20,12 +20,22 @@ $stCurrentUsers = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE tenant_
 $stCurrentUsers->execute([$tid]);
 $currentUsersCount = (int)$stCurrentUsers->fetchColumn();
 
+// Fetch All Registered SaaS Tenants for Workspace Assignment
+$stAllTenants = $pdo->query("SELECT id, name, code FROM tenants ORDER BY name ASC");
+$allTenants = $stAllTenants->fetchAll();
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
     $role = $_POST['role'] ?? 'accountant';
+    $targetTenantId = (int)($_POST['target_tenant_id'] ?? $tid);
+    $accountScope = $_POST['account_scope'] ?? 'subaccount';
+
+    if ($accountScope === 'tenant_admin') {
+        $role = 'admin';
+    }
 
     if (!$isLifetime && $currentUsersCount >= $maxUsersAllowed) {
         $error = "Team user limit reached ($currentUsersCount/$maxUsersAllowed allowed on your " . ($tPlan['plan_name'] ?? 'Plan') . "). Please upgrade your subscription plan to add more team members.";
@@ -35,14 +45,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $hash = password_hash($password, PASSWORD_DEFAULT);
             $st = $pdo->prepare("INSERT INTO users (tenant_id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)");
-            $st->execute([$tid, $name, $email, $hash, $role]);
+            $st->execute([$targetTenantId, $name, $email, $hash, $role]);
             $newUserId = (int)$pdo->lastInsertId();
 
             $stUt = $pdo->prepare("INSERT INTO user_tenants (user_id, tenant_id, role) VALUES (?, ?, ?)");
-            $stUt->execute([$newUserId, $tid, $role]);
+            $stUt->execute([$newUserId, $targetTenantId, $role]);
 
-            log_audit($pdo, 'create_user', 'users', $newUserId, "Created user $email with role $role");
-            flash('success', "User account for $email created successfully!");
+            // Find tenant name for flash message
+            $assignedTenantName = $activeTenant['name'];
+            foreach ($allTenants as $at) {
+                if ($at['id'] == $targetTenantId) {
+                    $assignedTenantName = $at['name'];
+                    break;
+                }
+            }
+
+            log_audit($pdo, 'create_user', 'users', $newUserId, "Created user $email with role $role assigned to workspace $assignedTenantName");
+            flash('success', "User account for $email created successfully and assigned to '$assignedTenantName'!");
             redirect('users');
         } catch (PDOException $e) {
             $error = 'Failed to create user. Email address may already exist.';
@@ -50,8 +69,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$st = $pdo->prepare("SELECT u.*, ut.role tenant_role FROM users u JOIN user_tenants ut ON ut.user_id = u.id WHERE ut.tenant_id = ? ORDER BY u.id DESC");
-$st->execute([$tid]);
+$st = $pdo->prepare("SELECT u.*, ut.role tenant_role, t.name tenant_workspace_name, t.code tenant_workspace_code FROM users u JOIN user_tenants ut ON ut.user_id = u.id LEFT JOIN tenants t ON t.id = ut.tenant_id WHERE ut.tenant_id = ? OR ? = 1 ORDER BY u.id DESC");
+$st->execute([$tid, ($activeTenant['id'] == 1 ? 1 : 0)]);
 $users = $st->fetchAll();
 
 page_start('Team & Permissions');
@@ -97,6 +116,7 @@ page_start('Team & Permissions');
                 <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
                     <th class="px-6 py-3.5">User Name</th>
                     <th class="px-6 py-3.5">Email Address</th>
+                    <th class="px-6 py-3.5">Assigned Workspace</th>
                     <th class="px-6 py-3.5">Role</th>
                     <th class="px-6 py-3.5">Date Added</th>
                 </tr>
@@ -111,6 +131,11 @@ page_start('Team & Permissions');
                             <span><?=e($u['name'])?></span>
                         </td>
                         <td class="px-6 py-4 text-slate-600"><?=e($u['email'])?></td>
+                        <td class="px-6 py-4">
+                            <span class="px-2.5 py-1 rounded-lg text-2xs font-extrabold bg-slate-100 text-slate-800 border border-slate-200">
+                                <i class="fa-solid fa-building text-amber-500 mr-1"></i><?=e($u['tenant_workspace_name'] ?: 'Corporate HQ')?>
+                            </span>
+                        </td>
                         <td class="px-6 py-4">
                             <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800">
                                 <?=strtoupper(e($u['tenant_role'] ?: $u['role']))?>
@@ -133,7 +158,7 @@ page_start('Team & Permissions');
                     </div>
                     <div>
                         <div class="font-bold text-slate-900 text-sm"><?=e($u['name'])?></div>
-                        <div class="text-2xs text-slate-400"><?=e($u['email'])?></div>
+                        <div class="text-2xs text-slate-400"><?=e($u['email'])?> &bull; <?=e($u['tenant_workspace_name'] ?: 'Corporate HQ')?></div>
                     </div>
                 </div>
                 <span class="px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-amber-100 text-amber-800">
@@ -148,7 +173,7 @@ page_start('Team & Permissions');
 <div id="new-user-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
         <div class="flex justify-between items-center pb-4 border-b border-slate-100 mb-5">
-            <h3 class="text-lg font-bold text-slate-900">Add Team Member</h3>
+            <h3 class="text-lg font-bold text-slate-900">Add Team Member & Assign Scope</h3>
             <button onclick="document.getElementById('new-user-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-xl font-bold">×</button>
         </div>
         <form method="post" class="space-y-4">
@@ -165,6 +190,39 @@ page_start('Team & Permissions');
                 <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Password * (min 8 chars)</label>
                 <input type="password" name="password" required minlength="8" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-900">
             </div>
+
+            <!-- Company Workspace Assignment -->
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Assigned Company Workspace / Tenant *</label>
+                <select name="target_tenant_id" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-bold text-slate-900">
+                    <?php foreach ($allTenants as $at): ?>
+                        <option value="<?=$at['id']?>" <?=$at['id']==$tid?'selected':''?>><?=e($at['name'])?> (code: <?=e($at['code'])?>)</option>
+                    <?php endforeach; ?>
+                </select>
+                <p class="text-2xs text-slate-400 mt-1">Assign user access to a specific sub-account workspace or corporate headquarters.</p>
+            </div>
+
+            <!-- Scope Type Selection -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <label class="block text-xs font-bold text-slate-700 uppercase">Account Access Type</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="flex items-center space-x-2 bg-white p-2.5 rounded-lg border border-slate-200 cursor-pointer hover:border-amber-400">
+                        <input type="radio" name="account_scope" value="subaccount" checked class="text-amber-600 focus:ring-amber-500">
+                        <div>
+                            <div class="text-xs font-bold text-slate-900">Sub-Account Member</div>
+                            <div class="text-3xs text-slate-400">Scoped role permissions</div>
+                        </div>
+                    </label>
+                    <label class="flex items-center space-x-2 bg-white p-2.5 rounded-lg border border-slate-200 cursor-pointer hover:border-purple-400">
+                        <input type="radio" name="account_scope" value="tenant_admin" class="text-purple-600 focus:ring-purple-500">
+                        <div>
+                            <div class="text-xs font-bold text-slate-900">Tenant Workspace Admin</div>
+                            <div class="text-3xs text-slate-400">Full tenant administration</div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
             <div>
                 <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Permission Role *</label>
                 <select name="role" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-bold text-slate-900">
