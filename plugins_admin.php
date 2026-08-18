@@ -78,9 +78,81 @@ page_start('Plug & Play Modular Plugins');
     </div>
 
     <div class="mt-4 sm:mt-0 flex items-center space-x-3">
+        <button onclick="document.getElementById('devGuidePanel').classList.toggle('hidden')" class="inline-flex items-center px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-md transition-all">
+            <i class="fa-solid fa-book-open mr-1.5 text-amber-400"></i>Plugin Developer Guide
+        </button>
         <a href="plugins_admin?action=create_sample" class="inline-flex items-center px-4 py-2.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 font-extrabold text-xs rounded-xl shadow-xs transition-all">
             <i class="fa-solid fa-code mr-1.5 text-purple-600"></i>Generate Starter Sample Plugin
         </a>
+    </div>
+</div>
+
+<!-- Expandable Plugin Developer Guide -->
+<div id="devGuidePanel" class="hidden mb-8 bg-slate-950 text-white rounded-2xl p-6 shadow-2xl border border-slate-800">
+    <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+        <div class="flex items-center space-x-2.5">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-black">
+                <i class="fa-solid fa-book-bookmark"></i>
+            </div>
+            <div>
+                <h2 class="text-base font-extrabold text-white">Modular Plugin Development Specification</h2>
+                <p class="text-xs text-slate-400">Guide for developers building custom .zip plugins and schema extensions.</p>
+            </div>
+        </div>
+        <button onclick="document.getElementById('devGuidePanel').classList.add('hidden')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-300">
+        <div class="space-y-3">
+            <h3 class="font-extrabold text-amber-400 text-sm uppercase tracking-wider">1. Directory & Manifest (`plugin.json`)</h3>
+            <p>Every plugin zip archive must contain a root directory with <code>plugin.json</code> and <code>plugin.php</code>:</p>
+            <pre class="bg-slate-900 p-3 rounded-xl border border-slate-800 text-3xs font-mono text-amber-300 overflow-x-auto">{
+  "name": "Custom Royalties & Fee",
+  "slug": "custom_royalties_fee",
+  "version": "1.0.0",
+  "author": "Partner SDK",
+  "description": "Calculates percentage royalty fees on invoice creation.",
+  "main": "plugin.php"
+}</pre>
+
+            <h3 class="font-extrabold text-amber-400 text-sm uppercase tracking-wider mt-4">2. Available System Hooks</h3>
+            <ul class="list-disc list-inside space-y-1 font-mono text-3xs text-slate-300">
+                <li><b class="text-purple-400">management_menu_items</b> (Action): Injects topbar links.</li>
+                <li><b class="text-purple-400">invoice_before_save</b> (Filter): Alters subtotal, discount, or tax.</li>
+                <li><b class="text-purple-400">invoice_after_save</b> (Action): Triggers webhooks after invoice save.</li>
+                <li><b class="text-purple-400">payment_gateways_register</b> (Filter): Registers custom payment gateways.</li>
+                <li><b class="text-purple-400">dashboard_widgets_top</b> (Action): Adds analytics cards to dashboard.</li>
+            </ul>
+        </div>
+
+        <div class="space-y-3">
+            <h3 class="font-extrabold text-cyan-400 text-sm uppercase tracking-wider">3. Database & Multi-Tenant Rules</h3>
+            <ul class="list-disc list-inside space-y-1 text-2xs text-slate-300">
+                <li><b class="text-white">Table Prefixing:</b> Custom plugin tables MUST use prefix <code>plugin_{slug}_...</code> (e.g. <code>plugin_royalties_log</code>).</li>
+                <li><b class="text-white">Tenant Scoping:</b> All queries MUST filter by <code>tenant_id = tenant_id()</code> to guarantee multi-tenant data isolation.</li>
+                <li><b class="text-white">Core Mutation Block:</b> Plugins cannot run <code>DROP TABLE</code> or <code>TRUNCATE</code> on core tables (<code>invoices</code>, <code>clients</code>, <code>users</code>).</li>
+            </ul>
+
+            <h3 class="font-extrabold text-cyan-400 text-sm uppercase tracking-wider mt-4">4. Sample Plugin Hook Code</h3>
+            <pre class="bg-slate-900 p-3 rounded-xl border border-slate-800 text-3xs font-mono text-emerald-300 overflow-x-auto">&lt;?php
+use Services\PluginEngine;
+
+PluginEngine::add_action('management_menu_items', function() {
+    echo '&lt;a href="#" class="font-bold text-xs"&gt;Custom Plugin&lt;/a&gt;';
+});
+
+PluginEngine::add_filter('invoice_before_save', function($invoice) {
+    if ($invoice['subtotal'] > 10000) {
+        $invoice['discount_value'] = 5.0; // 5% discount
+    }
+    return $invoice;
+});</pre>
+        </div>
+    </div>
+
+    <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-2xs text-slate-400">
+        <span>Detailed Guide: See <code>PLUGIN_DEVELOPMENT_GUIDE.md</code> in root codebase directory.</span>
+        <a href="plugins_admin?action=create_sample" class="text-amber-400 hover:underline font-bold">Generate Working Starter Sample Plugin →</a>
     </div>
 </div>
 
