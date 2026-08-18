@@ -45,7 +45,7 @@ page_start('Accounts Receivable Aging Report');
         <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Accounts Receivable (A/R) Aging Report</h1>
         <p class="mt-1 text-sm text-slate-500">Uncollected client balances categorized by overdue age for <strong><?=e(tenant()['name'])?></strong>.</p>
     </div>
-    <div class="mt-4 md:mt-0 flex space-x-3">
+    <div class="mt-4 md:mt-0 flex space-x-3 no-print">
         <a href="export_report?type=aging" class="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-50">
             <i class="fa-solid fa-file-csv mr-2 text-emerald-600"></i>Export CSV
         </a>

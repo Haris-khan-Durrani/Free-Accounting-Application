@@ -25,19 +25,20 @@ $templateId = $_GET['template'] ?? ($inv['template_id'] ?: $brand['default_invoi
     <title><?=e($inv['invoice_number'])?> - <?=e($brand['company_name'])?></title>
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
-        body { background: #f8fafc; margin: 0; padding: 20px; }
+        @page { size: A4 portrait; margin: 10mm; }
+        body { background: #ffffff; margin: 0; padding: 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .print-page-wrapper { max-width: 900px; margin: 0 auto; }
         .print-actions-bar { text-align: right; margin-bottom: 20px; }
         @media print {
-            body { background: #fff; padding: 0; }
-            .print-actions-bar { display: none !important; }
-            .print-page-wrapper { max-width: none; margin: 0; }
+            body { background: #fff; padding: 0; margin: 0; }
+            .print-actions-bar, .no-print { display: none !important; }
+            .print-page-wrapper { max-width: none; margin: 0; width: 100%; }
         }
     </style>
 </head>
-<body>
+<body onload="window.print()">
 <div class="print-page-wrapper">
-    <div class="print-actions-bar">
+    <div class="print-actions-bar no-print">
         <button class="btn btn-gold btn-large" onclick="window.print()">🖨️ Print / Save as PDF</button>
     </div>
     <?=\Services\InvoiceRenderer::render($inv, $items, $brand, $templateId)?>

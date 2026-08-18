@@ -29,24 +29,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         redirect('invoice_view?id=' . $invId);
     }
 
-    // Insert Payment Record
-    $stPay = $pdo->prepare("INSERT INTO payments (tenant_id, invoice_id, amount, payment_date, payment_method, notes) VALUES (?, ?, ?, ?, ?, ?)");
-    $stPay->execute([$tid, $invId, $amount, $payDate, $payMethod, $notes]);
+    try {
+        $pdo->beginTransaction();
 
-    // Calculate New Cumulative Paid Total
-    $stSum = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ?");
-    $stSum->execute([$invId]);
-    $totalPaid = (float)$stSum->fetchColumn();
+        // Insert Payment Record into Ledger
+        $stPay = $pdo->prepare("INSERT INTO payments (tenant_id, invoice_id, amount, currency, payment_date, payment_method, notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stPay->execute([$tid, $invId, $amount, $inv['currency'], $payDate, $payMethod, $notes, $_SESSION['user_id'] ?? null]);
+        $paymentId = (int)$pdo->lastInsertId();
 
-    $invoiceTotal = (float)$inv['total'];
-    $newStatus = ($totalPaid >= $invoiceTotal) ? 'paid' : 'partially_paid';
+        // Calculate New Cumulative Paid Total
+        $stSum = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ?");
+        $stSum->execute([$invId]);
+        $totalPaid = (float)$stSum->fetchColumn();
 
-    // Update Invoice Status & Paid Amount
-    $stUpd = $pdo->prepare("UPDATE invoices SET status = ?, paid_amount = ? WHERE id = ? AND tenant_id = ?");
-    $stUpd->execute([$newStatus, $totalPaid, $invId, $tid]);
+        $invoiceTotal = (float)$inv['total'];
+        $newStatus = ($totalPaid >= $invoiceTotal - 0.01) ? 'paid' : 'partially_paid';
 
-    // Record Ledger Journal Entry
-    \Services\AccountingService::postInvoicePayment($pdo, $tid, $invId, $amount, $payMethod);
+        // Update Invoice Status & Paid Amount
+        $stUpd = $pdo->prepare("UPDATE invoices SET status = ?, paid_amount = ? WHERE id = ? AND tenant_id = ?");
+        $stUpd->execute([$newStatus, $totalPaid, $invId, $tid]);
+
+        // Record Ledger Journal Entry atomically for this payment
+        $acct = new \Services\AccountingService($pdo, $tid);
+        $acct->postPaymentReceived($paymentId);
+
+        $pdo->commit();
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        flash('error', 'Payment recording failed: ' . $e->getMessage());
+        redirect('invoice_view?id=' . $invId);
+    }
 
     // Trigger n8n Automation Engine
     \Services\AutomationService::trigger($pdo, $tid, 'invoice_paid', [

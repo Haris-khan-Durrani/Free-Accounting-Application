@@ -56,7 +56,7 @@ page_start('Balance Sheet Statement');
         <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Statement of Financial Position (Balance Sheet)</h1>
         <p class="mt-1 text-sm text-slate-500">Assets, liabilities, and equity snapshot as of <strong><?=e(date('d M Y', strtotime($asOfDate)))?></strong> for <strong><?=e(tenant()['name'])?></strong>.</p>
     </div>
-    <div class="mt-4 md:mt-0 flex space-x-3">
+    <div class="mt-4 md:mt-0 flex space-x-3 no-print">
         <a href="export_report?type=balance_sheet&as_of_date=<?=urlencode($asOfDate)?>" class="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-50">
             <i class="fa-solid fa-file-csv mr-2 text-emerald-600"></i>Export CSV
         </a>
@@ -67,7 +67,7 @@ page_start('Balance Sheet Statement');
 </div>
 
 <!-- As-Of Date Filter -->
-<div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm mb-8 max-w-sm">
+<div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm mb-8 max-w-sm no-print">
     <form method="get" class="flex items-center space-x-3">
         <div class="flex-grow">
             <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Statement Date</label>

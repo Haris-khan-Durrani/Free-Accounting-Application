@@ -56,7 +56,7 @@ page_start('View Invoice ' . $invoice['invoice_number']);
     </div>
 
     <!-- Ultra-Clean Single Row Action Buttons Bar -->
-    <div class="mt-4 xl:mt-0 flex flex-wrap items-center gap-2">
+    <div class="mt-4 xl:mt-0 flex flex-wrap items-center gap-2 no-print">
         <a href="invoice_form?id=<?=$invoice['id']?>" class="inline-flex items-center px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl shadow-xs transition-all space-x-1.5">
             <i class="fa-solid fa-pen-to-square"></i>
             <span>Edit</span>

@@ -29,13 +29,13 @@ page_start('Cash Flow Statement');
         <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Statement of Cash Flows</h1>
         <p class="mt-1 text-sm text-slate-500">Overview of cash inflows and outflows for <strong><?=e(tenant()['name'])?></strong>.</p>
     </div>
-    <button onclick="window.print()" class="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-50">
+    <button onclick="window.print()" class="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-50 no-print">
         <i class="fa-solid fa-print mr-2"></i>Print Cash Flow
     </button>
 </div>
 
 <!-- Date Filter -->
-<div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm mb-8">
+<div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm mb-8 no-print">
     <form method="get" class="flex flex-wrap items-center gap-4">
         <div>
             <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Start Date</label>

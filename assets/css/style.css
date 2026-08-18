@@ -537,3 +537,112 @@ input:focus, select:focus, textarea:focus {
   max-width: 400px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
+
+/* Master Print Engine & PDF Export Rules */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  /* 1. Hide UI Navigation, Header, Actions & Forms */
+  header,
+  footer,
+  nav,
+  aside,
+  .no-print,
+  .no-print *,
+  .print-hide,
+  .print-actions-bar,
+  .page-header-bar,
+  .palette-sidebar,
+  button,
+  .btn,
+  form,
+  #mobile-app-modal,
+  .trial-banner,
+  .flash-alert,
+  input,
+  select,
+  textarea {
+    display: none !important;
+  }
+
+  /* 2. Reset Document Layout */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    font-size: 11pt !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* 3. Containers & Content Wrappers */
+  main, .container, .max-w-7xl, .max-w-5xl, .max-w-4xl, .w-full, .print-page-wrapper {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* 4. Reset Cards and Content Boxes */
+  .card, .bg-white, .bg-slate-900, .bg-slate-950, .stat-card {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    margin-bottom: 12px !important;
+    padding: 12px !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* 5. Tables */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-top: 10px !important;
+    margin-bottom: 10px !important;
+  }
+
+  th, td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 10px !important;
+    color: #000000 !important;
+    font-size: 10pt !important;
+  }
+
+  th {
+    background-color: #f1f5f9 !important;
+    font-weight: bold !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* 6. Typography & Color Adjustments */
+  h1, h2, h3, h4, h5, h6, p, span, div, strong, td, th {
+    color: #000000 !important;
+  }
+
+  .text-emerald-600, .text-emerald-500, .text-green-600 { color: #047857 !important; }
+  .text-rose-600, .text-red-600 { color: #b91c1c !important; }
+  .text-amber-600, .text-amber-500 { color: #d97706 !important; }
+
+  .badge, span.rounded-full, span.rounded-xl {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  tr, .stat-card, .card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}

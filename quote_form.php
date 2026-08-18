@@ -100,6 +100,10 @@ $stClients = $pdo->prepare("SELECT * FROM clients WHERE tenant_id = ? ORDER BY c
 $stClients->execute([$tid]);
 $clients = $stClients->fetchAll();
 
+$stCatalog = $pdo->prepare("SELECT * FROM items WHERE tenant_id = ? AND is_active = 1 ORDER BY name ASC");
+$stCatalog->execute([$tid]);
+$catalogItems = $stCatalog->fetchAll();
+
 $nextQuoteNo = $quote ? $quote['quote_number'] : quote_number($pdo);
 
 page_start($quote ? 'Edit Commercial Proposal' : 'Create Commercial Proposal');
@@ -167,17 +171,22 @@ page_start($quote ? 'Edit Commercial Proposal' : 'Create Commercial Proposal');
     <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
         <h2 class="text-lg font-bold text-slate-900 border-b border-slate-100 pb-4 mb-6 flex items-center justify-between">
             <span><i class="fa-solid fa-list-check text-blue-500 mr-2.5"></i> Deliverables & Scope Pricing</span>
-            <button type="button" onclick="addProposalRow()" class="text-xs font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-lg border border-amber-200 transition-all">
-                <i class="fa-solid fa-plus mr-1"></i>Add Row
-            </button>
+            <div class="flex items-center space-x-2">
+                <button type="button" onclick="openAddItemModal()" class="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 transition-all flex items-center gap-1.5 shadow-2xs">
+                    <i class="fa-solid fa-box-open text-xs"></i> New Catalog Item
+                </button>
+                <button type="button" onclick="addProposalRow()" class="text-xs font-bold text-amber-600 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-lg border border-amber-200 transition-all">
+                    <i class="fa-solid fa-plus mr-1"></i>Add Row
+                </button>
+            </div>
         </h2>
 
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse" id="proposal-items-table">
                 <thead>
                     <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                        <th class="px-4 py-3" style="width: 45%;">Item / Service Name</th>
-                        <th class="px-4 py-3" style="width: 25%;">Scope Details</th>
+                        <th class="px-4 py-3" style="width: 48%;">Item / Service Name</th>
+                        <th class="px-4 py-3" style="width: 22%;">Scope Details</th>
                         <th class="px-4 py-3 text-center" style="width: 10%;">Qty</th>
                         <th class="px-4 py-3 text-right" style="width: 15%;">Unit Price</th>
                         <th class="px-4 py-3 text-center" style="width: 5%;">Del</th>
@@ -186,20 +195,46 @@ page_start($quote ? 'Edit Commercial Proposal' : 'Create Commercial Proposal');
                 <tbody class="divide-y divide-slate-100 text-sm">
                     <?php if (empty($quoteItems)): ?>
                         <tr>
-                            <td class="px-4 py-3"><input type="text" name="description[]" placeholder="e.g. Software Implementation Services" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-semibold"></td>
+                            <td class="px-4 py-3">
+                                <div class="space-y-1.5">
+                                    <select onchange="handleCatalogItemChange(this)" class="catalog-item-select w-full rounded-xl border border-slate-300 bg-slate-50/90 px-3 py-1.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all">
+                                        <option value="">-- Choose Catalog Item or Type Below --</option>
+                                        <option value="__add_new_item__" class="font-bold text-emerald-600 bg-emerald-50">+ Add New Catalog Item...</option>
+                                        <?php foreach ($catalogItems as $cItem): ?>
+                                            <option value="<?=$cItem['id']?>">
+                                                <?=e(($cItem['sku'] ? '[' . $cItem['sku'] . '] ' : '') . $cItem['name'] . ' — ' . number_format((float)$cItem['unit_price'], 2))?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <input type="text" name="description[]" placeholder="Item description / name..." required class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900">
+                                </div>
+                            </td>
                             <td class="px-4 py-3"><input type="text" name="details[]" placeholder="Scope description" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs"></td>
                             <td class="px-4 py-3"><input type="number" step="0.01" name="qty[]" value="1" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-center font-bold"></td>
                             <td class="px-4 py-3"><input type="number" step="0.01" name="unit_price[]" value="0.00" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-right font-mono font-bold"></td>
-                            <td class="px-4 py-3 text-center"><button type="button" onclick="this.closest('tr').remove()" class="text-rose-500 hover:text-rose-700 font-bold">×</button></td>
+                            <td class="px-4 py-3 text-center"><button type="button" onclick="this.closest('tr').remove(); calculateProposalTotals();" class="text-rose-500 hover:text-rose-700 font-bold">×</button></td>
                         </tr>
                     <?php endif; ?>
                     <?php foreach ($quoteItems as $it): ?>
                         <tr>
-                            <td class="px-4 py-3"><input type="text" name="description[]" value="<?=e($it['description'])?>" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-semibold"></td>
+                            <td class="px-4 py-3">
+                                <div class="space-y-1.5">
+                                    <select onchange="handleCatalogItemChange(this)" class="catalog-item-select w-full rounded-xl border border-slate-300 bg-slate-50/90 px-3 py-1.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all">
+                                        <option value="">-- Choose Catalog Item or Type Below --</option>
+                                        <option value="__add_new_item__" class="font-bold text-emerald-600 bg-emerald-50">+ Add New Catalog Item...</option>
+                                        <?php foreach ($catalogItems as $cItem): ?>
+                                            <option value="<?=$cItem['id']?>">
+                                                <?=e(($cItem['sku'] ? '[' . $cItem['sku'] . '] ' : '') . $cItem['name'] . ' — ' . number_format((float)$cItem['unit_price'], 2))?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <input type="text" name="description[]" value="<?=e($it['description'])?>" required class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold">
+                                </div>
+                            </td>
                             <td class="px-4 py-3"><input type="text" name="details[]" value="<?=e($it['details'])?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs"></td>
                             <td class="px-4 py-3"><input type="number" step="0.01" name="qty[]" value="<?=e((string)(float)$it['qty'])?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-center font-bold"></td>
                             <td class="px-4 py-3"><input type="number" step="0.01" name="unit_price[]" value="<?=e((string)(float)$it['unit_price'])?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-right font-mono font-bold"></td>
-                            <td class="px-4 py-3 text-center"><button type="button" onclick="this.closest('tr').remove()" class="text-rose-500 hover:text-rose-700 font-bold">×</button></td>
+                            <td class="px-4 py-3 text-center"><button type="button" onclick="this.closest('tr').remove(); calculateProposalTotals();" class="text-rose-500 hover:text-rose-700 font-bold">×</button></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -221,32 +256,32 @@ page_start($quote ? 'Edit Commercial Proposal' : 'Create Commercial Proposal');
                 </select>
             </div>
             <div>
-                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Discount Amount / Percentage</label>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Discount Value</label>
                 <input type="number" step="0.01" name="discount_value" value="<?=e((string)(float)($quote['discount_value'] ?? 0))?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-bold font-mono text-slate-900">
             </div>
             <div class="md:col-span-3">
-                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Commercial Terms & Notes</label>
-                <textarea name="notes" rows="3" placeholder="Enter terms, scope notes, or delivery timeline..." class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-900"><?=e($quote['notes'] ?? '')?></textarea>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Proposal Notes & Payment Terms</label>
+                <textarea name="notes" rows="3" placeholder="Proposal terms, delivery timeline..." class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-semibold"><?=e($quote['notes'] ?? '')?></textarea>
             </div>
         </div>
     </div>
 
     <!-- Live Summary Card -->
-    <div class="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl p-6 shadow-xl border border-slate-700/80">
+    <div class="bg-gradient-to-r from-slate-900 to-slate-800 text-white rounded-2xl p-6 shadow-xl border border-slate-700">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div>
                 <h3 class="text-base font-extrabold text-white flex items-center space-x-2">
-                    <i class="fa-solid fa-coins text-amber-400"></i>
-                    <span>Real-Time Proposal Summary</span>
+                    <i class="fa-solid fa-calculator text-amber-400"></i>
+                    <span>Proposal Total Calculation</span>
                 </h3>
-                <p class="text-2xs text-slate-400 mt-1">Calculated automatically as line items and discounts are entered.</p>
+                <p class="text-2xs text-slate-400 mt-1">Updates live as items and scope pricing are edited.</p>
             </div>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-right">
-                <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700/80">
+            <div class="grid grid-cols-3 gap-4 text-right">
+                <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
                     <span class="text-3xs uppercase font-extrabold text-slate-400 block tracking-wider mb-1">Subtotal</span>
                     <span id="live_subtotal" class="text-sm font-mono font-bold text-slate-200">0.00 AED</span>
                 </div>
-                <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700/80">
+                <div class="bg-slate-800/80 p-3 rounded-xl border border-slate-700">
                     <span class="text-3xs uppercase font-extrabold text-slate-400 block tracking-wider mb-1">Discount</span>
                     <span id="live_discount" class="text-sm font-mono font-bold text-amber-400">0.00 AED</span>
                 </div>
@@ -258,22 +293,65 @@ page_start($quote ? 'Edit Commercial Proposal' : 'Create Commercial Proposal');
         </div>
     </div>
 
-    <!-- Submit Action -->
+    <!-- Actions -->
     <div class="flex items-center justify-end space-x-4">
         <a href="quotes.php" class="px-6 py-3 border border-slate-300 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all">Cancel</a>
         <button type="submit" class="inline-flex items-center px-8 py-3 border border-transparent text-base font-extrabold rounded-xl text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-md transition-all">
-            <i class="fa-solid fa-floppy-disk mr-2"></i><?=$quote ? 'Update Commercial Proposal' : 'Save Commercial Proposal'?>
+            <i class="fa-solid fa-floppy-disk mr-2"></i><?=$quote ? 'Update Proposal' : 'Save & Issue Proposal'?>
         </button>
     </div>
 </form>
 
 <script>
+let catalogItems = <?=json_encode($catalogItems)?>;
+
+function handleCatalogItemChange(select) {
+    const val = select.value;
+    if (val === '__add_new_item__') {
+        select.value = '';
+        openAddItemModal(select);
+        return;
+    }
+    if (!val) return;
+    const item = catalogItems.find(i => String(i.id) === String(val));
+    if (!item) return;
+
+    const row = select.closest('tr');
+    if (!row) return;
+
+    const descInput = row.querySelector('input[name="description[]"]');
+    const detailsInput = row.querySelector('input[name="details[]"]');
+    const priceInput = row.querySelector('input[name="unit_price[]"]');
+
+    if (descInput) descInput.value = item.name;
+    if (detailsInput) detailsInput.value = item.description || '';
+    if (priceInput) priceInput.value = parseFloat(item.unit_price).toFixed(2);
+
+    calculateProposalTotals();
+}
+
 function addProposalRow() {
     const tbody = document.querySelector('#proposal-items-table tbody');
     const tr = document.createElement('tr');
     tr.className = 'hover:bg-slate-50/50 transition-colors';
+
+    let catalogOptionsHtml = `<option value="">-- Choose Catalog Item or Type Below --</option>
+        <option value="__add_new_item__" class="font-bold text-emerald-600 bg-emerald-50">+ Add New Catalog Item...</option>`;
+    
+    catalogItems.forEach(item => {
+        const skuStr = item.sku ? `[${item.sku}] ` : '';
+        catalogOptionsHtml += `<option value="${item.id}">${skuStr}${item.name} — ${parseFloat(item.unit_price).toFixed(2)}</option>`;
+    });
+
     tr.innerHTML = `
-        <td class="px-4 py-3"><input type="text" name="description[]" placeholder="Item description..." required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"></td>
+        <td class="px-4 py-3">
+            <div class="space-y-1.5">
+                <select onchange="handleCatalogItemChange(this)" class="catalog-item-select w-full rounded-xl border border-slate-300 bg-slate-50/90 px-3 py-1.5 text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all">
+                    ${catalogOptionsHtml}
+                </select>
+                <input type="text" name="description[]" placeholder="Item description..." required class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all">
+            </div>
+        </td>
         <td class="px-4 py-3"><input type="text" name="details[]" placeholder="Scope details..." class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"></td>
         <td class="px-4 py-3"><input type="number" step="0.01" name="qty[]" value="1" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-center font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"></td>
         <td class="px-4 py-3"><input type="number" step="0.01" name="unit_price[]" value="0.00" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-right font-mono font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"></td>
@@ -330,5 +408,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <?php
 require __DIR__ . '/add_client_modal.php';
+require __DIR__ . '/add_item_modal.php';
 page_end();
 ?>

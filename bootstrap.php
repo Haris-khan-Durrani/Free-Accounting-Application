@@ -1,5 +1,14 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.cookie_samesite', 'Lax');
+    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+        ini_set('session.cookie_secure', '1');
+    }
+    session_start();
+}
 
 // Autoload Core namespace classes
 spl_autoload_register(function ($class) {
@@ -64,6 +73,15 @@ function money(float $value, string $currencyCode = 'AED', ?PDO $pdoInstance = n
 
 function tenant(): array {
     global $pdo;
+    if (!\Core\Tenant::hasActiveId()) {
+        return [
+            'id' => 1,
+            'name' => 'OneSol Headquarters',
+            'code' => 'onesol-hq',
+            'currency' => 'AED',
+            'country_code' => 'AE'
+        ];
+    }
     return \Core\Tenant::getActive($pdo);
 }
 
@@ -71,9 +89,9 @@ function tenant_id(): int {
     return \Core\Tenant::getActiveId();
 }
 
-function branding(): array {
+function branding(?int $tenantId = null): array {
     global $pdo;
-    return \Core\Branding::get($pdo);
+    return \Core\Branding::get($pdo, $tenantId);
 }
 
 function redirect(string $url): never { 
@@ -158,5 +176,11 @@ function log_audit(PDO $pdo, string $action, string $entityType, ?int $entityId 
 }
 
 // Initialize Modular Plugin Engine for Active Tenant
-\Services\PluginEngine::init($pdo);
+if (\Core\Tenant::hasActiveId()) {
+    try {
+        \Services\PluginEngine::init($pdo);
+    } catch (\Core\TenantContextException $e) {
+        // Unauthenticated bootstrap fallback
+    }
+}
 

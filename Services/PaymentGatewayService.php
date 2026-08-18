@@ -102,4 +102,47 @@ class PaymentGatewayService {
             return false;
         }
     }
+
+    /**
+     * Cryptographically verify Stripe Webhook Signature (v1 scheme HMAC-SHA256)
+     */
+    public static function verifyStripeSignature(string $payload, string $sigHeader, string $secret, int $tolerance = 300): bool {
+        if (empty($sigHeader) || empty($secret)) {
+            return false;
+        }
+
+        $timestamp = null;
+        $signatures = [];
+
+        $items = explode(',', $sigHeader);
+        foreach ($items as $item) {
+            $pair = explode('=', trim($item), 2);
+            if (count($pair) === 2) {
+                if ($pair[0] === 't') {
+                    $timestamp = (int)$pair[1];
+                } elseif ($pair[0] === 'v1') {
+                    $signatures[] = $pair[1];
+                }
+            }
+        }
+
+        if (!$timestamp || empty($signatures)) {
+            return false;
+        }
+
+        if ($tolerance > 0 && abs(time() - $timestamp) > $tolerance) {
+            return false;
+        }
+
+        $signedPayload = $timestamp . '.' . $payload;
+        $expectedSignature = hash_hmac('sha256', $signedPayload, $secret);
+
+        foreach ($signatures as $sig) {
+            if (hash_equals($expectedSignature, $sig)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

@@ -40,24 +40,27 @@ $stCheck->execute([$invId, "%Stripe Session: $sessionId%"]);
 $existingPayId = $stCheck->fetchColumn();
 
 if (!$existingPayId && $payAmount > 0) {
-    // 1. Insert Payment Record
+    // 1. Insert Payment Record into Ledger
     $notes = "Stripe Online Payment (Ref: " . ($sessionId ?: 'Stripe Checkout') . ")";
     $stPay = $pdo->prepare("
-        INSERT INTO payments (tenant_id, invoice_id, amount, payment_date, payment_method, notes)
-        VALUES (?, ?, ?, ?, 'stripe', ?)
+        INSERT INTO payments (tenant_id, invoice_id, amount, currency, payment_date, payment_method, gateway, gateway_transaction_id, notes)
+        VALUES (?, ?, ?, ?, ?, 'stripe', 'stripe', ?, ?)
     ");
-    $stPay->execute([$tid, $invId, $payAmount, $today, $notes]);
+    $stPay->execute([$tid, $invId, $payAmount, $inv['currency'], $today, $sessionId, $notes]);
     $paymentId = (int)$pdo->lastInsertId();
 
     // 2. Update Invoice Paid Amount & Status
-    $newPaid = (float)$inv['paid_amount'] + $payAmount;
+    $stSum = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ?");
+    $stSum->execute([$invId]);
+    $newPaid = (float)$stSum->fetchColumn();
     $newStatus = ($newPaid >= (float)$inv['total'] - 0.01) ? 'paid' : 'partially_paid';
 
     $stUpd = $pdo->prepare("UPDATE invoices SET paid_amount = ?, status = ? WHERE id = ?");
     $stUpd->execute([$newPaid, $newStatus, $invId]);
 
     // 3. Post Double-Entry General Ledger Accounting Entry
-    \Services\AccountingService::postPaymentReceived($pdo, $tid, $invId, $payAmount);
+    $acct = new \Services\AccountingService($pdo, $tid);
+    $acct->postPaymentReceived($paymentId);
 
     // 4. Send Confirmation Email Receipt
     if (!empty($inv['client_email'])) {

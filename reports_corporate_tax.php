@@ -41,7 +41,7 @@ page_start('UAE Corporate Tax Estimator');
         </div>
         <p class="mt-1 text-sm text-slate-500">Track your AED 375,000 Small Business Relief (SBR) threshold & estimated 9% Corporate Tax for <strong><?=e(tenant()['name'])?></strong>.</p>
     </div>
-    <div class="mt-4 md:mt-0 flex space-x-3">
+    <div class="mt-4 md:mt-0 flex space-x-3 no-print">
         <button onclick="window.print()" class="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-50">
             <i class="fa-solid fa-print mr-2"></i>Print Tax Assessment
         </button>
@@ -49,7 +49,7 @@ page_start('UAE Corporate Tax Estimator');
 </div>
 
 <!-- Year Filter -->
-<div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm mb-8 max-w-xs">
+<div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm mb-8 max-w-xs no-print">
     <form method="get" class="flex items-center space-x-3">
         <div class="flex-grow">
             <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Corporate Tax Year</label>

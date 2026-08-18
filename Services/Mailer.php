@@ -21,7 +21,7 @@ class Mailer {
         $smtpPort = (int)($tenant['smtp_port'] ?? 587);
         $smtpEnc = strtolower(trim($tenant['smtp_encryption'] ?? 'tls'));
         $smtpUser = trim($tenant['smtp_username'] ?? '');
-        $smtpPass = $tenant['smtp_password'] ?? '';
+        $smtpPass = \Core\Crypto::decrypt($tenant['smtp_password'] ?? '');
 
         // If custom SMTP is configured, use Socket SMTP connection
         if ($smtpHost && $smtpUser) {

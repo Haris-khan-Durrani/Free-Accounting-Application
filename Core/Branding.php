@@ -7,7 +7,7 @@ class Branding {
     private static array $cache = [];
 
     public static function get(PDO $pdo, ?int $tenantId = null): array {
-        $tid = $tenantId ?? Tenant::getActiveId();
+        $tid = $tenantId ?? (Tenant::hasActiveId() ? Tenant::getActiveId() : 1);
 
         return Cache::remember('branding_settings', 900, function() use ($pdo, $tid) {
             $st = $pdo->prepare("SELECT * FROM branding_settings WHERE tenant_id = ?");
@@ -53,7 +53,7 @@ class Branding {
     }
 
     public static function forgetCache(?int $tenantId = null): void {
-        $tid = $tenantId ?? Tenant::getActiveId();
+        $tid = $tenantId ?? (Tenant::hasActiveId() ? Tenant::getActiveId() : 1);
         Cache::forget('branding_settings', $tid);
     }
 }

@@ -46,13 +46,15 @@ $da = round(calc_discount($subtotal, $type, $dv), 2);
 $netSubtotal = max(0, $subtotal - $da);
 
 // Calculate Tax / VAT
-$taxPercent = 0.0;
-if ($taxRateId > 0) {
+$taxAmount = max(0, round((float)($_POST['tax_amount'] ?? 0), 2));
+
+// If tax_amount was 0 but a specific tax_rate_id was selected
+if ($taxAmount == 0 && $taxRateId > 0) {
     $stT = $pdo->prepare("SELECT rate_percent FROM tax_rates WHERE id = ? AND tenant_id = ?");
     $stT->execute([$taxRateId, $tid]);
     $taxPercent = (float)($stT->fetchColumn() ?: 0);
+    $taxAmount = round($netSubtotal * ($taxPercent / 100), 2);
 }
-$taxAmount = round($netSubtotal * ($taxPercent / 100), 2);
 $total = round($netSubtotal + $taxAmount, 2);
 $notes = trim($_POST['notes'] ?? '');
 

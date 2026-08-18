@@ -32,6 +32,7 @@ function page_start(string $title): void {
         }
     </script>';
     echo '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">';
+    echo '<link rel="stylesheet" href="assets/css/style.css">';
     echo '<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>';
     
     echo '</head><body class="h-full font-sans antialiased text-slate-900 bg-slate-100 flex flex-col min-h-screen pb-20 lg:pb-0">';
@@ -39,13 +40,13 @@ function page_start(string $title): void {
     // Trial Status Banner Bar
     if (!empty($_SESSION['user_id'])) {
         if ($isTrialExpired) {
-            echo '<div class="bg-gradient-to-r from-rose-600 to-rose-700 text-white px-4 py-2 text-xs font-bold text-center shadow-md flex items-center justify-center space-x-2 z-50 sticky top-0">';
+            echo '<div class="no-print bg-gradient-to-r from-rose-600 to-rose-700 text-white px-4 py-2 text-xs font-bold text-center shadow-md flex items-center justify-center space-x-2 z-50 sticky top-0">';
             echo '<i class="fa-solid fa-triangle-exclamation text-amber-300 text-sm"></i>';
             echo '<span>Your Free Trial for <strong>' . e($activeTenant['name']) . '</strong> has expired. Upgrade your subscription plan to continue full invoicing features.</span>';
             echo '<a href="billing" class="ml-2 bg-white text-rose-700 px-3 py-0.5 rounded-full text-2xs font-extrabold hover:bg-rose-50 shadow-xs">Upgrade Plan →</a>';
             echo '</div>';
         } elseif ($isTrialActive && $daysLeftInTrial <= 30) {
-            echo '<div class="bg-gradient-to-r from-amber-600 to-amber-700 text-white px-4 py-1.5 text-2xs sm:text-xs font-bold text-center shadow-xs flex items-center justify-center space-x-2 z-50 sticky top-0">';
+            echo '<div class="no-print bg-gradient-to-r from-amber-600 to-amber-700 text-white px-4 py-1.5 text-2xs sm:text-xs font-bold text-center shadow-xs flex items-center justify-center space-x-2 z-50 sticky top-0">';
             echo '<i class="fa-solid fa-clock text-amber-200"></i>';
             echo '<span>Free Trial Active: <strong>' . $daysLeftInTrial . ' Days Remaining</strong> (Expires on ' . date('d M Y', strtotime($trialEnds)) . ').</span>';
             echo '<a href="billing" class="ml-2 underline hover:text-amber-200">View SaaS Plans</a>';
@@ -57,7 +58,7 @@ function page_start(string $title): void {
         ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30 font-black' 
         : 'text-slate-300 hover:text-white hover:bg-slate-800/70 font-semibold';
 
-    echo '<header class="bg-slate-950/95 backdrop-blur-xl text-white sticky top-0 z-40 border-b border-slate-800/80 shadow-2xl">';
+    echo '<header class="no-print bg-slate-950/95 backdrop-blur-xl text-white sticky top-0 z-40 border-b border-slate-800/80 shadow-2xl">';
     echo '<div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">';
     
     // Left: Brand Logo & Workspace Switcher
@@ -329,7 +330,7 @@ function page_start(string $title): void {
     if ($flash) {
         $bgColor = $flash['type'] === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800';
         $icon = $flash['type'] === 'error' ? 'fa-triangle-exclamation text-rose-500' : 'fa-circle-check text-emerald-500';
-        echo '<div class="' . $bgColor . ' border rounded-xl p-4 mb-6 flex items-center shadow-sm">';
+        echo '<div class="no-print ' . $bgColor . ' border rounded-xl p-4 mb-6 flex items-center shadow-sm">';
         echo '<i class="fa-solid ' . $icon . ' text-xl mr-3"></i>';
         echo '<span class="font-medium text-sm">' . e($flash['message']) . '</span>';
         echo '</div>';
@@ -338,7 +339,7 @@ function page_start(string $title): void {
 
 function page_end(): void { 
     echo '</main>';
-    echo '<footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500 mt-auto hidden lg:block">';
+    echo '<footer class="no-print bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-500 mt-auto hidden lg:block">';
     echo '<div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">';
     echo '<div>&copy; ' . date('Y') . ' <strong>' . e(branding()['company_name']) . '</strong>. Enterprise Multi-Tenant Accounting Suite.</div>';
     echo '<div class="flex space-x-4"><a href="guide" class="hover:underline">User Guide</a><a href="public_invoice" class="hover:underline">Client Portal</a><a href="email_settings" class="hover:underline">Custom SMTP</a><a href="security" class="hover:underline">2FA Security</a></div>';

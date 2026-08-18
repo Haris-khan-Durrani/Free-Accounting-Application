@@ -56,6 +56,8 @@ if (\Core\SecurityThrottle::isLockedOut()) {
         $_SESSION['user_id'] = $u['id'];
         $_SESSION['user_name'] = $u['name'];
         $_SESSION['user_role'] = $u['role'] ?? 'owner';
+        $_SESSION['active_tenant_id'] = $tenantId;
+        $_SESSION['user_tenant_id'] = $tenantId;
         $_SESSION['tenant_id'] = $tenantId;
 
         log_audit($pdo, 'login', 'users', $u['id'], "User {$u['email']} logged in successfully");

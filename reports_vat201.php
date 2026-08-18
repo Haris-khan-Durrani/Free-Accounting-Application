@@ -86,7 +86,7 @@ page_start('UAE FTA VAT 201 Return');
         </div>
         <p class="mt-1 text-sm text-slate-500">Official Federal Tax Authority (FTA) 7-Emirate VAT filing form for <strong><?=e(tenant()['name'])?></strong> (TRN: <strong><?=e(branding()['tax_number'] ?: '100000000000003')?></strong>).</p>
     </div>
-    <div class="mt-4 md:mt-0 flex space-x-3">
+    <div class="mt-4 md:mt-0 flex space-x-3 no-print">
         <a href="export_report?type=tax&start_date=<?=urlencode($startDate)?>&end_date=<?=urlencode($endDate)?>" class="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-50">
             <i class="fa-solid fa-file-csv mr-2 text-emerald-600"></i>Export CSV
         </a>
@@ -97,7 +97,7 @@ page_start('UAE FTA VAT 201 Return');
 </div>
 
 <!-- Date Filter -->
-<div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm mb-8">
+<div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm mb-8 no-print">
     <form method="get" class="flex flex-wrap items-center gap-4">
         <div>
             <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Tax Period Start</label>

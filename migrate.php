@@ -124,7 +124,47 @@ function run_migrations(PDO $pdo): string {
         INDEX idx_status (status)
     ) ENGINE=InnoDB");
 
-    $output[] = "Database schema updated successfully with Scoped API Keys & Recurring Invoices tables.";
+    // Webhook Events Idempotency Table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS webhook_events (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        provider VARCHAR(50) NOT NULL DEFAULT 'stripe',
+        external_event_id VARCHAR(255) NOT NULL,
+        event_type VARCHAR(100) NOT NULL,
+        tenant_id INT UNSIGNED NULL,
+        payload_hash VARCHAR(64) NULL,
+        status ENUM('pending', 'processed', 'failed') NOT NULL DEFAULT 'pending',
+        processed_at DATETIME NULL,
+        error TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_provider_event (provider, external_event_id),
+        INDEX idx_tenant (tenant_id)
+    ) ENGINE=InnoDB");
+
+    // Product & Service Catalog Table
+    $pdo->exec("CREATE TABLE IF NOT EXISTS items (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        tenant_id INT UNSIGNED NOT NULL,
+        name VARCHAR(190) NOT NULL,
+        sku VARCHAR(60) NULL,
+        type ENUM('product','service') NOT NULL DEFAULT 'service',
+        description TEXT NULL,
+        unit_price DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+        unit VARCHAR(30) NOT NULL DEFAULT 'unit',
+        tax_rate_id INT UNSIGNED NULL,
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_tenant (tenant_id)
+    ) ENGINE=InnoDB");
+
+    // Payments Ledger Column Enhancements
+    ensure_column($pdo, 'payments', 'currency', "VARCHAR(10) NOT NULL DEFAULT 'AED' AFTER amount");
+    ensure_column($pdo, 'payments', 'exchange_rate', "DECIMAL(14,6) NOT NULL DEFAULT 1.000000 AFTER currency");
+    ensure_column($pdo, 'payments', 'gateway', "VARCHAR(50) NULL AFTER payment_method");
+    ensure_column($pdo, 'payments', 'gateway_transaction_id', "VARCHAR(255) NULL AFTER gateway");
+    ensure_column($pdo, 'payments', 'reference', "VARCHAR(100) NULL AFTER gateway_transaction_id");
+    ensure_column($pdo, 'payments', 'created_by', "INT UNSIGNED NULL AFTER notes");
+
+    $output[] = "Database schema updated successfully with Scoped API Keys, Recurring Invoices & Webhook Events tables.";
 
     return implode("<br>", $output);
 }

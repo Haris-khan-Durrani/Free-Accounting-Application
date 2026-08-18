@@ -31,7 +31,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_name'] = $user['name'];
             $_SESSION['user_role'] = $user['role'] ?? 'owner';
-            $_SESSION['tenant_id'] = $user['tenant_id'] ?? 1;
+            $tId = (int)($user['tenant_id'] ?? 1);
+            $_SESSION['active_tenant_id'] = $tId;
+            $_SESSION['user_tenant_id'] = $tId;
+            $_SESSION['tenant_id'] = $tId;
             unset($_SESSION['2fa_pending_user_id']);
 
             log_audit($pdo, 'otp_verified', 'users', $user['id'], "User {$user['email']} completed 2FA verification");
