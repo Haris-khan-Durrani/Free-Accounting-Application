@@ -25,12 +25,7 @@ class Mailer {
 
         // If custom SMTP is configured, use Socket SMTP connection
         if ($smtpHost && $smtpUser) {
-            try {
-                return self::sendViaSmtp($smtpHost, $smtpPort, $smtpEnc, $smtpUser, $smtpPass, $fromEmail, $fromName, $toEmail, $subject, $htmlBody);
-            } catch (Exception $e) {
-                error_log("Tenant #$tenantId SMTP Error: " . $e->getMessage());
-                // Fallback to PHP mail if SMTP fails
-            }
+            return self::sendViaSmtp($smtpHost, $smtpPort, $smtpEnc, $smtpUser, $smtpPass, $fromEmail, $fromName, $toEmail, $subject, $htmlBody);
         }
 
         // Native PHP mail() fallback

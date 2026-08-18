@@ -8,6 +8,13 @@ CREATE TABLE IF NOT EXISTS tenants (
   country_code VARCHAR(10) NOT NULL DEFAULT 'US',
   require_2fa TINYINT(1) NOT NULL DEFAULT 0,
   status ENUM('active','suspended') NOT NULL DEFAULT 'active',
+  smtp_host VARCHAR(255) NULL,
+  smtp_port INT NOT NULL DEFAULT 587,
+  smtp_encryption VARCHAR(10) NOT NULL DEFAULT 'tls',
+  smtp_username VARCHAR(255) NULL,
+  smtp_password TEXT NULL,
+  from_email VARCHAR(255) NULL,
+  from_name VARCHAR(255) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 

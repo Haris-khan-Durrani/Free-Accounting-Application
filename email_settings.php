@@ -22,7 +22,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fromName = trim($_POST['from_name'] ?? '');
 
     $existingPass = $activeTenant['smtp_password'] ?? '';
-    $encryptedPass = !empty($smtpPassword) ? \Core\Crypto::encrypt($smtpPassword) : $existingPass;
+    // Only encrypt if user provided a new password, otherwise keep existing stored password
+    if ($smtpPassword !== '') {
+        $encryptedPass = \Core\Crypto::encrypt($smtpPassword);
+    } else {
+        $encryptedPass = $existingPass;
+    }
 
     if ($action === 'save_smtp') {
         $st = $pdo->prepare("UPDATE tenants SET smtp_host = ?, smtp_port = ?, smtp_encryption = ?, smtp_username = ?, smtp_password = ?, from_email = ?, from_name = ? WHERE id = ?");
@@ -60,8 +65,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $testResult = ['success' => false, 'message' => "Failed to deliver test email. Check your SMTP host, credentials, or firewall settings."];
             }
-        } catch (Exception $e) {
-            $testResult = ['success' => false, 'message' => "SMTP Connection Exception: " . $e->getMessage()];
+        } catch (Throwable $e) {
+            $testResult = ['success' => false, 'message' => "SMTP Connection Exception: " . e($e->getMessage())];
         }
 
         // Refresh activeTenant array
@@ -96,7 +101,7 @@ page_start('Tenant Custom SMTP Email Settings');
             <i class="fa-solid fa-server text-amber-500 mr-2"></i>Outbound SMTP Mail Server Configuration
         </h2>
 
-        <form method="post" class="space-y-5">
+        <form method="post" class="space-y-5" autocomplete="off">
             <?=csrf_field()?>
             <input type="hidden" name="action" value="save_smtp">
 
@@ -126,7 +131,7 @@ page_start('Tenant Custom SMTP Email Settings');
                 </div>
                 <div>
                     <label class="block text-xs font-extrabold text-slate-700 uppercase mb-1.5">SMTP Password *</label>
-                    <input type="password" name="smtp_password" value="<?=e($activeTenant['smtp_password'] ?? '')?>" placeholder="••••••••••••" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-900">
+                    <input type="password" name="smtp_password" value="" placeholder="<?=!empty($activeTenant['smtp_password']) ? '•••••••• (Saved)' : 'Enter SMTP Password'?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-900">
                 </div>
             </div>
 

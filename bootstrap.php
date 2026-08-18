@@ -67,6 +67,13 @@ try { $pdo->exec("ALTER TABLE invoices MODIFY COLUMN status ENUM('draft','sent',
 try { $pdo->exec("ALTER TABLE settings ADD COLUMN tenant_id INT UNSIGNED NOT NULL DEFAULT 1"); } catch (Throwable $t) {}
 try { $pdo->exec("ALTER TABLE settings DROP PRIMARY KEY, ADD PRIMARY KEY (tenant_id, setting_key)"); } catch (Throwable $t) {}
 try { $pdo->exec("ALTER TABLE tenants ADD COLUMN require_2fa TINYINT(1) NOT NULL DEFAULT 0"); } catch (Throwable $t) {}
+try { $pdo->exec("ALTER TABLE tenants ADD COLUMN smtp_host VARCHAR(255) NULL"); } catch (Throwable $t) {}
+try { $pdo->exec("ALTER TABLE tenants ADD COLUMN smtp_port INT NOT NULL DEFAULT 587"); } catch (Throwable $t) {}
+try { $pdo->exec("ALTER TABLE tenants ADD COLUMN smtp_encryption VARCHAR(10) NOT NULL DEFAULT 'tls'"); } catch (Throwable $t) {}
+try { $pdo->exec("ALTER TABLE tenants ADD COLUMN smtp_username VARCHAR(255) NULL"); } catch (Throwable $t) {}
+try { $pdo->exec("ALTER TABLE tenants ADD COLUMN smtp_password TEXT NULL"); } catch (Throwable $t) {}
+try { $pdo->exec("ALTER TABLE tenants ADD COLUMN from_email VARCHAR(255) NULL"); } catch (Throwable $t) {}
+try { $pdo->exec("ALTER TABLE tenants ADD COLUMN from_name VARCHAR(255) NULL"); } catch (Throwable $t) {}
 try { $pdo->exec("ALTER TABLE users ADD COLUMN two_factor_enabled TINYINT(1) NOT NULL DEFAULT 0"); } catch (Throwable $t) {}
 try { $pdo->exec("ALTER TABLE users ADD COLUMN otp_code VARCHAR(10) NULL"); } catch (Throwable $t) {}
 try { $pdo->exec("ALTER TABLE users ADD COLUMN otp_expires_at DATETIME NULL"); } catch (Throwable $t) {}
