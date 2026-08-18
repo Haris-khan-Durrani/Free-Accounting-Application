@@ -95,54 +95,155 @@ page_start('Plug & Play Modular Plugins');
                 <i class="fa-solid fa-book-bookmark"></i>
             </div>
             <div>
-                <h2 class="text-base font-extrabold text-white">Modular Plugin Development Specification</h2>
-                <p class="text-xs text-slate-400">Guide for developers building custom .zip plugins and schema extensions.</p>
+                <h2 class="text-base font-extrabold text-white">Modular Plugin Development & API Specification</h2>
+                <p class="text-xs text-slate-400">Complete developer manual for extending OneSol Invoice Manager with custom plug-and-play features.</p>
             </div>
         </div>
         <button onclick="document.getElementById('devGuidePanel').classList.add('hidden')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-300">
-        <div class="space-y-3">
-            <h3 class="font-extrabold text-amber-400 text-sm uppercase tracking-wider">1. Directory & Manifest (`plugin.json`)</h3>
-            <p>Every plugin zip archive must contain a root directory with <code>plugin.json</code> and <code>plugin.php</code>:</p>
-            <pre class="bg-slate-900 p-3 rounded-xl border border-slate-800 text-3xs font-mono text-amber-300 overflow-x-auto">{
-  "name": "Custom Royalties & Fee",
-  "slug": "custom_royalties_fee",
-  "version": "1.0.0",
-  "author": "Partner SDK",
-  "description": "Calculates percentage royalty fees on invoice creation.",
-  "main": "plugin.php"
-}</pre>
+    <!-- Tab Buttons -->
+    <div class="flex space-x-2 border-b border-slate-800 pb-3 mb-6 overflow-x-auto">
+        <button onclick="switchDevTab('tab-blueprint')" id="btn-tab-blueprint" class="dev-tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 transition-all">🚀 4-Step Blueprint</button>
+        <button onclick="switchDevTab('tab-hooks')" id="btn-tab-hooks" class="dev-tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-slate-300 hover:text-white transition-all">🪝 System Hooks API</button>
+        <button onclick="switchDevTab('tab-database')" id="btn-tab-database" class="dev-tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-slate-300 hover:text-white transition-all">🗄️ Database & Schema</button>
+        <button onclick="switchDevTab('tab-examples')" id="btn-tab-examples" class="dev-tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-slate-300 hover:text-white transition-all">💡 Code Snippets</button>
+    </div>
 
-            <h3 class="font-extrabold text-amber-400 text-sm uppercase tracking-wider mt-4">2. Available System Hooks</h3>
-            <ul class="list-disc list-inside space-y-1 font-mono text-3xs text-slate-300">
-                <li><b class="text-purple-400">management_menu_items</b> (Action): Injects topbar links.</li>
-                <li><b class="text-purple-400">invoice_before_save</b> (Filter): Alters subtotal, discount, or tax.</li>
-                <li><b class="text-purple-400">invoice_after_save</b> (Action): Triggers webhooks after invoice save.</li>
-                <li><b class="text-purple-400">payment_gateways_register</b> (Filter): Registers custom payment gateways.</li>
-                <li><b class="text-purple-400">dashboard_widgets_top</b> (Action): Adds analytics cards to dashboard.</li>
-            </ul>
+    <!-- Tab 1: 4-Step Blueprint -->
+    <div id="tab-blueprint" class="dev-tab-content space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+            <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
+                <span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center text-3xs mb-2">1</span>
+                <h4 class="font-extrabold text-white mb-1">Create Folder</h4>
+                <p class="text-slate-400 text-3xs">Create a folder for your plugin (e.g. <code>my_custom_discount</code>).</p>
+            </div>
+            <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
+                <span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center text-3xs mb-2">2</span>
+                <h4 class="font-extrabold text-white mb-1">Create Manifest</h4>
+                <p class="text-slate-400 text-3xs">Create <code>plugin.json</code> file with title, slug, author, version, and main file.</p>
+            </div>
+            <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
+                <span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center text-3xs mb-2">3</span>
+                <h4 class="font-extrabold text-white mb-1">Write PHP Code</h4>
+                <p class="text-slate-400 text-3xs">Create <code>plugin.php</code> and use <code>PluginEngine::add_action()</code> or <code>add_filter()</code>.</p>
+            </div>
+            <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-800">
+                <span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center text-3xs mb-2">4</span>
+                <h4 class="font-extrabold text-white mb-1">Zip & Upload</h4>
+                <p class="text-slate-400 text-3xs">Compress into a <code>.zip</code> file and upload via the form on the left!</p>
+            </div>
         </div>
 
-        <div class="space-y-3">
-            <h3 class="font-extrabold text-cyan-400 text-sm uppercase tracking-wider">3. Database & Multi-Tenant Rules</h3>
-            <ul class="list-disc list-inside space-y-1 text-2xs text-slate-300">
-                <li><b class="text-white">Table Prefixing:</b> Custom plugin tables MUST use prefix <code>plugin_{slug}_...</code> (e.g. <code>plugin_royalties_log</code>).</li>
-                <li><b class="text-white">Tenant Scoping:</b> All queries MUST filter by <code>tenant_id = tenant_id()</code> to guarantee multi-tenant data isolation.</li>
-                <li><b class="text-white">Core Mutation Block:</b> Plugins cannot run <code>DROP TABLE</code> or <code>TRUNCATE</code> on core tables (<code>invoices</code>, <code>clients</code>, <code>users</code>).</li>
-            </ul>
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 mt-4">
+            <h4 class="text-xs font-bold text-amber-400 mb-2">Example `plugin.json` Manifest File:</h4>
+            <pre class="text-3xs font-mono text-amber-300">{
+  "name": "Custom Royalty Fee Calculator",
+  "slug": "custom_royalty_fee",
+  "version": "1.0.0",
+  "author": "Acme Partner Corp",
+  "description": "Calculates automatic custom percentage royalty fees on invoice save.",
+  "main": "plugin.php"
+}</pre>
+        </div>
+    </div>
 
-            <h3 class="font-extrabold text-cyan-400 text-sm uppercase tracking-wider mt-4">4. Sample Plugin Hook Code</h3>
-            <pre class="bg-slate-900 p-3 rounded-xl border border-slate-800 text-3xs font-mono text-emerald-300 overflow-x-auto">&lt;?php
+    <!-- Tab 2: System Hooks API -->
+    <div id="tab-hooks" class="dev-tab-content hidden space-y-4 text-xs">
+        <p class="text-slate-300">The plugin engine provides Action and Filter hooks to intercept app execution cleanly:</p>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-3xs">
+                <thead>
+                    <tr class="bg-slate-900 text-slate-400 font-mono uppercase">
+                        <th class="p-2.5 border-b border-slate-800">Hook Name</th>
+                        <th class="p-2.5 border-b border-slate-800">Type</th>
+                        <th class="p-2.5 border-b border-slate-800">Arguments</th>
+                        <th class="p-2.5 border-b border-slate-800">Description</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60 font-mono">
+                    <tr>
+                        <td class="p-2.5 text-amber-400 font-bold">management_menu_items</td>
+                        <td class="p-2.5 text-purple-400">Action</td>
+                        <td class="p-2.5 text-slate-400">None</td>
+                        <td class="p-2.5 text-slate-300">Injects custom links into Topbar Management mega menu.</td>
+                    </tr>
+                    <tr>
+                        <td class="p-2.5 text-amber-400 font-bold">invoice_before_save</td>
+                        <td class="p-2.5 text-emerald-400">Filter</td>
+                        <td class="p-2.5 text-slate-400">$invoiceData (array)</td>
+                        <td class="p-2.5 text-slate-300">Alters subtotal, discount, or tax rates before saving.</td>
+                    </tr>
+                    <tr>
+                        <td class="p-2.5 text-amber-400 font-bold">invoice_after_save</td>
+                        <td class="p-2.5 text-purple-400">Action</td>
+                        <td class="p-2.5 text-slate-400">$pdo, $invoiceId, $tenantId</td>
+                        <td class="p-2.5 text-slate-300">Triggers after invoice creation (webhooks/external API sync).</td>
+                    </tr>
+                    <tr>
+                        <td class="p-2.5 text-amber-400 font-bold">payment_gateways_register</td>
+                        <td class="p-2.5 text-emerald-400">Filter</td>
+                        <td class="p-2.5 text-slate-400">$gateways (array)</td>
+                        <td class="p-2.5 text-slate-300">Registers custom payment gateway classes.</td>
+                    </tr>
+                    <tr>
+                        <td class="p-2.5 text-amber-400 font-bold">dashboard_widgets_top</td>
+                        <td class="p-2.5 text-purple-400">Action</td>
+                        <td class="p-2.5 text-slate-400">$pdo, $tenantId</td>
+                        <td class="p-2.5 text-slate-300">Renders custom analytical metric cards on Dashboard.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab 3: Database & Schema -->
+    <div id="tab-database" class="dev-tab-content hidden space-y-4 text-xs">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2">
+                <h4 class="font-extrabold text-cyan-400">Mandatory Database Rules</h4>
+                <ul class="list-disc list-inside space-y-1 text-3xs text-slate-300">
+                    <li><b>Table Prefixing:</b> Custom tables MUST use prefix <code>plugin_{slug}_...</code> (e.g. <code>plugin_royalties_log</code>).</li>
+                    <li><b>Multi-Tenant Scoping:</b> All queries MUST filter by <code>tenant_id = tenant_id()</code> to isolate subaccount data.</li>
+                    <li><b>Mutation Guards:</b> Plugins CANNOT run <code>DROP TABLE</code> or <code>TRUNCATE</code> on core tables (<code>invoices</code>, <code>clients</code>, <code>users</code>).</li>
+                </ul>
+            </div>
+
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2">
+                <h4 class="font-extrabold text-cyan-400">Creating Custom SQL Table Snippet</h4>
+                <pre class="text-3xs font-mono text-emerald-300 overflow-x-auto">$pdo = $GLOBALS['pdo'];
+$pdo->exec("
+    CREATE TABLE IF NOT EXISTS plugin_royalty_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        tenant_id INT NOT NULL,
+        invoice_id INT NOT NULL,
+        fee DECIMAL(15,2) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX (tenant_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+");</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 4: Code Examples -->
+    <div id="tab-examples" class="dev-tab-content hidden space-y-4 text-xs">
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2">
+            <h4 class="font-extrabold text-emerald-400">Production Example: `plugin.php`</h4>
+            <pre class="text-3xs font-mono text-emerald-300 overflow-x-auto">&lt;?php
 use Services\PluginEngine;
 
+// 1. Inject Topbar Menu Link
 PluginEngine::add_action('management_menu_items', function() {
-    echo '&lt;a href="#" class="font-bold text-xs"&gt;Custom Plugin&lt;/a&gt;';
+    echo '&lt;a href="#" onclick="alert(\'Royalty Plugin Active!\')" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-indigo-900 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"&gt;';
+    echo '&lt;i class="fa-solid fa-calculator w-5 text-indigo-600 text-center"&gt;&lt;/i&gt;&lt;span&gt;Royalty Calculator&lt;/span&gt;';
+    echo '&lt;/a&gt;';
 });
 
+// 2. Intercept Invoice Save (Apply 5% Discount for Orders > 10,000 AED)
 PluginEngine::add_filter('invoice_before_save', function($invoice) {
-    if ($invoice['subtotal'] > 10000) {
+    if (isset($invoice['subtotal']) && $invoice['subtotal'] > 10000) {
+        $invoice['discount_type'] = 'percent';
         $invoice['discount_value'] = 5.0; // 5% discount
     }
     return $invoice;
@@ -150,8 +251,22 @@ PluginEngine::add_filter('invoice_before_save', function($invoice) {
         </div>
     </div>
 
-    <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between text-2xs text-slate-400">
-        <span>Detailed Guide: See <code>PLUGIN_DEVELOPMENT_GUIDE.md</code> in root codebase directory.</span>
+    <script>
+    function switchDevTab(tabId) {
+        document.querySelectorAll('.dev-tab-content').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.dev-tab-btn').forEach(el => {
+            el.classList.remove('bg-amber-500', 'text-slate-950');
+            el.classList.add('bg-slate-900', 'text-slate-300');
+        });
+        document.getElementById(tabId).classList.remove('hidden');
+        const btn = document.getElementById('btn-' + tabId);
+        btn.classList.remove('bg-slate-900', 'text-slate-300');
+        btn.classList.add('bg-amber-500', 'text-slate-950');
+    }
+    </script>
+
+    <div class="mt-6 pt-3 border-t border-slate-800 flex items-center justify-between text-2xs text-slate-400">
+        <span>Complete File Documentation: See <code>PLUGIN_DEVELOPMENT_GUIDE.md</code> in root directory.</span>
         <a href="plugins_admin?action=create_sample" class="text-amber-400 hover:underline font-bold">Generate Working Starter Sample Plugin →</a>
     </div>
 </div>
