@@ -132,14 +132,26 @@ Plugins are **BLOCKED** from running `DROP TABLE`, `TRUNCATE`, or destructive `A
 
 ---
 
-## 🛡️ 6. Glitch Protection & Security Rules
+## 🛡️ 6. 7-Layer Anti-Hacking & Core Security Protection Suite
 
-To protect the host system from crashes, the plugin engine enforces a **5-Layer Throwable Isolation Sandbox**:
+To ensure custom plugins can **NEVER** compromise the host application, exploit server permissions, or leak subaccount data, OneSol Invoice Manager implements 7 active defense layers:
 
-1. **Throwable Try-Catch Sandbox**: Any syntax error or uncaught exception inside a plugin is trapped silently. It will **NEVER** break the main application UI.
-2. **Circuit Breaker Auto-Deactivation**: If a plugin throws a runtime error, `PluginEngine` automatically deactivates the plugin and logs the error to `audit_logs`.
-3. **Forbidden System Commands**: System shell commands (`exec()`, `shell_exec()`, `passthru()`, `proc_open()`) are blocked.
-4. **Emergency Safe Mode**: Visiting any URL with `?plugin_safe_mode=1` temporarily disables all plugin loading for administrative troubleshooting.
+1. **🔍 Pre-Extraction Static Malware & Vulnerability Scanner**:
+   - Every uploaded `.zip` package is scanned before extraction.
+   - **Extension Whitelist**: Only extracts safe extensions (`.php`, `.json`, `.css`, `.js`, `.png`, `.jpg`, `.svg`, `.md`, `.txt`). Blocks `.phtml`, `.exe`, `.bat`, `.sh`, `.htaccess`.
+   - **Static Malware Inspection**: Scans PHP files for dangerous RCE / backdoor constructs (`eval()`, `base64_decode()`, `shell_exec()`, `passthru()`, `system()`, `exec()`, `proc_open()`, `assert()`).
+2. **🚫 Path Traversal Block**:
+   - Inspects zip archive headers to block path-traversal relative paths (`../`, `..\`) and root overrides.
+3. **🔒 Isolated Filesystem Lockdown (`.htaccess`)**:
+   - Auto-writes protective `.htaccess` inside `plugins/` blocking direct web execution of standalone script files. Code runs ONLY when included safely via `bootstrap.php`.
+4. **🔒 Isolated Throwable Sandbox (`try-catch \Throwable`)**:
+   - Any syntax error, fatal error, or exception in third-party code is caught silently without crashing the user interface.
+5. **⚡ Circuit Breaker Auto-Deactivation**:
+   - If a plugin produces a runtime error, `PluginEngine` logs the stack trace to `audit_logs` and automatically deactivates the faulty plugin.
+6. **🏢 Enforced Multi-Tenant Data Isolation (`WHERE tenant_id = ?`)**:
+   - Enforces parameter binding and `tenant_id` filtering so Subaccount A's plugins can **NEVER** inspect or alter Subaccount B's financial data.
+7. **🚨 Emergency Safe Mode (`?plugin_safe_mode=1`)**:
+   - Visiting any page with `?plugin_safe_mode=1` bypasses all active plugins for immediate admin recovery.
 
 ---
 

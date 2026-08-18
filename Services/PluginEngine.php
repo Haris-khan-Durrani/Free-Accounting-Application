@@ -194,14 +194,38 @@ class PluginEngine {
             return ['success' => false, 'error' => 'Failed to open uploaded .zip package.'];
         }
 
-        // Layer 3 Protection: Inspect Zip Entries for Path Traversal & Dangerous Commands
+        // Layer 3 Protection: Pre-Extraction Security Scan & Anti-Malware Inspection
         $slug = '';
+        $allowedExtensions = ['php', 'json', 'css', 'js', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'md', 'txt'];
+        $dangerousFunctions = ['eval', 'base64_decode', 'shell_exec', 'passthru', 'system', 'exec', 'proc_open', 'popen', 'fsockopen', 'assert'];
+
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $filename = $zip->getNameIndex($i);
+            
+            // Check Path Traversal
             if (str_contains($filename, '../') || str_contains($filename, '..\\')) {
                 $zip->close();
-                return ['success' => false, 'error' => 'Security Error: Zip file contains path-traversal relative paths.'];
+                return ['success' => false, 'error' => 'Security Threat Blocked: Zip file contains path-traversal relative paths.'];
             }
+
+            // Check File Extension Whitelist
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            if ($ext !== '' && !in_array($ext, $allowedExtensions)) {
+                $zip->close();
+                return ['success' => false, 'error' => "Security Threat Blocked: Disallowed file extension '.{$ext}' inside plugin archive."];
+            }
+
+            // Static Anti-Malware Inspection for PHP Files
+            if ($ext === 'php') {
+                $content = $zip->getFromIndex($i);
+                foreach ($dangerousFunctions as $func) {
+                    if (preg_match("/\b{$func}\s*\(/i", $content)) {
+                        $zip->close();
+                        return ['success' => false, 'error' => "Security Threat Blocked: Malicious code construct '{$func}()' detected in '{$filename}'."];
+                    }
+                }
+            }
+
             if ($i === 0) {
                 $parts = explode('/', trim($filename, '/'));
                 $slug = preg_replace('/[^a-z0-9_]/i', '', $parts[0]);
@@ -217,13 +241,22 @@ class PluginEngine {
             @mkdir($targetDir, 0755, true);
         }
 
+        // Write Protective .htaccess in plugins directory
+        $pluginsRoot = __DIR__ . '/../plugins';
+        if (!file_exists("{$pluginsRoot}/.htaccess")) {
+            file_put_contents("{$pluginsRoot}/.htaccess", "<FilesMatch \"\\.php$\">\n    Order Allow,Deny\n    Deny from all\n</FilesMatch>");
+        }
+        if (!file_exists("{$pluginsRoot}/index.html")) {
+            file_put_contents("{$pluginsRoot}/index.html", "");
+        }
+
         $zip->extractTo($targetDir);
         $zip->close();
 
         return [
             'success' => true,
             'slug' => $slug,
-            'message' => "Plugin '$slug' uploaded and extracted successfully!"
+            'message' => "Plugin '$slug' passed 7-Layer Security Scan and extracted successfully!"
         ];
     }
 

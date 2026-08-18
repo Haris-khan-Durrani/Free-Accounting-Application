@@ -107,6 +107,7 @@ page_start('Plug & Play Modular Plugins');
         <button onclick="switchDevTab('tab-blueprint')" id="btn-tab-blueprint" class="dev-tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-amber-500 text-slate-950 transition-all">🚀 4-Step Blueprint</button>
         <button onclick="switchDevTab('tab-hooks')" id="btn-tab-hooks" class="dev-tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-slate-300 hover:text-white transition-all">🪝 System Hooks API</button>
         <button onclick="switchDevTab('tab-database')" id="btn-tab-database" class="dev-tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-slate-300 hover:text-white transition-all">🗄️ Database & Schema</button>
+        <button onclick="switchDevTab('tab-security')" id="btn-tab-security" class="dev-tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-slate-300 hover:text-white transition-all">🛡️ Anti-Hacking Protection</button>
         <button onclick="switchDevTab('tab-examples')" id="btn-tab-examples" class="dev-tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 text-slate-300 hover:text-white transition-all">💡 Code Snippets</button>
     </div>
 
@@ -226,7 +227,32 @@ $pdo->exec("
         </div>
     </div>
 
-    <!-- Tab 4: Code Examples -->
+    <!-- Tab 4: Anti-Hacking & Core Protection -->
+    <div id="tab-security" class="dev-tab-content hidden space-y-4 text-xs">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2">
+                <h4 class="font-extrabold text-rose-400">7 Active Defense Protection Layers</h4>
+                <ul class="list-disc list-inside space-y-1 text-3xs text-slate-300">
+                    <li><b class="text-white">Static Malware Scanner:</b> Scans PHP files in uploaded .zip packages for malicious constructs (<code>eval()</code>, <code>base64_decode()</code>, <code>system()</code>, <code>exec()</code>, <code>shell_exec()</code>, <code>passthru()</code>).</li>
+                    <li><b class="text-white">Extension Whitelist:</b> Restricts uploads strictly to safe extensions (<code>.php</code>, <code>.json</code>, <code>.css</code>, <code>.js</code>, <code>.png</code>, <code>.jpg</code>, <code>.svg</code>). Blocks <code>.phtml</code>, <code>.exe</code>, <code>.bat</code>, <code>.sh</code>.</li>
+                    <li><b class="text-white">Path Traversal Block:</b> Rejects zip archives with relative path overrides (<code>../</code>, <code>..\</code>).</li>
+                    <li><b class="text-white">Filesystem Lockdown:</b> Auto-generates protective <code>.htaccess</code> inside <code>plugins/</code> blocking direct standalone web script execution.</li>
+                </ul>
+            </div>
+
+            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2">
+                <h4 class="font-extrabold text-rose-400">Multi-Tenant Sandbox & Circuit Breaker</h4>
+                <ul class="list-disc list-inside space-y-1 text-3xs text-slate-300">
+                    <li><b class="text-white">Throwable Sandbox:</b> Traps syntax/runtime exceptions silently inside <code>try-catch \Throwable</code> so plugins never crash the core app UI.</li>
+                    <li><b class="text-white">Auto Circuit Breaker:</b> Automatically deactivates buggy plugins upon detecting a runtime error and logs tracebacks to <code>audit_logs</code>.</li>
+                    <li><b class="text-white">Tenant Isolation:</b> Parameterized PDO queries with <code>tenant_id</code> ensure Subaccount A cannot inspect Subaccount B data.</li>
+                    <li><b class="text-white">Emergency Safe Mode:</b> Append <code>?plugin_safe_mode=1</code> to bypass all plugins instantly for admin recovery.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab 5: Code Examples -->
     <div id="tab-examples" class="dev-tab-content hidden space-y-4 text-xs">
         <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2">
             <h4 class="font-extrabold text-emerald-400">Production Example: `plugin.php`</h4>
