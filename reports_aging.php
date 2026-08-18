@@ -86,7 +86,7 @@ page_start('Accounts Receivable Aging Report');
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-black text-slate-900 uppercase tracking-tight"><?=e(tenant()['name'])?></h1>
-            <p class="text-xs text-slate-600 font-semibold mt-0.5">TRN Tax Reg No: <?=e(tenant()['tax_number'] ?: '100293847500003')?> | <?=e(tenant()['address'] ?: 'United Arab Emirates')?></p>
+            <p class="text-xs text-slate-600 font-semibold mt-0.5">TRN Tax Reg No: <strong><?=e(tenant()['tax_number'] ?? branding()['tax_number'] ?? '100293847500003')?></strong> | <?=e(tenant()['address'] ?? branding()['address'] ?? 'United Arab Emirates')?></p>
         </div>
         <div class="text-right">
             <h2 class="text-lg font-black text-slate-900 uppercase">A/R Aging Schedule Report</h2>

@@ -98,7 +98,7 @@ page_start('Tax & VAT Return Report');
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-2xl font-black text-slate-900 uppercase tracking-tight"><?=e(tenant()['name'])?></h1>
-            <p class="text-xs text-slate-600 font-semibold mt-0.5">TRN Tax Reg No: <strong><?=e($brand['tax_number'] ?? '100293847500003')?></strong> | <?=e(tenant()['address'] ?: 'United Arab Emirates')?></p>
+            <p class="text-xs text-slate-600 font-semibold mt-0.5">TRN Tax Reg No: <strong><?=e($brand['tax_number'] ?? tenant()['tax_number'] ?? '100293847500003')?></strong> | <?=e(tenant()['address'] ?? branding()['address'] ?? 'United Arab Emirates')?></p>
         </div>
         <div class="text-right">
             <h2 class="text-lg font-black text-slate-900 uppercase">Tax & VAT Return Filing Summary</h2>
