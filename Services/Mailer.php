@@ -72,15 +72,26 @@ class Mailer {
             self::readSmtpResponse($socket, 250);
         }
 
-        // AUTH LOGIN
-        fputs($socket, "AUTH LOGIN\r\n");
-        self::readSmtpResponse($socket, 334);
+        // AUTH LOGIN (with fallback to AUTH PLAIN)
+        try {
+            fputs($socket, "AUTH LOGIN\r\n");
+            self::readSmtpResponse($socket, 334);
 
-        fputs($socket, base64_encode($username) . "\r\n");
-        self::readSmtpResponse($socket, 334);
+            fputs($socket, base64_encode($username) . "\r\n");
+            self::readSmtpResponse($socket, 334);
 
-        fputs($socket, base64_encode($password) . "\r\n");
-        self::readSmtpResponse($socket, 235);
+            fputs($socket, base64_encode($password) . "\r\n");
+            self::readSmtpResponse($socket, 235);
+        } catch (Exception $eLogin) {
+            // If AUTH LOGIN failed, attempt AUTH PLAIN (standard for cPanel/aaPanel Exim)
+            $authPlainStr = base64_encode("\0" . $username . "\0" . $password);
+            fputs($socket, "AUTH PLAIN " . $authPlainStr . "\r\n");
+            try {
+                self::readSmtpResponse($socket, 235);
+            } catch (Exception $ePlain) {
+                throw new Exception("SMTP Authentication Failed (535): Incorrect username or password for '$username'. Response: " . $eLogin->getMessage());
+            }
+        }
 
         // MAIL FROM
         fputs($socket, "MAIL FROM: <$fromEmail>\r\n");

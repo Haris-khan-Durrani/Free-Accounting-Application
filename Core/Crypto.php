@@ -38,31 +38,39 @@ class Crypto {
     }
 
     /**
-     * Decrypt ciphertext encrypted with AES-256-GCM.
+     * Decrypt ciphertext encrypted with AES-256-GCM (supports unwrapping multi-layer legacy encryptions).
      */
     public static function decrypt(string $encryptedPayload, ?string $customKey = null): ?string {
         if ($encryptedPayload === '') return '';
 
-        $decoded = base64_decode($encryptedPayload, true);
-        if ($decoded === false || strlen($decoded) < 28) {
-            // Return raw string if payload is not encrypted (e.g. legacy plain values)
-            return $encryptedPayload;
+        $current = $encryptedPayload;
+        for ($i = 0; $i < 5; $i++) {
+            $decoded = base64_decode($current, true);
+            if ($decoded === false || strlen($decoded) < 28) {
+                break;
+            }
+
+            $key = $customKey ? hash('sha256', $customKey, true) : self::getMasterKey();
+            $iv = substr($decoded, 0, 12);
+            $tag = substr($decoded, 12, 16);
+            $ciphertext = substr($decoded, 28);
+
+            $plaintext = openssl_decrypt(
+                $ciphertext,
+                'aes-256-gcm',
+                $key,
+                OPENSSL_RAW_DATA,
+                $iv,
+                $tag
+            );
+
+            if ($plaintext !== false && $plaintext !== '') {
+                $current = $plaintext;
+            } else {
+                break;
+            }
         }
 
-        $key = $customKey ? hash('sha256', $customKey, true) : self::getMasterKey();
-        $iv = substr($decoded, 0, 12);
-        $tag = substr($decoded, 12, 16);
-        $ciphertext = substr($decoded, 28);
-
-        $plaintext = openssl_decrypt(
-            $ciphertext,
-            'aes-256-gcm',
-            $key,
-            OPENSSL_RAW_DATA,
-            $iv,
-            $tag
-        );
-
-        return ($plaintext !== false) ? $plaintext : $encryptedPayload;
+        return $current;
     }
 }
