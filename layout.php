@@ -146,74 +146,72 @@ function page_start(string $title): void {
         echo '</div>';
 
         // Direct Settings Link in Top Header Bar
-        echo '<a href="settings" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['settings.php', 'settings', 'branding.php', 'payment_settings.php']) . '"><i class="fa-solid fa-sliders text-amber-400 text-2xs"></i><span>Settings</span></a>';
-
-        // Management Dropdown Menu (Compact 2-Column Mega Menu)
+        echo '<a href="settings" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['settings.php', 'settings', 'branding.php', 'payment_settings.php']) . '"><i class="fa-solid fa-sliders text-amber-400 text-2xs"></i><span>Settings</span></a>';        // Management Dropdown Menu (Balanced 2-Column Mega Menu)
         echo '<div class="relative group py-2">';
         echo '<button class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap font-semibold text-slate-300 hover:text-white hover:bg-slate-800/70 transition-all"><i class="fa-solid fa-gear text-cyan-400 text-2xs"></i><span>Management</span><i class="fa-solid fa-chevron-down text-[9px] ml-0.5 opacity-70"></i></button>';
-        echo '<div class="absolute right-0 top-full pt-1 w-[520px] hidden group-hover:block z-50">';
-        echo '<div class="bg-white rounded-2xl shadow-2xl border border-slate-200/90 p-3 grid grid-cols-2 gap-3">';
+        echo '<div class="absolute right-0 top-full pt-1 w-[580px] hidden group-hover:block z-[100]">';
+        echo '<div class="bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 grid grid-cols-2 gap-4 max-h-[85vh] overflow-y-auto text-left">';
         
         // Left Column
-        echo '<div class="space-y-3">';
+        echo '<div class="space-y-3.5">';
         
         // Group 1: Workspaces & Branding
         echo '<div>';
-        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-building text-slate-400 text-3xs"></i><span>Workspaces & Branding</span></div>';
-        echo '<a href="settings" class="flex items-center px-2.5 py-1.5 text-xs font-extrabold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors mb-1"><i class="fa-solid fa-sliders w-5 text-amber-500 text-center"></i><span>Master Settings Hub</span></a>';
-        echo '<a href="domain_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-blue-50/70 hover:text-blue-600 rounded-lg transition-colors"><i class="fa-solid fa-globe w-5 text-blue-500 text-center"></i><span>Whitelabel Domain & SSL</span></a>';
-        echo '<a href="subaccounts" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors"><i class="fa-solid fa-sitemap w-5 text-blue-500 text-center"></i><span>Workspaces & Branches</span></a>';
-        echo '<a href="branding" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-palette w-5 text-amber-500 text-center"></i><span>Branding & Logo Setup</span></a>';
+        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-building text-slate-400 text-3xs"></i><span>Workspaces & Branding</span></div>';
+        echo '<a href="settings" class="flex items-center px-2.5 py-1.5 text-xs font-extrabold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-sliders w-5 text-amber-500 text-center"></i><span>Master Settings Hub</span></a>';
+        echo '<a href="domain_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-blue-50/70 hover:text-blue-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-globe w-5 text-blue-500 text-center"></i><span>Whitelabel Domain & SSL</span></a>';
+        echo '<a href="subaccounts" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-sitemap w-5 text-blue-500 text-center"></i><span>Workspaces & Branches</span></a>';
+        echo '<a href="branding" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-palette w-5 text-amber-500 text-center"></i><span>Branding & Logo Setup</span></a>';
         echo '</div>';
 
         // Group 2: Invoice Design & Templates
         echo '<div>';
-        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-wand-magic-sparkles text-slate-400 text-3xs"></i><span>Invoice Design & Templates</span></div>';
-        echo '<a href="invoice_customize" class="flex items-center px-2.5 py-1.5 text-xs font-extrabold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors mb-1"><i class="fa-solid fa-paint-roller w-5 text-amber-500 text-center"></i><span>Template Selector (11 Designs)</span></a>';
-        echo '<a href="invoice_builder" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-layer-group w-5 text-amber-500 text-center"></i><span>Drag & Drop Builder</span></a>';
+        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-wand-magic-sparkles text-slate-400 text-3xs"></i><span>Invoice Design & Templates</span></div>';
+        echo '<a href="invoice_customize" class="flex items-center px-2.5 py-1.5 text-xs font-extrabold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-paint-roller w-5 text-amber-500 text-center"></i><span>Template Selector (11 Designs)</span></a>';
+        echo '<a href="invoice_builder" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-layer-group w-5 text-amber-500 text-center"></i><span>Drag & Drop Builder</span></a>';
         echo '</div>';
 
-        // Group 3: SaaS Subscription & Plan
+        // Group 3: Products & Catalog
         echo '<div>';
-        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-crown text-slate-400 text-3xs"></i><span>SaaS Subscription & Plan</span></div>';
-        echo '<a href="billing" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-credit-card w-5 text-amber-500 text-center"></i><span>Subscription Plan</span></a>';
-        echo '<a href="recurring_invoices" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors mb-1"><i class="fa-solid fa-rotate w-5 text-purple-600 text-center"></i><span>Auto-Subscription Billing</span></a>';
-        echo '<a href="subscriptions_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-layer-group w-5 text-amber-500 text-center"></i><span>Create SaaS Plan Tiers</span></a>';
-        echo '<a href="users" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors"><i class="fa-solid fa-users-gear w-5 text-blue-500 text-center"></i><span>Team Members</span></a>';
-        echo '</div>';
-
-        // Group 4: Core Catalog
-        echo '<div>';
-        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-box text-slate-400 text-3xs"></i><span>Products & Expenses</span></div>';
-        echo '<a href="items" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-emerald-600 rounded-lg transition-colors"><i class="fa-solid fa-box w-5 text-emerald-500 text-center"></i><span>Product Catalog</span></a>';
-        echo '<a href="expense_categories" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-rose-600 rounded-lg transition-colors"><i class="fa-solid fa-tags w-5 text-rose-500 text-center"></i><span>Expense Categories</span></a>';
-        echo '<a href="cache_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-emerald-600 rounded-lg transition-colors"><i class="fa-solid fa-bolt w-5 text-emerald-500 text-center"></i><span>Redis Cache Engine</span></a>';
+        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-box text-slate-400 text-3xs"></i><span>Products & Catalog</span></div>';
+        echo '<a href="items" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-emerald-50/70 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-box w-5 text-emerald-500 text-center"></i><span>Product Catalog</span></a>';
+        echo '<a href="expense_categories" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-rose-50/70 hover:text-rose-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-tags w-5 text-rose-500 text-center"></i><span>Expense Categories</span></a>';
+        echo '<a href="backup_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-cyan-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-database w-5 text-cyan-500 text-center"></i><span>SQL Database Backup</span></a>';
         echo '</div>';
 
         echo '</div>';
 
         // Right Column
-        echo '<div class="space-y-3">';
+        echo '<div class="space-y-3.5">';
+
+        // Group 4: SaaS Subscription & Plan
+        echo '<div>';
+        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-crown text-slate-400 text-3xs"></i><span>SaaS Subscription & Plan</span></div>';
+        echo '<a href="billing" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-credit-card w-5 text-amber-500 text-center"></i><span>Subscription Plan</span></a>';
+        echo '<a href="recurring_invoices" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-rotate w-5 text-purple-600 text-center"></i><span>Auto-Subscription Billing</span></a>';
+        echo '<a href="subscriptions_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-layer-group w-5 text-amber-500 text-center"></i><span>Create SaaS Plan Tiers</span></a>';
+        echo '<a href="users" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-users-gear w-5 text-blue-500 text-center"></i><span>Team Members</span></a>';
+        echo '</div>';
 
         // Group 5: Security & Integrations
         echo '<div>';
-        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-shield-halved text-slate-400 text-3xs"></i><span>Security & Integrations</span></div>';
-        echo '<a href="payment_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-purple-50/70 hover:text-purple-600 rounded-lg transition-colors"><i class="fa-solid fa-credit-card w-5 text-purple-500 text-center"></i><span>Payment Gateways</span></a>';
-        echo '<a href="whatsapp_settings" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-emerald-50/70 hover:text-emerald-600 rounded-lg transition-colors"><i class="fa-brands fa-whatsapp w-5 text-emerald-500 text-center"></i><span>WhatsApp API</span></a>';
-        echo '<a href="security" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-indigo-600 rounded-lg transition-colors"><i class="fa-solid fa-shield-halved w-5 text-indigo-500 text-center"></i><span>2FA & Security</span></a>';
-        echo '<a href="email_settings" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-server w-5 text-amber-500 text-center"></i><span>Custom SMTP</span></a>';
-        echo '<a href="api_keys" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors"><i class="fa-solid fa-key w-5 text-amber-500 text-center"></i><span>API Key Manager</span></a>';
-        echo '<a href="automation" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-purple-600 rounded-lg transition-colors"><i class="fa-solid fa-diagram-project w-5 text-purple-500 text-center"></i><span>n8n Automations</span></a>';
+        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-shield-halved text-slate-400 text-3xs"></i><span>Security & Integrations</span></div>';
+        echo '<a href="payment_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-purple-50/70 hover:text-purple-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-credit-card w-5 text-purple-500 text-center"></i><span>Payment Gateways</span></a>';
+        echo '<a href="whatsapp_settings" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-emerald-50/70 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-brands fa-whatsapp w-5 text-emerald-500 text-center"></i><span>WhatsApp API</span></a>';
+        echo '<a href="security" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-shield-halved w-5 text-indigo-500 text-center"></i><span>2FA & Security</span></a>';
+        echo '<a href="email_settings" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-server w-5 text-amber-500 text-center"></i><span>Custom SMTP</span></a>';
+        echo '<a href="api_keys" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-key w-5 text-amber-500 text-center"></i><span>API Key Manager</span></a>';
+        echo '<a href="automation" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-purple-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-diagram-project w-5 text-purple-500 text-center"></i><span>n8n Automations</span></a>';
         echo '</div>';
 
         // Group 6: SaaS Admin & Help
         echo '<div>';
-        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-0.5 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-crown text-amber-500 text-3xs"></i><span>SaaS Admin & Help</span></div>';
-        echo '<a href="subscriptions_admin" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors mb-1"><i class="fa-solid fa-crown w-5 text-amber-600 text-center"></i><span>Create & Edit SaaS Plans</span></a>';
-        echo '<a href="tenants_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-emerald-600 rounded-lg transition-colors"><i class="fa-solid fa-users-gear w-5 text-emerald-500 text-center"></i><span>Subscriber Accounts</span></a>';
-        echo '<a href="super_admin_gateways" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-indigo-600 rounded-lg transition-colors"><i class="fa-solid fa-credit-card w-5 text-indigo-500 text-center"></i><span>Super Admin Gateways</span></a>';
-        echo '<a href="guide" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors"><i class="fa-solid fa-book-open w-5 text-blue-500 text-center"></i><span>Interactive User Guide</span></a>';
-        echo '<a href="audit_log" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-slate-900 rounded-lg transition-colors"><i class="fa-solid fa-clock-rotate-left w-5 text-slate-400 text-center"></i><span>System Audit Log</span></a>';
+        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-crown text-amber-500 text-3xs"></i><span>SaaS Admin & Help</span></div>';
+        echo '<a href="tenants_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-users-gear w-5 text-emerald-500 text-center"></i><span>Subscriber Accounts</span></a>';
+        echo '<a href="super_admin_gateways" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-credit-card w-5 text-indigo-500 text-center"></i><span>Super Admin Gateways</span></a>';
+        echo '<a href="cache_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-bolt w-5 text-emerald-500 text-center"></i><span>Redis Cache Engine</span></a>';
+        echo '<a href="guide" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-book-open w-5 text-blue-500 text-center"></i><span>Interactive User Guide</span></a>';
+        echo '<a href="audit_log" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-slate-900 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-clock-rotate-left w-5 text-slate-400 text-center"></i><span>System Audit Log</span></a>';
         echo '</div>';
 
         echo '</div>';
