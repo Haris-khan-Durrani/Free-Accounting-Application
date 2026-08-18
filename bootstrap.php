@@ -95,8 +95,8 @@ function branding(?int $tenantId = null): array {
 }
 
 function redirect(string $url): never { 
-    $cleanUrl = preg_replace('/\.php$/', '', $url);
-    header('Location: ' . $cleanUrl); 
+    $targetUrl = strpos($url, '.php') === false && strpos($url, '/') === false && strpos($url, '?') === false ? $url . '.php' : $url;
+    header('Location: ' . $targetUrl); 
     exit; 
 }
 
