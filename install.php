@@ -68,19 +68,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (!$installed || !empty($_GET['force
             $sql = file_get_contents($sqlFile);
             $pdo->exec($sql);
 
-            // 4. Create or Update Master SuperAdmin User Account
+            // 4. Ensure default tenant exists
+            $stTen = $pdo->query("SELECT id FROM tenants WHERE id = 1 LIMIT 1");
+            if (!$stTen->fetch()) {
+                $pdo->exec("INSERT INTO tenants (id, name, code, currency, country_code, status) VALUES (1, 'OneSol Headquarters', 'onesol-hq', 'AED', 'AE', 'active')");
+            }
+
+            // 5. Create or Update Master Admin User Account
             $hash = password_hash($adminPass, PASSWORD_DEFAULT);
             $stUser = $pdo->prepare("SELECT id FROM users WHERE email = ? LIMIT 1");
             $stUser->execute([$email]);
             $existingUserId = $stUser->fetchColumn();
 
             if ($existingUserId) {
-                $stUp = $pdo->prepare("UPDATE users SET name = 'OneSol Admin', password_hash = ?, role = 'admin' WHERE id = ?");
+                $stUp = $pdo->prepare("UPDATE users SET name = 'OneSol Admin', password_hash = ?, role = 'admin', tenant_id = 1 WHERE id = ?");
                 $stUp->execute([$hash, $existingUserId]);
+                $adminUserId = (int)$existingUserId;
             } else {
                 $stIns = $pdo->prepare("INSERT INTO users (tenant_id, name, email, password_hash, role) VALUES (1, 'OneSol Admin', ?, ?, 'admin')");
                 $stIns->execute([$email, $hash]);
+                $adminUserId = (int)$pdo->lastInsertId();
             }
+
+            // Seed user_tenants relationship
+            $stUt = $pdo->prepare("INSERT IGNORE INTO user_tenants (user_id, tenant_id, role) VALUES (?, 1, 'admin')");
+            $stUt->execute([$adminUserId]);
 
             // 5. Seed default demo data if invoices empty
             $count = (int)$pdo->query("SELECT COUNT(*) FROM invoices")->fetchColumn();

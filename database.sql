@@ -300,6 +300,13 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS settings (
-  setting_key VARCHAR(100) PRIMARY KEY,
-  setting_value TEXT NULL
+  tenant_id INT UNSIGNED NOT NULL DEFAULT 1,
+  setting_key VARCHAR(100) NOT NULL,
+  setting_value TEXT NULL,
+  PRIMARY KEY (tenant_id, setting_key)
 ) ENGINE=InnoDB;
+
+-- Default Tenant Seed
+INSERT IGNORE INTO tenants (id, name, code, currency, country_code, status) 
+VALUES (1, 'OneSol Headquarters', 'onesol-hq', 'AED', 'AE', 'active');
+
