@@ -5,6 +5,24 @@ require_login();
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 
+// Fetch all registered tenants for superadmin/owner domain workspace switcher
+$stAllTenants = $pdo->query("SELECT id, name, code FROM tenants ORDER BY name ASC");
+$allTenants = $stAllTenants->fetchAll();
+
+$targetTenantId = (int)($_GET['tenant_id'] ?? $_POST['target_tenant_id'] ?? $tid);
+if (!has_role(['owner', 'admin']) && $targetTenantId !== $tid) {
+    $targetTenantId = $tid;
+}
+
+$targetTenantObj = null;
+foreach ($allTenants as $at) {
+    if ($at['id'] == $targetTenantId) {
+        $targetTenantObj = $at;
+        break;
+    }
+}
+$targetTenantName = $targetTenantObj ? $targetTenantObj['name'] : tenant()['name'];
+
 // Ensure columns exist in database
 try { $pdo->exec("ALTER TABLE branding_settings ADD COLUMN custom_domain VARCHAR(190) NULL"); } catch (\Throwable $e) {}
 try { $pdo->exec("ALTER TABLE branding_settings ADD COLUMN domain_verified TINYINT(1) NOT NULL DEFAULT 0"); } catch (\Throwable $e) {}
@@ -23,13 +41,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $removePoweredBy = isset($_POST['remove_powered_by']) ? 1 : 0;
 
     $st = $pdo->prepare("UPDATE branding_settings SET custom_domain = ?, remove_powered_by = ? WHERE tenant_id = ?");
-    $st->execute([$customDomain, $removePoweredBy, $tid]);
+    $st->execute([$customDomain, $removePoweredBy, $targetTenantId]);
 
-    log_audit($pdo, 'update_domain_settings', 'branding_settings', $tid, "Updated whitelabel custom domain: $customDomain");
-    $message = "Whitelabel domain configuration updated successfully.";
+    \Core\Tenant::forgetCache($targetTenantId);
+
+    log_audit($pdo, 'update_domain_settings', 'branding_settings', $targetTenantId, "Updated whitelabel custom domain: $customDomain for workspace #$targetTenantId");
+    $message = "Whitelabel domain configuration for '$targetTenantName' updated successfully.";
 }
 
-$brand = \Core\Branding::get($pdo, $tid);
+$brand = \Core\Branding::get($pdo, $targetTenantId);
 $customDomain = $brand['custom_domain'] ?? '';
 $isVerified = !empty($brand['domain_verified']);
 $removePoweredBy = !empty($brand['remove_powered_by']);
@@ -45,8 +65,21 @@ page_start('Whitelabel Domain Settings');
             <span class="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-black text-xs uppercase tracking-wider">Enterprise Whitelabel</span>
             <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Custom Domain & Whitelabel Branding</h1>
         </div>
-        <p class="mt-1 text-xs sm:text-sm text-slate-500">Bind your own company domain or subdomain (e.g. <code>invoices.yourcompany.com</code>) to brand client payment portals.</p>
+        <p class="mt-1 text-xs sm:text-sm text-slate-500">Bind your custom domain or subdomain for workspace <strong><?=e($targetTenantName)?></strong>.</p>
     </div>
+
+    <?php if (count($allTenants) > 1 && has_role(['owner', 'admin'])): ?>
+        <div class="mt-4 sm:mt-0 flex items-center space-x-2 bg-white px-3.5 py-2 rounded-xl border border-slate-200 shadow-sm">
+            <label class="text-2xs font-extrabold text-slate-500 uppercase">Target Workspace:</label>
+            <select onchange="location.href='domain_settings.php?tenant_id=' + this.value" class="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-extrabold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
+                <?php foreach ($allTenants as $at): ?>
+                    <option value="<?=$at['id']?>" <?=$at['id'] == $targetTenantId ? 'selected' : ''?>>
+                        🏢 <?=e($at['name'])?> (code: <?=e($at['code'])?>)
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+    <?php endif; ?>
 </div>
 
 <?php if ($message): ?>
@@ -63,6 +96,7 @@ page_start('Whitelabel Domain Settings');
             <form method="post" id="domainForm" class="space-y-6">
                 <?=csrf_field()?>
                 <input type="hidden" name="action" value="save_domain">
+                <input type="hidden" name="target_tenant_id" value="<?=$targetTenantId?>">
 
                 <div>
                     <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
