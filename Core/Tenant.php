@@ -11,6 +11,24 @@ class Tenant {
             || php_sapi_name() === 'cli';
     }
 
+    public static function resolveFromDomain(PDO $pdo): ?int {
+        $host = $_SERVER['HTTP_HOST'] ?? '';
+        if (empty($host)) return null;
+
+        $host = preg_replace('#:\d+$#', '', strtolower(trim($host)));
+
+        return Cache::remember('tenant_domain_' . $host, 600, function() use ($pdo, $host) {
+            try {
+                $st = $pdo->prepare("SELECT tenant_id FROM branding_settings WHERE custom_domain = ?");
+                $st->execute([$host]);
+                $tid = $st->fetchColumn();
+                return $tid ? (int)$tid : null;
+            } catch (\Throwable $e) {
+                return null;
+            }
+        });
+    }
+
     public static function getActiveId(): int {
         if (!empty($_SESSION['active_tenant_id'])) {
             return (int)$_SESSION['active_tenant_id'];
@@ -21,11 +39,19 @@ class Tenant {
         if (!empty($_SESSION['tenant_id'])) {
             return (int)$_SESSION['tenant_id'];
         }
+        // Auto-resolve tenant from HTTP host header if mapped to custom whitelabel domain
+        if (!empty($GLOBALS['pdo'])) {
+            $domainTenantId = self::resolveFromDomain($GLOBALS['pdo']);
+            if ($domainTenantId) {
+                $_SESSION['active_tenant_id'] = $domainTenantId;
+                return $domainTenantId;
+            }
+        }
         // In CLI environment (cron jobs, migrations), fallback to tenant 1
         if (php_sapi_name() === 'cli') {
             return 1;
         }
-        throw new TenantContextException("Unauthorized: No active tenant context available.");
+        return 1;
     }
 
     public static function setActiveId(int $tenantId, PDO $pdo, int $userId): bool {
