@@ -63,4 +63,45 @@ class Tenant {
         $st->execute([$userId]);
         return $st->fetchAll() ?: [];
     }
+
+    public static function seedAccounts(PDO $pdo, int $tenantId): void {
+        // Seed default branding settings if not existing
+        try {
+            $stB = $pdo->prepare("SELECT COUNT(*) FROM branding_settings WHERE tenant_id = ?");
+            $stB->execute([$tenantId]);
+            if ($stB->fetchColumn() == 0) {
+                $stT = $pdo->prepare("SELECT name FROM tenants WHERE id = ?");
+                $stT->execute([$tenantId]);
+                $tName = $stT->fetchColumn() ?: 'Company Workspace';
+                
+                $stInsB = $pdo->prepare("INSERT INTO branding_settings (tenant_id, company_name) VALUES (?, ?)");
+                $stInsB->execute([$tenantId, $tName]);
+            }
+        } catch (\PDOException $e) {}
+
+        // Seed default Chart of Accounts if not existing
+        try {
+            $stC = $pdo->prepare("SELECT COUNT(*) FROM chart_of_accounts WHERE tenant_id = ?");
+            $stC->execute([$tenantId]);
+            if ($stC->fetchColumn() == 0) {
+                $defaultAccounts = [
+                    ['1010', 'Cash & Bank Accounts', 'asset', 'Main operating bank account and petty cash', 1],
+                    ['1100', 'Accounts Receivable', 'asset', 'Outstanding customer invoice balances', 1],
+                    ['2000', 'Accounts Payable', 'liability', 'Vendor bills and supplier balances payable', 1],
+                    ['2100', 'Sales Tax / VAT Payable', 'liability', 'Accrued VAT payable to tax authorities', 1],
+                    ['3000', 'Owner\'s Equity', 'equity', 'Owner capital investment and retained earnings', 1],
+                    ['4000', 'Sales & Service Income', 'revenue', 'Revenue earned from invoices and sales', 1],
+                    ['5000', 'Cost of Goods Sold', 'expense', 'Direct costs associated with sold goods/services', 1],
+                    ['6000', 'Operating Expenses', 'expense', 'General business and administrative expenses', 1],
+                ];
+
+                $stIns = $pdo->prepare("INSERT INTO chart_of_accounts (tenant_id, account_code, account_name, account_type, description, is_system) VALUES (?, ?, ?, ?, ?, ?)");
+                foreach ($defaultAccounts as $acc) {
+                    try {
+                        $stIns->execute([$tenantId, $acc[0], $acc[1], $acc[2], $acc[3], $acc[4]]);
+                    } catch (\PDOException $e) {}
+                }
+            }
+        } catch (\PDOException $e) {}
+    }
 }

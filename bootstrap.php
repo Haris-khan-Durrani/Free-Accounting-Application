@@ -89,6 +89,10 @@ function money(float $value, string $currencyCode = 'AED', ?PDO $pdoInstance = n
     return \Core\Currency::format($value, $currencyCode, $pdoInstance ?: $pdo);
 }
 
+function seed_chart_of_accounts(PDO $pdo, int $tenantId): void {
+    \Core\Tenant::seedAccounts($pdo, $tenantId);
+}
+
 function tenant(): array {
     global $pdo;
     if (!\Core\Tenant::hasActiveId()) {
