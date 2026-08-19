@@ -5,7 +5,26 @@ require __DIR__ . '/layout.php';
 
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
-$brand = branding();
+
+// Fetch all registered tenants for superadmin/owner workspace switcher
+$stAllTenants = $pdo->query("SELECT id, name, code FROM tenants ORDER BY name ASC");
+$allTenants = $stAllTenants->fetchAll();
+
+$targetTenantId = (int)($_GET['tenant_id'] ?? $_POST['target_tenant_id'] ?? $tid);
+if (!has_role(['owner', 'admin']) && $targetTenantId !== $tid) {
+    $targetTenantId = $tid;
+}
+
+$brand = branding($targetTenantId);
+$targetTenantObj = null;
+foreach ($allTenants as $at) {
+    if ($at['id'] == $targetTenantId) {
+        $targetTenantObj = $at;
+        break;
+    }
+}
+$targetTenantName = $targetTenantObj ? $targetTenantObj['name'] : tenant()['name'];
+
 $message = '';
 $error = '';
 
@@ -50,11 +69,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $signatureUrl = $brand['signature_url'];
     $stampUrl = $brand['stamp_url'];
 
-    $handleUpload = function($fileKey, $prefix) use ($uploadDir) {
+    $handleUpload = function($fileKey, $prefix) use ($uploadDir, $targetTenantId) {
         if (!empty($_FILES[$fileKey]['name']) && $_FILES[$fileKey]['error'] === UPLOAD_ERR_OK) {
             $ext = strtolower(pathinfo($_FILES[$fileKey]['name'], PATHINFO_EXTENSION));
             if (in_array($ext, ['png', 'jpg', 'jpeg', 'svg', 'webp'], true)) {
-                $filename = $prefix . '_' . tenant_id() . '_' . time() . '.' . $ext;
+                $filename = $prefix . '_' . $targetTenantId . '_' . time() . '.' . $ext;
                 $target = $uploadDir . $filename;
                 if (move_uploaded_file($_FILES[$fileKey]['tmp_name'], $target)) {
                     return 'assets/img/uploads/' . $filename;
@@ -93,16 +112,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         invoice_footer_notes=VALUES(invoice_footer_notes), watermark_enabled=VALUES(watermark_enabled), show_qr_code=VALUES(show_qr_code)");
 
     $st->execute([
-        $tid, $companyName, $companyTagline, $companyWebsite, $companyEmail, $companyPhone,
+        $targetTenantId, $companyName, $companyTagline, $companyWebsite, $companyEmail, $companyPhone,
         $taxLabel, $taxNumber, $regNumber, $address, $city, $country,
         $bankName, $bankAccountName, $bankAccountNumber, $bankIban, $bankSwift,
         $primaryColor, $secondaryColor, $accentColor, $fontFamily, $logoUrl, $darkLogoUrl,
         $signatureUrl, $stampUrl, $defaultTemplate, $footerNotes, $watermarkEnabled, $showQrCode
     ]);
 
-    log_audit($pdo, 'update', 'branding', $tid, 'Updated dynamic branding profile and themes');
-    flash('success', 'Dynamic branding and company profile updated successfully!');
-    redirect('branding.php');
+    \Core\Tenant::forgetCache($targetTenantId);
+
+    log_audit($pdo, 'update', 'branding', $targetTenantId, "Updated dynamic branding profile and themes for workspace #$targetTenantId");
+    flash('success', "Dynamic branding and company profile for '$targetTenantName' updated successfully!");
+    redirect('branding.php?tenant_id=' . $targetTenantId);
 }
 
 page_start('Dynamic Branding & Company Profile');
@@ -111,10 +132,22 @@ page_start('Dynamic Branding & Company Profile');
 <div class="md:flex md:items-center md:justify-between mb-8">
     <div>
         <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Dynamic Branding & Identity</h1>
-        <p class="mt-1 text-sm text-slate-500">Configure visual themes, logo media, bank details, and invoice parameters for <strong><?=e(tenant()['name'])?></strong>.</p>
+        <p class="mt-1 text-sm text-slate-500">Configure visual themes, logo media, bank details, and invoice parameters for <strong><?=e($targetTenantName)?></strong>.</p>
     </div>
-    <div class="mt-4 md:mt-0">
-        <a href="domain_settings" class="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all space-x-2">
+    <div class="mt-4 md:mt-0 flex items-center space-x-3">
+        <?php if (count($allTenants) > 1 && has_role(['owner', 'admin'])): ?>
+            <div class="flex items-center space-x-2 bg-white px-3.5 py-2 rounded-xl border border-slate-200 shadow-sm">
+                <label class="text-2xs font-extrabold text-slate-500 uppercase">Workspace:</label>
+                <select onchange="location.href='branding.php?tenant_id=' + this.value" class="rounded-lg border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-extrabold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
+                    <?php foreach ($allTenants as $at): ?>
+                        <option value="<?=$at['id']?>" <?=$at['id'] == $targetTenantId ? 'selected' : ''?>>
+                            🏢 <?=e($at['name'])?> (code: <?=e($at['code'])?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        <?php endif; ?>
+        <a href="domain_settings?tenant_id=<?=$targetTenantId?>" class="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all space-x-2">
             <i class="fa-solid fa-globe text-amber-300 text-sm"></i>
             <span>Whitelabel Domain Settings</span>
         </a>
@@ -143,6 +176,7 @@ page_start('Dynamic Branding & Company Profile');
 
 <form method="post" enctype="multipart/form-data" class="space-y-8">
     <?=csrf_field()?>
+    <input type="hidden" name="target_tenant_id" value="<?=$targetTenantId?>">
 
     <!-- Section 1: Business Profile -->
     <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">

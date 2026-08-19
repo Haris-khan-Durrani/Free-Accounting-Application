@@ -190,6 +190,10 @@ page_start('SaaS Tenant & Trial Manager (REST API)');
                             </div>
                         </td>
                         <td class="px-6 py-4 text-right space-x-1">
+                            <a href="branding.php?tenant_id=<?=$t['id']?>" class="inline-flex items-center px-2.5 py-1 text-2xs font-extrabold text-amber-800 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200 transition-all" title="Configure Logo, Theme Colors & Invoice Customization">
+                                <i class="fa-solid fa-palette mr-1 text-amber-600"></i>Branding
+                            </a>
+
                             <form method="post" class="inline">
                                 <?=csrf_field()?>
                                 <input type="hidden" name="action" value="toggle_unlimited">
