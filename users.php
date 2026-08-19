@@ -26,45 +26,152 @@ $allTenants = $stAllTenants->fetchAll();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
-    $name = trim($_POST['name'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
-    $role = $_POST['role'] ?? 'accountant';
-    $targetTenantId = (int)($_POST['target_tenant_id'] ?? $tid);
-    $accountScope = $_POST['account_scope'] ?? 'subaccount';
+    $action = $_POST['action'] ?? 'create_user';
 
-    if ($accountScope === 'tenant_admin') {
-        $role = 'admin';
+    if ($action === 'create_user') {
+        $name = trim($_POST['name'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $role = $_POST['role'] ?? 'accountant';
+        $targetTenantId = (int)($_POST['target_tenant_id'] ?? $tid);
+        $accountScope = $_POST['account_scope'] ?? 'subaccount';
+
+        if ($accountScope === 'tenant_admin') {
+            $role = 'admin';
+        }
+
+        if (!$isLifetime && $currentUsersCount >= $maxUsersAllowed) {
+            $error = "Team user limit reached ($currentUsersCount/$maxUsersAllowed allowed on your " . ($tPlan['plan_name'] ?? 'Plan') . "). Please upgrade your subscription plan to add more team members.";
+        } elseif (!$name || !$email || strlen($password) < 8) {
+            $error = 'Name, valid email, and password (min 8 chars) are required.';
+        } else {
+            try {
+                $hash = password_hash($password, PASSWORD_DEFAULT);
+                $st = $pdo->prepare("INSERT INTO users (tenant_id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)");
+                $st->execute([$targetTenantId, $name, $email, $hash, $role]);
+                $newUserId = (int)$pdo->lastInsertId();
+
+                $stUt = $pdo->prepare("INSERT INTO user_tenants (user_id, tenant_id, role) VALUES (?, ?, ?)");
+                $stUt->execute([$newUserId, $targetTenantId, $role]);
+
+                // Find tenant name for message & email
+                $assignedTenantName = $activeTenant['name'];
+                foreach ($allTenants as $at) {
+                    if ($at['id'] == $targetTenantId) {
+                        $assignedTenantName = $at['name'];
+                        break;
+                    }
+                }
+
+                // Dispatch Welcome Email to the new team member
+                $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+                $loginUrl = $protocol . '://' . $host . $scriptDir . '/login.php';
+
+                $subject = "Welcome to " . e($assignedTenantName) . " - Your Account Credentials";
+                $htmlBody = "
+                    <div style='font-family: system-ui, -apple-system, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;'>
+                        <div style='text-align: center; margin-bottom: 20px;'>
+                            <h2 style='color: #0f172a; margin: 0; font-size: 22px;'>Welcome to " . e($assignedTenantName) . "! 🎉</h2>
+                            <p style='color: #64748b; font-size: 13px; margin-top: 6px;'>Your team member account has been created and assigned to your workspace.</p>
+                        </div>
+                        <div style='background: #f8fafc; padding: 18px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #f1f5f9;'>
+                            <table style='width: 100%; border-collapse: collapse; font-size: 13px; color: #334155;'>
+                                <tr><td style='padding: 6px 0; font-weight: bold; width: 140px;'>Workspace:</td><td style='padding: 6px 0; font-weight: 700; color: #0f172a;'>" . e($assignedTenantName) . "</td></tr>
+                                <tr><td style='padding: 6px 0; font-weight: bold;'>Permission Role:</td><td style='padding: 6px 0;'><span style='background: #fef3c7; color: #92400e; padding: 3px 10px; border-radius: 99px; font-weight: 800; font-size: 11px; text-transform: uppercase;'>" . e($role) . "</span></td></tr>
+                                <tr><td style='padding: 6px 0; font-weight: bold;'>Login Email:</td><td style='padding: 6px 0; font-weight: 600;'>" . e($email) . "</td></tr>
+                                <tr><td style='padding: 6px 0; font-weight: bold;'>Password:</td><td style='padding: 6px 0;'><code style='background: #e2e8f0; color: #0f172a; padding: 3px 8px; border-radius: 6px; font-family: monospace; font-weight: bold;'>" . e($password) . "</code></td></tr>
+                            </table>
+                        </div>
+                        <div style='text-align: center; margin-top: 24px;'>
+                            <a href='" . e($loginUrl) . "' style='display: inline-block; padding: 12px 28px; background: linear-gradient(to right, #f59e0b, #d97706); color: #ffffff; text-decoration: none; font-weight: 800; border-radius: 12px; font-size: 14px;'>Log In to Workspace &rarr;</a>
+                        </div>
+                    </div>
+                ";
+
+                $emailNotice = '';
+                try {
+                    $sent = \Services\Mailer::send($pdo, $targetTenantId, $email, $subject, $htmlBody);
+                    if ($sent) {
+                        $emailNotice = " & a Welcome Email with login details was sent to $email!";
+                    }
+                } catch (Throwable $t) {
+                    $emailNotice = " (Note: Welcome email could not be delivered. Check custom SMTP settings).";
+                }
+
+                log_audit($pdo, 'create_user', 'users', $newUserId, "Created user $email with role $role assigned to workspace $assignedTenantName");
+                flash('success', "User account for $email created successfully and assigned to '$assignedTenantName'" . $emailNotice);
+                redirect('users');
+            } catch (PDOException $e) {
+                $error = 'Failed to create user. Email address may already exist.';
+            }
+        }
     }
 
-    if (!$isLifetime && $currentUsersCount >= $maxUsersAllowed) {
-        $error = "Team user limit reached ($currentUsersCount/$maxUsersAllowed allowed on your " . ($tPlan['plan_name'] ?? 'Plan') . "). Please upgrade your subscription plan to add more team members.";
-    } elseif (!$name || !$email || strlen($password) < 8) {
-        $error = 'Name, valid email, and password (min 8 chars) are required.';
-    } else {
-        try {
-            $hash = password_hash($password, PASSWORD_DEFAULT);
-            $st = $pdo->prepare("INSERT INTO users (tenant_id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)");
-            $st->execute([$targetTenantId, $name, $email, $hash, $role]);
-            $newUserId = (int)$pdo->lastInsertId();
+    if ($action === 'edit_user') {
+        $editUserId = (int)($_POST['user_id'] ?? 0);
+        $name = trim($_POST['name'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $role = $_POST['role'] ?? 'accountant';
+        $targetTenantId = (int)($_POST['target_tenant_id'] ?? $tid);
+        $password = $_POST['password'] ?? '';
 
-            $stUt = $pdo->prepare("INSERT INTO user_tenants (user_id, tenant_id, role) VALUES (?, ?, ?)");
-            $stUt->execute([$newUserId, $targetTenantId, $role]);
-
-            // Find tenant name for flash message
-            $assignedTenantName = $activeTenant['name'];
-            foreach ($allTenants as $at) {
-                if ($at['id'] == $targetTenantId) {
-                    $assignedTenantName = $at['name'];
-                    break;
+        if (!$editUserId || !$name || !$email) {
+            $error = 'User ID, name, and email are required for updating.';
+        } else {
+            try {
+                if (!empty($password) && strlen($password) >= 8) {
+                    $hash = password_hash($password, PASSWORD_DEFAULT);
+                    $stU = $pdo->prepare("UPDATE users SET name = ?, email = ?, role = ?, tenant_id = ?, password_hash = ? WHERE id = ?");
+                    $stU->execute([$name, $email, $role, $targetTenantId, $hash, $editUserId]);
+                } else {
+                    $stU = $pdo->prepare("UPDATE users SET name = ?, email = ?, role = ?, tenant_id = ? WHERE id = ?");
+                    $stU->execute([$name, $email, $role, $targetTenantId, $editUserId]);
                 }
-            }
 
-            log_audit($pdo, 'create_user', 'users', $newUserId, "Created user $email with role $role assigned to workspace $assignedTenantName");
-            flash('success', "User account for $email created successfully and assigned to '$assignedTenantName'!");
-            redirect('users');
-        } catch (PDOException $e) {
-            $error = 'Failed to create user. Email address may already exist.';
+                $stUt = $pdo->prepare("UPDATE user_tenants SET tenant_id = ?, role = ? WHERE user_id = ? AND tenant_id = ?");
+                $stUt->execute([$targetTenantId, $role, $editUserId, $tid]);
+                if ($stUt->rowCount() == 0) {
+                    // Update any existing user_tenant entry for user
+                    $stUt2 = $pdo->prepare("UPDATE user_tenants SET tenant_id = ?, role = ? WHERE user_id = ?");
+                    $stUt2->execute([$targetTenantId, $role, $editUserId]);
+                }
+
+                log_audit($pdo, 'edit_user', 'users', $editUserId, "Updated user #$editUserId ($email)");
+                flash('success', "Team member '$name' updated successfully!");
+                redirect('users');
+            } catch (PDOException $e) {
+                $error = 'Failed to update user. Email address may already be in use.';
+            }
+        }
+    }
+
+    if ($action === 'delete_user') {
+        $deleteUserId = (int)($_POST['user_id'] ?? 0);
+        $activeUserId = (int)($_SESSION['user_id'] ?? 0);
+
+        if ($deleteUserId === $activeUserId) {
+            $error = 'Security Protection: You cannot delete your own active user account.';
+        } else {
+            try {
+                $st1 = $pdo->prepare("DELETE FROM user_tenants WHERE user_id = ? AND tenant_id = ?");
+                $st1->execute([$deleteUserId, $tid]);
+
+                // Check if user belongs to any other tenant
+                $st2 = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE user_id = ?");
+                $st2->execute([$deleteUserId]);
+                if ($st2->fetchColumn() == 0) {
+                    $st3 = $pdo->prepare("DELETE FROM users WHERE id = ?");
+                    $st3->execute([$deleteUserId]);
+                }
+
+                log_audit($pdo, 'delete_user', 'users', $deleteUserId, "Removed user #$deleteUserId from workspace #$tid");
+                flash('success', 'Team member removed from workspace successfully.');
+                redirect('users');
+            } catch (PDOException $e) {
+                $error = 'Failed to delete user.';
+            }
         }
     }
 }
@@ -122,6 +229,7 @@ page_start('Team & Permissions');
                     <th class="px-6 py-3.5">Assigned Workspace</th>
                     <th class="px-6 py-3.5">Role</th>
                     <th class="px-6 py-3.5">Date Added</th>
+                    <th class="px-6 py-3.5 text-right">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 text-sm">
@@ -145,6 +253,16 @@ page_start('Team & Permissions');
                             </span>
                         </td>
                         <td class="px-6 py-4 text-xs text-slate-500"><?=e(date('d M Y', strtotime($u['created_at'])))?></td>
+                        <td class="px-6 py-4 text-right space-x-1">
+                            <button onclick='openEditUserModal(<?=json_encode($u, JSON_HEX_APOS|JSON_HEX_QUOT)?>)' class="inline-flex items-center p-2 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50 text-xs transition-all" title="Edit Member">
+                                <i class="fa-solid fa-pen-to-square text-sm"></i>
+                            </button>
+                            <?php if ((int)$u['id'] !== (int)($_SESSION['user_id'] ?? 0)): ?>
+                                <button onclick="confirmDeleteUser(<?=$u['id']?>, '<?=e($u['name'])?>')" class="inline-flex items-center p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 text-xs transition-all" title="Delete Member">
+                                    <i class="fa-solid fa-trash-can text-sm"></i>
+                                </button>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -164,9 +282,19 @@ page_start('Team & Permissions');
                         <div class="text-2xs text-slate-400"><?=e($u['email'])?> &bull; <?=e($u['tenant_workspace_name'] ?: 'Corporate HQ')?></div>
                     </div>
                 </div>
-                <span class="px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-amber-100 text-amber-800">
-                    <?=strtoupper(e($u['tenant_role'] ?: $u['role']))?>
-                </span>
+                <div class="flex items-center space-x-2">
+                    <span class="px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-amber-100 text-amber-800">
+                        <?=strtoupper(e($u['tenant_role'] ?: $u['role']))?>
+                    </span>
+                    <button onclick='openEditUserModal(<?=json_encode($u, JSON_HEX_APOS|JSON_HEX_QUOT)?>)' class="p-1 text-slate-500 hover:text-amber-600">
+                        <i class="fa-solid fa-pen-to-square text-xs"></i>
+                    </button>
+                    <?php if ((int)$u['id'] !== (int)($_SESSION['user_id'] ?? 0)): ?>
+                        <button onclick="confirmDeleteUser(<?=$u['id']?>, '<?=e($u['name'])?>')" class="p-1 text-slate-400 hover:text-rose-600">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    <?php endif; ?>
+                </div>
             </div>
         <?php endforeach; ?>
     </div>
@@ -192,6 +320,7 @@ page_start('Team & Permissions');
         <!-- Form Body -->
         <form method="post" class="p-6 space-y-4">
             <?=csrf_field()?>
+            <input type="hidden" name="action" value="create_user">
             
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -263,5 +392,97 @@ page_start('Team & Permissions');
         </form>
     </div>
 </div>
+
+<!-- Edit User Modal -->
+<div id="edit-user-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/80">
+            <div class="flex items-center space-x-3">
+                <div class="h-10 w-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center text-lg font-bold">
+                    <i class="fa-solid fa-user-pen"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900 tracking-tight">Edit Team Member</h3>
+                    <p class="text-2xs text-slate-500 font-medium">Update member permissions & workspace assignment</p>
+                </div>
+            </div>
+            <button onclick="document.getElementById('edit-user-modal').classList.add('hidden')" class="h-8 w-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center text-lg font-bold transition-all">×</button>
+        </div>
+
+        <form method="post" class="p-6 space-y-4">
+            <?=csrf_field()?>
+            <input type="hidden" name="action" value="edit_user">
+            <input type="hidden" name="user_id" id="edit-user-id">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Full Name *</label>
+                    <input type="text" name="name" id="edit-user-name" required class="w-full rounded-xl border border-slate-300 bg-slate-50/80 px-3.5 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Email Address *</label>
+                    <input type="email" name="email" id="edit-user-email" required class="w-full rounded-xl border border-slate-300 bg-slate-50/80 px-3.5 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Reset Password (Optional)</label>
+                    <input type="password" name="password" placeholder="Leave blank to keep current" class="w-full rounded-xl border border-slate-300 bg-slate-50/80 px-3.5 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Permission Role *</label>
+                    <select name="role" id="edit-user-role" class="w-full rounded-xl border border-slate-300 bg-slate-50/80 px-3.5 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
+                        <option value="admin">Admin (Full Access)</option>
+                        <option value="accountant">Accountant (Invoices & Reports)</option>
+                        <option value="sales">Sales (Proposals & Invoices)</option>
+                        <option value="viewer">Viewer (Read Only)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Assigned Company Workspace *</label>
+                <select name="target_tenant_id" id="edit-user-tenant" class="w-full rounded-xl border border-slate-300 bg-slate-50/80 px-3.5 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
+                    <?php foreach ($allTenants as $at): ?>
+                        <option value="<?=$at['id']?>"><?=e($at['name'])?> (code: <?=e($at['code'])?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">
+                <button type="button" onclick="document.getElementById('edit-user-modal').classList.add('hidden')" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all">Cancel</button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl text-xs font-black text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg shadow-amber-500/20 transition-all">Save Member Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete User Modal Form -->
+<form id="delete-user-form" method="post" class="hidden">
+    <?=csrf_field()?>
+    <input type="hidden" name="action" value="delete_user">
+    <input type="hidden" name="user_id" id="delete-user-id">
+</form>
+
+<script>
+function openEditUserModal(user) {
+    document.getElementById('edit-user-id').value = user.id;
+    document.getElementById('edit-user-name').value = user.name;
+    document.getElementById('edit-user-email').value = user.email;
+    document.getElementById('edit-user-role').value = user.tenant_role || user.role || 'accountant';
+    if (document.getElementById('edit-user-tenant')) {
+        document.getElementById('edit-user-tenant').value = user.tenant_id || 1;
+    }
+    document.getElementById('edit-user-modal').classList.remove('hidden');
+}
+
+function confirmDeleteUser(userId, userName) {
+    if (confirm("Are you sure you want to remove team member '" + userName + "' from this workspace?")) {
+        document.getElementById('delete-user-id').value = userId;
+        document.getElementById('delete-user-form').submit();
+    }
+}
+</script>
 
 <?php page_end(); ?>
