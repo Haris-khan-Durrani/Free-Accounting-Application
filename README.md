@@ -1,4 +1,4 @@
-# ⚡ OneSol Enterprise Invoice & Accounting Manager
+# ⚡ Free Multi-Tenant Enterprise Invoice & Accounting Application
 
 ![PHP 8.3](https://img.shields.io/badge/PHP-8.3-777BB4?style=for-the-badge&logo=php&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
@@ -6,8 +6,9 @@
 ![Redis](https://img.shields.io/badge/Redis-7.0-DC382D?style=for-the-badge&logo=redis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![UAE FTA Compliant](https://img.shields.io/badge/UAE_FTA_VAT-201_Compliant-007A3D?style=for-the-badge)
+![License MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-**OneSol Invoice Manager** is a high-performance, multi-tenant SaaS billing, accounting, and financial management application built for modern enterprises. Packed with 20+ feature modules, 11 PDF invoice templates, UAE FTA VAT 201 tax compliance, whitelabel custom domains, REST API automation, and real-time calculation engines.
+**Free Enterprise Accounting Application** is a high-performance, multi-tenant open-source SaaS billing, double-entry accounting, and financial management system. Packed with 20+ feature modules, 12 dynamic PDF invoice templates, interactive Visual Drag & Drop Builder, Custom Label & Wording Editor, UAE FTA VAT 201 tax compliance, passwordless email OTP client portal, whitelabel custom domains, REST API automation, and real-time general ledger calculation engines.
 
 ---
 
@@ -27,7 +28,7 @@ graph TD
         Portal -->|View Ledger & Pay| Gateways["Payment Gateways<br/>(Stripe, PayPal, NI, Bank Wire)"]
     end
 
-    subgraph Core_App ["⚡ OneSol Multi-Tenant Engine"]
+    subgraph Core_App ["⚡ Multi-Tenant Engine"]
         Admin["Super Admin / Workspace User"] -->|HTTP / Domain Router| Layout["layout.php<br/>(Topbar & Mega Menu)"]
         
         Layout -->|Subaccounts & Branches| TenantManager["subaccounts.php<br/>(Multi-Tenant Isolation)"]
@@ -38,7 +39,7 @@ graph TD
         Layout -->|Client CRM & Import| ClientCRM["clients.php & client_import.php<br/>(Zoho / QB / Xero Importer)"]
         Layout -->|Expenses & Receipts| ExpEngine["expenses.php<br/>(Expense Tracking)"]
         
-        Layout -->|11 PDF Layout Designs| TemplateEngine["invoice_customize.php<br/>(Template Renderer & Builder)"]
+        Layout -->|12 PDF Layout Designs| TemplateEngine["invoice_customize.php<br/>(Template Gallery & Drag & Drop)"]
     end
 
     subgraph Background_Workers ["🤖 Automation & Cron Jobs"]
@@ -81,6 +82,12 @@ graph TD
 
 ## 🌟 Key Features & Capabilities
 
+### 🎨 12 PDF Invoice Templates, Drag & Drop Builder & Label Customizer
+- **Visual Drag & Drop Builder (`invoice_builder.php`)**: Reorder components (Header, Metadata, Client Info, Item Table, Financial Totals, Bank Remittance, Terms, Signature/Stamp, QR Verification) visually with live WYSIWYG canvas feedback.
+- **In-Canvas & Sidebar Editing**: Edit labels (e.g. `TAX INVOICE`, `OFFICIAL BILL`, `TRN / Tax ID`) and color themes (Primary Accent Color, Header Text Color) directly on the canvas or sidebar.
+- **Tenant Isolation**: Custom layouts and wording overrides save per `tenant_id` without cross-tenant conflicts.
+- **12 Modern PDF Designs**: Custom Drag & Drop Template, Modern Minimal, Corporate Executive, Creative Vibrant, Tech Glassmorphism, Sleek Dark, Compact Thermal POS Receipt, Elegant Serif, Swiss Grid, Borderless Clean, Two-Column Split, and OneSol Executive Gold.
+
 ### 🇦🇪 UAE FTA Tax & Corporate Tax Compliance
 - **Official FTA VAT 201 Declaration Return**: Formatted to match UAE Federal Tax Authority (FTA) Form 201 layout with Box 1a–1g breakdowns across all 7 Emirates (Dubai, Abu Dhabi, Sharjah, Ajman, UAQ, RAK, Fujairah).
 - **Official FTA Audit File (.faf) Generator**: 1-Click export of the pipe-delimited `.faf` text audit file required by FTA auditors containing Header, Sales, and Purchase ledgers.
@@ -88,45 +95,22 @@ graph TD
 - **Tax Invoice & TRN Validation**: Supports 15-digit Seller & Buyer TRN numbers, 5% standard VAT rate, zero-rated exports (0%), and exempt items.
 - **Dual AED Currency Engine**: Native support for AED (UAE Dirham) with automatic CBUAE conversion rates for foreign currencies (USD, EUR, GBP, SAR).
 
-### 🌐 Enterprise Whitelabel Custom Domains
-- **Custom Subdomain Binding**: Bind custom domains (e.g. `billing.yourcompany.com`) to host public client payment portals.
-- **⚡ Real-Time DNS Testing**: Interactive AJAX DNS verification engine that performs live CNAME and IP resolution checks with SSL indicators.
-- **Watermark Control**: Option to remove "Powered by OneSol" branding across client portals.
+### 🔑 Security & Self-Service Client Portal
+- **Passwordless Client OTP Authentication (`client_login.php`)**: Secure 6-digit email OTP single-use login with session regeneration (`session_regenerate_id(true)`).
+- **Forgot Password System (`forgot_password.php` & `reset_password.php`)**: Secure SMTP token-based password reset for workspace admins and users.
+- **Whitelabel Custom Domains (`domain_settings.php`)**: Bind custom subdomains (e.g. `billing.yourcompany.com`) with live AJAX DNS verification checks.
 
-### 📊 Comprehensive Financial Reporting Suite (8 Reports)
+### 📊 Double-Entry General Ledger & Reporting Suite
 - **Profit & Loss Statement (P&L)**: Gross Revenue vs Business Expenses with Net Profit calculation.
-- **Balance Sheet (Statement of Financial Position)**: Cash & Receivables, Net VAT Obligations, and Retained Earnings satisfying $\text{Assets} = \text{Liabilities} + \text{Equity}$.
-- **Cash Flow Statement**: Operating inflows and outflows categorized by date.
+- **Balance Sheet**: Cash & Receivables, Net VAT Obligations, and Retained Earnings satisfying $\text{Assets} = \text{Liabilities} + \text{Equity}$.
 - **Accounts Receivable (A/R) Aging Report**: 30 / 60 / 90+ day overdue buckets.
-- **UAE FTA VAT 201 Filing Return**: 7-Emirate Box 1–14 tax return.
-- **General VAT Summary Report**: Tax collected vs input VAT paid.
-- **Client Revenue & Sales Analysis**: Total sales per client account with statement links.
-- **Expenses by Category**: Spending breakdown across operational expense categories.
-- **Universal CSV Exports**: 1-click CSV file downloads across all reporting pages.
+- **Universal CSV & PDF Exports**: 1-click CSV file downloads across all reporting pages.
 
-### 🎨 11 Dynamic Invoice Templates & Drag & Drop Builder
-- **11 Curated Designs**: Modern Minimal, Corporate Executive, Creative Vibrant, Tech Glassmorphism, Sleek Dark, Compact Thermal Receipt, Dual Column, Bold Gold, Slate Clean, Architectural Blue, and Classic Legal.
-- **Drag & Drop Invoice Builder**: Reorder columns, customize brand colors, logos, digital signatures, and seal stamps.
-
-### 🔄 Auto-Subscription Billing Engine
-- **Subscription Billing Manager (`recurring_invoices.php`)**: Full UI dashboard for setting up automated recurring client subscriptions (Weekly, Monthly, Quarterly, Yearly) with automatic VAT calculations.
-- **Background Cron Worker (`cron_recurring.php`)**: Automated worker executing subscription cycles, posting double-entry accounting general ledger entries, generating tax invoices, and emailing PDF receipts to clients.
-- **Global Search & Pagination Engine**: Instant keyword search and multi-page pagination across Client CRM Directory (`clients.php`), Executive Invoices Log (`index.php`), and Expense Receipts (`expenses.php`).
-- **Stripe Fallback & Webhook Sync**: `stripe_return.php` and `api/v1/webhooks/stripe.php` automatically record online credit card payments, update invoice status, post general ledger entries, and send email receipts in real-time.
-- **Universal Client Importer (Zoho / QuickBooks / Xero)**: Migration wizard (`client_import.php`) with smart column auto-mapping to import client directories from Zoho Books, QuickBooks, Xero, FreshBooks, or Excel CSV files.
-- **Client Self-Service Portal**: Passwordless client login hub (`client_portal.php`) where clients view invoice history, download statements of account, and pay online.
-- **WhatsApp Cloud API Integration**: Direct Meta WhatsApp Cloud API gateway (`whatsapp_settings.php`) for automated PDF invoice & payment link dispatches.
-- **Statement of Account**: Full financial ledger per client detailing invoices, payments received, running balance, and PDF print formatting.
-- **1-Click SMTP Email Dispatch**: Deliver HTML invoices with online payment buttons using tenant custom SMTP settings (Gmail, Office 365, cPanel, SES).
-
-### 🛡️ Security, Rate Limiting & Backups
-- **Security Throttling Engine**: IP-based rate limiting that locks out brute-force bot attempts after 5 failed logins for 15 minutes.
-- **Two-Factor Authentication (2FA)**: 6-digit OTP security verification via email.
-- **1-Click SQL Database Backup**: Export raw `.sql` database dumps for archiving.
-- **CBUAE Live Exchange Rate Sync**: Daily automated fetch (`cron_exchange_rates.php`) updating AED exchange rates for foreign currencies.
-
-### ⚡ Live Dynamic Calculation Engine
-- Sticky summary cards on invoice and proposal creation forms that calculate Subtotal, Discounts (Fixed or %), VAT Tax, and Grand Total live as line items change.
+### 🔄 Auto-Subscription Billing & Integrations
+- **Subscription Billing Manager (`recurring_invoices.php`)**: Automated recurring billing profiles (Weekly, Monthly, Quarterly, Yearly).
+- **Stripe & Webhook Integration**: Online credit card payment sync via webhooks.
+- **Meta WhatsApp Cloud API Integration**: Direct PDF invoice and payment link dispatches via WhatsApp.
+- **Universal CRM Importer**: Migration wizard (`client_import.php`) to import client directories from Zoho Books, QuickBooks, Xero, or CSV files.
 
 ---
 
@@ -147,8 +131,8 @@ graph TD
 Clone the repository and launch the full stack (PHP 8.3, Nginx, MySQL 8, Redis 7):
 
 ```bash
-git clone https://github.com/Haris-khan-Durrani/invoice.git
-cd invoice
+git clone https://github.com/Haris-khan-Durrani/Free-Accounting-Application.git
+cd Free-Accounting-Application
 ```
 
 **Windows:**
@@ -170,7 +154,7 @@ Access the application at: **`http://localhost:8080`**
 
 1. **Clone the repository into your web root (`www` or `htdocs`):**
    ```bash
-   git clone https://github.com/Haris-khan-Durrani/invoice.git
+   git clone https://github.com/Haris-khan-Durrani/Free-Accounting-Application.git
    ```
 
 2. **Database Setup:**
@@ -186,7 +170,7 @@ Access the application at: **`http://localhost:8080`**
    ```
 
 4. **Access the application:**
-   Open `http://localhost/invoice` in your browser.
+   Open `http://localhost/Free-Accounting-Application` in your browser.
 
 ---
 
@@ -215,6 +199,4 @@ Interactive API testing console available at: **`/api_playground.php`**
 
 ## 📄 License
 
-This project is licensed under the **MIT License**.
-
-Designed & Developed by **OneSol Solutions**.
+This project is open-source software licensed under the **[MIT License](LICENSE)**. Free for commercial and personal use.
