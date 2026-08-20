@@ -118,14 +118,24 @@ function page_start(string $title): void {
         echo '<a href="expenses" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['expenses.php', 'expenses', 'expense_form.php']) . '"><i class="fa-solid fa-receipt text-rose-400 text-2xs"></i><span>Expenses</span></a>';
         
         // Reports Dropdown Menu
-        $isReportsActive = str_contains($currScript, 'reports_') || $currScript === 'export_faf.php';
+        $isReportsActive = str_contains($currScript, 'reports_') || in_array($currScript, ['export_faf.php', 'accounts.php', 'journal.php']);
         echo '<div class="relative group py-2">';
-        echo '<button class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . ($isReportsActive ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30 font-black' : 'text-slate-300 hover:text-white hover:bg-slate-800/70 font-semibold') . '"><i class="fa-solid fa-folder-open text-purple-400 text-2xs"></i><span>Reports</span><i class="fa-solid fa-chevron-down text-[9px] ml-0.5 opacity-70"></i></button>';
+        echo '<button class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . ($isReportsActive ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30 font-black' : 'text-slate-300 hover:text-white hover:bg-slate-800/70 font-semibold') . '"><i class="fa-solid fa-folder-open text-purple-400 text-2xs"></i><span>Reports & Ledger</span><i class="fa-solid fa-chevron-down text-[9px] ml-0.5 opacity-70"></i></button>';
         echo '<div class="absolute right-0 top-full pt-1 w-72 hidden group-hover:block z-50">';
         echo '<div class="bg-white rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden py-1 max-h-[85vh] overflow-y-auto">';
         
-        // Category 1: Financial Statements
-        echo '<div class="bg-slate-50/90 border-b border-slate-100 px-4 py-2 flex items-center space-x-2">';
+        // Category 1: General Ledger & Accounting
+        echo '<div class="bg-indigo-50/90 border-b border-indigo-100 px-4 py-2 flex items-center space-x-2">';
+        echo '<i class="fa-solid fa-book-bookmark text-indigo-600 text-xs"></i>';
+        echo '<span class="text-[10px] font-extrabold uppercase tracking-wider text-indigo-900">General Ledger & Accounting</span>';
+        echo '</div>';
+        echo '<div class="py-1">';
+        echo '<a href="accounts" class="flex items-center px-4 py-2 text-xs font-bold text-slate-900 hover:bg-indigo-50/60 hover:text-indigo-600 transition-colors"><i class="fa-solid fa-list-check w-6 text-indigo-500 text-center"></i><span>Chart of Accounts (COA)</span></a>';
+        echo '<a href="journal" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-cyan-50/60 hover:text-cyan-600 transition-colors"><i class="fa-solid fa-book w-6 text-cyan-500 text-center"></i><span>General Ledger & Journal</span></a>';
+        echo '</div>';
+
+        // Category 2: Financial Statements
+        echo '<div class="bg-slate-50/90 border-y border-slate-100 px-4 py-2 flex items-center space-x-2 mt-1">';
         echo '<i class="fa-solid fa-chart-line text-slate-400 text-xs"></i>';
         echo '<span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Financial Statements</span>';
         echo '</div>';
@@ -136,7 +146,7 @@ function page_start(string $title): void {
         echo '<a href="reports_aging" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-purple-50/60 hover:text-purple-600 transition-colors"><i class="fa-solid fa-clock w-6 text-purple-500 text-center"></i><span>AR Aging Report</span></a>';
         echo '</div>';
 
-        // Category 2: UAE Tax & VAT Compliance
+        // Category 3: UAE Tax & VAT Compliance
         echo '<div class="bg-emerald-50/90 border-y border-emerald-100 px-4 py-2 flex items-center justify-between mt-1">';
         echo '<div class="flex items-center space-x-2"><i class="fa-solid fa-building-columns text-emerald-600 text-xs"></i><span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800">UAE Tax Compliance</span></div>';
         echo '<span class="text-[9px] font-black bg-emerald-600 text-white px-1.5 py-0.5 rounded">FTA 201</span>';
@@ -148,7 +158,7 @@ function page_start(string $title): void {
         echo '<a href="reports_tax" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-slate-900 transition-colors"><i class="fa-solid fa-calculator w-6 text-slate-400 text-center"></i><span>General VAT Summary</span></a>';
         echo '</div>';
 
-        // Category 3: Analytics & Audit
+        // Category 4: Analytics & Audit
         echo '<div class="bg-slate-50/90 border-y border-slate-100 px-4 py-2 flex items-center space-x-2 mt-1">';
         echo '<i class="fa-solid fa-chart-pie text-slate-400 text-xs"></i>';
         echo '<span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Business Analytics</span>';
@@ -188,9 +198,11 @@ function page_start(string $title): void {
         echo '<a href="invoice_builder" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-layer-group w-5 text-amber-500 text-center"></i><span>Drag & Drop Builder</span></a>';
         echo '</div>';
 
-        // Group 3: Products & Catalog
+        // Group 3: Accounting & Catalog
         echo '<div>';
-        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-box text-slate-400 text-3xs"></i><span>Products & Catalog</span></div>';
+        echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-book-bookmark text-slate-400 text-3xs"></i><span>Accounting & Catalog</span></div>';
+        echo '<a href="accounts" class="flex items-center px-2.5 py-1.5 text-xs font-extrabold text-indigo-900 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-list-check w-5 text-indigo-600 text-center"></i><span>Chart of Accounts (COA)</span></a>';
+        echo '<a href="journal" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-cyan-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-book w-5 text-cyan-500 text-center"></i><span>General Ledger & Journal</span></a>';
         echo '<a href="items" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-emerald-50/70 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-box w-5 text-emerald-500 text-center"></i><span>Product Catalog</span></a>';
         echo '<a href="expense_categories" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-rose-50/70 hover:text-rose-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-tags w-5 text-rose-500 text-center"></i><span>Expense Categories</span></a>';
         echo '<a href="backup_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-cyan-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-database w-5 text-cyan-500 text-center"></i><span>SQL Database Backup</span></a>';
