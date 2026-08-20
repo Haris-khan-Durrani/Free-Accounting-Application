@@ -58,7 +58,7 @@ page_start($invoice ? 'Edit Tax Invoice' : 'Create Tax Invoice');
     </a>
 </div>
 
-<form action="invoice_save.php" method="post" class="space-y-8">
+<form action="invoice_save.php" method="post" class="space-y-8 pb-32 lg:pb-8">
     <?=csrf_field()?>
     <input type="hidden" name="id" value="<?=e((string)$id)?>">
 
@@ -336,11 +336,11 @@ page_start($invoice ? 'Edit Tax Invoice' : 'Create Tax Invoice');
         </div>
     </div>
 
-    <!-- Actions -->
-    <div class="flex items-center justify-end space-x-4">
-        <a href="index.php" class="px-6 py-3 border border-slate-300 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all">Cancel</a>
-        <button type="submit" class="inline-flex items-center px-8 py-3 border border-transparent text-base font-extrabold rounded-xl text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-md transition-all">
-            <i class="fa-solid fa-floppy-disk mr-2"></i><?=$invoice ? 'Update Tax Invoice' : 'Save & Issue Invoice'?>
+    <!-- Actions (Mobile Safe Responsive Action Bar) -->
+    <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-4 gap-3">
+        <a href="index.php" class="w-full sm:w-auto text-center px-6 py-3.5 border border-slate-300 rounded-xl text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 transition-all">Cancel</a>
+        <button type="submit" class="w-full sm:w-auto inline-flex justify-center items-center px-8 py-3.5 border border-transparent text-base font-extrabold rounded-xl text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-xl transition-all active:scale-95">
+            <i class="fa-solid fa-paper-plane mr-2"></i><?=$invoice ? 'Update Tax Invoice' : 'Save & Issue Invoice'?>
         </button>
     </div>
 </form>

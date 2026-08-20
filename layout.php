@@ -280,41 +280,46 @@ function page_start(string $title): void {
     echo '</div>';
     echo '</header>';
 
-    // Mobile App Navigation Dock
+    // Mobile App Navigation Dock (Ultra-Sleek Inline Design with Active Page Glow & Spring Micro-Animations)
     if (!empty($_SESSION['user_id'])) {
-        echo '<nav class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 px-4 py-2 flex items-center justify-around shadow-2xl">';
+        echo '<nav class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-2xl border-t border-slate-800/80 px-2 py-1.5 flex items-center justify-around shadow-2xl">';
         
-        echo '<a href="index" class="flex flex-col items-center text-slate-400 hover:text-amber-400 py-1 transition-colors">';
-        echo '<i class="fa-solid fa-chart-pie text-lg mb-0.5"></i>';
-        echo '<span class="text-[10px] font-bold">Home</span>';
+        $mItem = function($url, $icon, $label, $matches = []) use ($currScript) {
+            $isActive = in_array($currScript, $matches);
+            $bgStyle = $isActive 
+                ? 'bg-amber-500/15 text-amber-400 font-extrabold border border-amber-500/30 shadow-xs' 
+                : 'text-slate-400 hover:text-slate-200 font-semibold border border-transparent';
+            $iconAnim = $isActive ? 'scale-110 text-amber-400' : 'group-hover:scale-110 group-active:scale-95';
+            
+            echo '<a href="' . $url . '" class="flex flex-col items-center justify-center py-1.5 px-2 rounded-2xl group transition-all duration-200 ' . $bgStyle . ' active:scale-95">';
+            echo '<i class="' . $icon . ' text-base mb-0.5 transform transition-transform duration-200 ' . $iconAnim . '"></i>';
+            echo '<span class="text-[10px] tracking-tight whitespace-nowrap">' . $label . '</span>';
+            echo '</a>';
+        };
+
+        // Home / Dashboard
+        $mItem('index', 'fa-solid fa-chart-pie', 'Home', ['index.php', 'index']);
+
+        // Invoices List
+        $mItem('invoices', 'fa-solid fa-file-invoice', 'Invoices', ['invoices.php', 'invoices', 'invoice_view.php']);
+
+        // Inline + Invoice Action Button (Sleek Inline Glow Badge, zero awkward protrusion)
+        $isAddInvoice = in_array($currScript, ['invoice_form.php', 'invoice_form']);
+        echo '<a href="invoice_form" class="flex flex-col items-center justify-center py-1.5 px-2.5 rounded-2xl group transition-all duration-200 active:scale-90 ' . ($isAddInvoice ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-lg ring-2 ring-amber-400/40' : 'bg-slate-900 border border-amber-500/40 text-amber-400 hover:bg-slate-800 shadow-xs') . '">';
+        echo '<i class="fa-solid fa-circle-plus text-base mb-0.5 transform group-hover:rotate-90 transition-transform duration-300"></i>';
+        echo '<span class="text-[10px] font-extrabold tracking-tight">+ Invoice</span>';
         echo '</a>';
 
-        echo '<a href="invoices" class="flex flex-col items-center text-slate-400 hover:text-amber-400 py-1 transition-colors">';
-        echo '<i class="fa-solid fa-file-invoice text-lg mb-0.5"></i>';
-        echo '<span class="text-[10px] font-bold">Invoices</span>';
-        echo '</a>';
+        // Clients
+        $mItem('clients', 'fa-solid fa-users', 'Clients', ['clients.php', 'clients']);
 
-        echo '<a href="clients" class="flex flex-col items-center text-slate-400 hover:text-amber-400 py-1 transition-colors">';
-        echo '<i class="fa-solid fa-users text-lg mb-0.5"></i>';
-        echo '<span class="text-[10px] font-bold">Clients</span>';
-        echo '</a>';
+        // Proposals / Quotes
+        $mItem('quotes', 'fa-solid fa-file-signature', 'Quotes', ['quotes.php', 'quotes']);
 
-        // Floating Action Button (FAB)
-        echo '<a href="invoice_form" class="-mt-6 flex flex-col items-center group">';
-        echo '<div class="h-13 w-13 rounded-full bg-gradient-to-tr from-amber-500 to-amber-600 border-4 border-slate-950 flex items-center justify-center text-white text-xl font-bold shadow-xl transform group-hover:scale-105 transition-all">';
-        echo '<i class="fa-solid fa-plus"></i>';
-        echo '</div>';
-        echo '<span class="text-[10px] font-extrabold text-amber-400 mt-0.5">Invoice</span>';
-        echo '</a>';
-
-        echo '<a href="quotes" class="flex flex-col items-center text-slate-400 hover:text-amber-400 py-1 transition-colors">';
-        echo '<i class="fa-solid fa-file-signature text-lg mb-0.5"></i>';
-        echo '<span class="text-[10px] font-bold">Quotes</span>';
-        echo '</a>';
-
-        echo '<button onclick="toggleMobileAppMenu()" class="flex flex-col items-center text-slate-400 hover:text-amber-400 py-1 transition-colors focus:outline-none">';
-        echo '<i class="fa-solid fa-bars-staggered text-lg mb-0.5"></i>';
-        echo '<span class="text-[10px] font-bold">Menu</span>';
+        // Menu Button
+        echo '<button onclick="toggleMobileAppMenu()" class="flex flex-col items-center justify-center py-1.5 px-2 rounded-2xl text-slate-400 hover:text-slate-200 group transition-all duration-200 active:scale-95 focus:outline-none">';
+        echo '<i class="fa-solid fa-bars-staggered text-base mb-0.5 transform group-hover:scale-110 transition-transform duration-200"></i>';
+        echo '<span class="text-[10px] font-semibold tracking-tight">Menu</span>';
         echo '</button>';
 
         echo '</nav>';
