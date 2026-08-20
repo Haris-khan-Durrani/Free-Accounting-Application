@@ -175,7 +175,7 @@ page_start('Expense Categories');
 </div>
 
 <!-- Modal: Add / Edit Category -->
-<div id="cat-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+<div id="cat-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-[100] hidden p-4">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
         <div class="flex justify-between items-center pb-4 border-b border-slate-100 mb-5">
             <h3 id="cat-modal-title" class="text-lg font-bold text-slate-900">Add Expense Category</h3>

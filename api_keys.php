@@ -317,7 +317,7 @@ function copyNewKey() {
 <!-- ══════════════════════════════════════════ -->
 <!-- MODAL: Create API Key -->
 <!-- ══════════════════════════════════════════ -->
-<div id="create-key-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-50 hidden p-3 sm:p-4">
+<div id="create-key-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-[100] hidden p-3 sm:p-4">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] my-auto">
 
         <!-- Modal Header (Fixed Top) -->

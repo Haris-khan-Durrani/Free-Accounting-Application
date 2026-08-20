@@ -594,7 +594,7 @@ page_start('Team & Permissions');
 </div>
 
 <!-- Add User Modal (Sleek 2-Column Responsive Layout - Zero Scrollbar Needed!) -->
-<div id="new-user-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
+<div id="new-user-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center z-[100] hidden p-4">
     <div class="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden">
         <!-- Header -->
         <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/80">
@@ -710,7 +710,7 @@ page_start('Team & Permissions');
 </div>
 
 <!-- Edit User Modal -->
-<div id="edit-user-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
+<div id="edit-user-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center z-[100] hidden p-4">
     <div class="bg-white rounded-3xl max-w-xl w-full shadow-2xl border border-slate-200 overflow-hidden">
         <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/80">
             <div class="flex items-center space-x-3">

@@ -221,7 +221,7 @@ page_start('Auto-Subscription Billing Manager');
 </div>
 
 <!-- Modal: Create New Subscription Schedule -->
-<div id="create-schedule-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
+<div id="create-schedule-modal" class="hidden fixed inset-0 z-[100] overflow-y-auto bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-6">
         <div class="flex items-center justify-between border-b border-slate-100 pb-4">
             <h3 class="text-lg font-black text-slate-900 flex items-center">

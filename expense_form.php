@@ -65,7 +65,7 @@ page_start($expense ? 'Edit Expense Record' : 'Record New Expense');
     </a>
 </div>
 
-<form method="post" class="space-y-8 max-w-4xl mx-auto">
+<form method="post" class="space-y-8 max-w-4xl mx-auto pb-28 lg:pb-8">
     <?=csrf_field()?>
 
     <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
@@ -75,11 +75,11 @@ page_start($expense ? 'Edit Expense Record' : 'Record New Expense');
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Vendor / Supplier Name *</label>
-                <input type="text" name="vendor_name" value="<?=e($expense['vendor_name'] ?? '')?>" placeholder="e.g. AWS Amazon, Dewa, Du Telecom" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
+                <input type="text" name="vendor_name" value="<?=e($expense['vendor_name'] ?? '')?>" placeholder="e.g. AWS Amazon, Dewa, Du Telecom" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-base sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Expense Category</label>
-                <select name="category_id" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
+                <select name="category_id" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-base sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
                     <option value="">-- General Expense --</option>
                     <?php foreach ($categories as $cat): ?>
                         <option value="<?=$cat['id']?>" <?=($expense && $expense['category_id'] == $cat['id']) ? 'selected' : ''?>><?=e($cat['name'])?></option>
@@ -88,17 +88,17 @@ page_start($expense ? 'Edit Expense Record' : 'Record New Expense');
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Expense Date *</label>
-                <input type="date" name="expense_date" value="<?=e($expense['expense_date'] ?? date('Y-m-d'))?>" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
+                <input type="date" name="expense_date" value="<?=e($expense['expense_date'] ?? date('Y-m-d'))?>" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Currency & Payment Method</label>
                 <div class="grid grid-cols-2 gap-3">
-                    <select name="currency" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-900">
+                    <select name="currency" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-base sm:text-sm font-bold text-slate-900">
                         <?php foreach (['AED', 'USD', 'EUR', 'GBP', 'SAR', 'INR', 'CAD', 'AUD'] as $curr): ?>
                             <option value="<?=$curr?>" <?=($expense['currency'] ?? tenant()['currency'])===$curr?'selected':''?>><?=$curr?></option>
                         <?php endforeach; ?>
                     </select>
-                    <select name="payment_method" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-900">
+                    <select name="payment_method" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-base sm:text-sm font-bold text-slate-900">
                         <option value="Bank Transfer" <?=($expense['payment_method'] ?? '')==='Bank Transfer'?'selected':''?>>Bank Transfer</option>
                         <option value="Corporate Credit Card" <?=($expense['payment_method'] ?? '')==='Corporate Credit Card'?'selected':''?>>Credit Card</option>
                         <option value="Petty Cash" <?=($expense['payment_method'] ?? '')==='Petty Cash'?'selected':''?>>Petty Cash</option>
@@ -107,23 +107,23 @@ page_start($expense ? 'Edit Expense Record' : 'Record New Expense');
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Subtotal Amount (Excl. Tax) *</label>
-                <input type="number" step="0.01" name="subtotal" value="<?=e((string)(float)($expense['subtotal'] ?? 0))?>" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-bold font-mono text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
+                <input type="number" step="0.01" name="subtotal" value="<?=e((string)(float)($expense['subtotal'] ?? 0))?>" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-base sm:text-sm font-bold font-mono text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Recoverable Tax / VAT Amount</label>
-                <input type="number" step="0.01" name="tax_amount" value="<?=e((string)(float)($expense['tax_amount'] ?? 0))?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-bold font-mono text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
+                <input type="number" step="0.01" name="tax_amount" value="<?=e((string)(float)($expense['tax_amount'] ?? 0))?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-base sm:text-sm font-bold font-mono text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
             </div>
             <div class="md:col-span-2">
                 <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Expense Notes / Memo</label>
-                <textarea name="notes" rows="3" placeholder="Reference invoice or receipt description..." class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"><?=e($expense['notes'] ?? '')?></textarea>
+                <textarea name="notes" rows="3" placeholder="Reference invoice or receipt description..." class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-base sm:text-sm font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"><?=e($expense['notes'] ?? '')?></textarea>
             </div>
         </div>
     </div>
 
-    <!-- Submit Action -->
-    <div class="flex justify-end space-x-4">
-        <a href="expenses.php" class="px-6 py-3 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100">Cancel</a>
-        <button type="submit" class="inline-flex items-center px-8 py-3 border border-transparent text-base font-extrabold rounded-xl text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-md transition-all">
+    <!-- Submit Action (Mobile Safe Layout) -->
+    <div class="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-4 gap-3">
+        <a href="expenses.php" class="w-full sm:w-auto text-center px-6 py-3.5 rounded-xl text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all">Cancel</a>
+        <button type="submit" class="w-full sm:w-auto inline-flex justify-center items-center px-8 py-3.5 border border-transparent text-base font-extrabold rounded-xl text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg transition-all">
             <i class="fa-solid fa-floppy-disk mr-2"></i><?=$expense ? 'Update Expense Record' : 'Save Expense Record'?>
         </button>
     </div>

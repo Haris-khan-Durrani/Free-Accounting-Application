@@ -291,7 +291,7 @@ page_start('SaaS Tenant & Trial Manager (REST API)');
 </div>
 
 <!-- Modal: New Tenant -->
-<div id="new-tenant-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+<div id="new-tenant-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-[100] hidden p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 overflow-hidden">
         <div class="flex justify-between items-center pb-4 border-b border-slate-100 mb-4">
             <div>

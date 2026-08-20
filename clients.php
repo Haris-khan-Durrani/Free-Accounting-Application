@@ -323,7 +323,7 @@ page_start('Client Directory');
 </div>
 
 <!-- Add / Edit Client Popup Modal -->
-<div id="clientModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+<div id="clientModal" class="fixed inset-0 z-[100] hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <!-- Backdrop -->
     <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity duration-300 opacity-0" id="clientModalBackdrop" onclick="closeClientModal()"></div>
 

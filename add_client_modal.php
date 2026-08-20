@@ -1,5 +1,5 @@
 <!-- Quick Add Client Modal Component -->
-<div id="addClientModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+<div id="addClientModal" class="fixed inset-0 z-[100] hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <!-- Backdrop -->
     <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs transition-opacity duration-300 opacity-0" id="addClientModalBackdrop" onclick="closeAddClientModal()"></div>
 

@@ -159,7 +159,7 @@ $brand = branding();
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                         <i class="fa-solid fa-envelope text-sm"></i>
                     </div>
-                    <input type="email" name="email" id="email-field" value="<?=e($_POST['email'] ?? '')?>" placeholder="name@company.com" required autofocus class="w-full rounded-xl border border-slate-300 bg-slate-50 pl-10 pr-3.5 py-3 text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all">
+                    <input type="email" name="email" id="email-field" value="<?=e($_POST['email'] ?? '')?>" placeholder="name@company.com" required autofocus class="w-full rounded-xl border border-slate-300 bg-slate-50 pl-10 pr-3.5 py-3 text-base sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all">
                 </div>
             </div>
 
@@ -172,10 +172,9 @@ $brand = branding();
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                         <i class="fa-solid fa-lock text-sm"></i>
                     </div>
-                    <input type="password" name="password" id="password-field" placeholder="••••••••" required class="w-full rounded-xl border border-slate-300 bg-slate-50 pl-10 pr-3.5 py-3 text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all">
+                    <input type="password" name="password" id="password-field" placeholder="••••••••" required class="w-full rounded-xl border border-slate-300 bg-slate-50 pl-10 pr-3.5 py-3 text-base sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all">
                 </div>
             </div>
-
 
             <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-3.5 border border-transparent text-sm font-black rounded-xl text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg transition-all transform hover:-translate-y-0.5">
                 <i class="fa-solid fa-right-to-bracket mr-2"></i>Sign In to Dashboard

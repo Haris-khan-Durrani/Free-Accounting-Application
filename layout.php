@@ -35,7 +35,7 @@ function page_start(string $title): void {
     echo '<link rel="stylesheet" href="assets/css/style.css">';
     echo '<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>';
     
-    echo '</head><body class="h-full font-sans antialiased text-slate-900 bg-slate-100 flex flex-col min-h-screen pb-20 lg:pb-0">';
+    echo '</head><body class="h-full font-sans antialiased text-slate-900 bg-slate-100 flex flex-col min-h-screen pb-28 lg:pb-0">';
     
     // Trial Status Banner Bar
     if (!empty($_SESSION['user_id'])) {
@@ -277,7 +277,7 @@ function page_start(string $title): void {
 
     // Mobile App Navigation Dock
     if (!empty($_SESSION['user_id'])) {
-        echo '<nav class="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 px-4 py-2 flex items-center justify-around shadow-2xl">';
+        echo '<nav class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800 px-4 py-2 flex items-center justify-around shadow-2xl">';
         
         echo '<a href="index" class="flex flex-col items-center text-slate-400 hover:text-amber-400 py-1 transition-colors">';
         echo '<i class="fa-solid fa-chart-pie text-lg mb-0.5"></i>';
@@ -317,7 +317,7 @@ function page_start(string $title): void {
 
     // Full-Screen Mobile Glassmorphism App Launcher Modal
     if (!empty($_SESSION['user_id'])) {
-        echo '<div id="mobile-app-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl z-50 hidden p-6 overflow-y-auto flex flex-col justify-between">';
+        echo '<div id="mobile-app-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl z-[150] hidden p-6 overflow-y-auto flex flex-col justify-between">';
         echo '<div>';
         
         echo '<div class="flex items-center justify-between border-b border-slate-800/80 pb-4 mb-6">';

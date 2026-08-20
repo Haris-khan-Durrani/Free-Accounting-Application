@@ -159,7 +159,7 @@ page_start('n8n Workflow Automation Engine');
 </div>
 
 <!-- Modal: Build New Workflow Node -->
-<div id="new-workflow-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 hidden p-4">
+<div id="new-workflow-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-[100] hidden p-4">
     <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200">
         <div class="flex justify-between items-center pb-4 border-b border-slate-100 mb-5">
             <h3 class="text-lg font-bold text-slate-900 flex items-center">
