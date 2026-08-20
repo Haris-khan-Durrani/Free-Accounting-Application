@@ -175,7 +175,8 @@ page_start('Master System & Workspace Settings');
         </div>
     </a>
 
-    <!-- Card 10: Create & Edit SaaS Plans -->
+    <!-- Card 10: Create & Edit SaaS Plans (Master Super-Admin Only) -->
+    <?php if (has_role(['owner']) && tenant_id() === 1): ?>
     <a href="subscriptions_admin" class="group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-amber-500/50 transition-all">
         <div class="flex items-center justify-between mb-4">
             <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
@@ -190,6 +191,7 @@ page_start('Master System & Workspace Settings');
             <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
         </div>
     </a>
+    <?php endif; ?>
 
     <!-- Card 11: Auto-Subscription Billing -->
     <a href="recurring_invoices" class="group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-purple-500/50 transition-all">

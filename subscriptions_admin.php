@@ -5,9 +5,9 @@ require __DIR__ . '/layout.php';
 
 $pdo = $GLOBALS['pdo'];
 
-// SaaS Plan administration — owner only
-if (!has_role(['owner'])) {
-    flash('error', 'Access denied. This page is restricted to the account owner.');
+// SaaS Plan administration — Master Super-Admin only (tenant_id = 1)
+if (!has_role(['owner']) || tenant_id() !== 1) {
+    flash('error', 'Access denied. SaaS Plan Tier Administration is restricted to the Master Super-Admin.');
     redirect('index');
 }
 

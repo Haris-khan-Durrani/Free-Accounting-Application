@@ -207,7 +207,6 @@ function page_start(string $title): void {
         echo '<a href="billing" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-credit-card w-5 text-amber-500 text-center"></i><span>Subscription Plan</span></a>';
         echo '<a href="recurring_invoices" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-rotate w-5 text-purple-600 text-center"></i><span>Auto-Subscription Billing</span></a>';
         if (has_role(['owner', 'admin'])) {
-            echo '<a href="subscriptions_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-layer-group w-5 text-amber-500 text-center"></i><span>Create SaaS Plan Tiers</span></a>';
             echo '<a href="users" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-users-gear w-5 text-blue-500 text-center"></i><span>Team Members</span></a>';
         }
         echo '</div>';
@@ -230,6 +229,7 @@ function page_start(string $title): void {
         echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-crown text-amber-500 text-3xs"></i><span>SaaS Admin & Extensions</span></div>';
         if (has_role(['owner']) && tenant_id() === 1) {
             echo '<a href="tenants_admin" class="flex items-center px-2.5 py-1.5 text-xs font-extrabold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-building-user w-5 text-purple-600 text-center"></i><span>SaaS Tenant Workspaces (+New)</span></a>';
+            echo '<a href="subscriptions_admin" class="flex items-center px-2.5 py-1.5 text-xs font-extrabold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-layer-group w-5 text-amber-600 text-center"></i><span>Create SaaS Plan Tiers</span></a>';
             echo '<a href="plugins_admin" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-puzzle-piece w-5 text-purple-600 text-center"></i><span>Plug & Play Extensions</span></a>';
             echo '<a href="super_admin_gateways" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-credit-card w-5 text-indigo-500 text-center"></i><span>Super Admin Gateways</span></a>';
         }
