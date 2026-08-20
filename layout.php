@@ -303,12 +303,8 @@ function page_start(string $title): void {
         // Invoices List
         $mItem('invoices', 'fa-solid fa-file-invoice', 'Invoices', ['invoices.php', 'invoices', 'invoice_view.php']);
 
-        // Inline + Invoice Action Button (Sleek Inline Glow Badge, zero awkward protrusion)
-        $isAddInvoice = in_array($currScript, ['invoice_form.php', 'invoice_form']);
-        echo '<a href="invoice_form" class="flex flex-col items-center justify-center py-1.5 px-2.5 rounded-2xl group transition-all duration-200 active:scale-90 ' . ($isAddInvoice ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black shadow-lg ring-2 ring-amber-400/40' : 'bg-slate-900 border border-amber-500/40 text-amber-400 hover:bg-slate-800 shadow-xs') . '">';
-        echo '<i class="fa-solid fa-circle-plus text-base mb-0.5 transform group-hover:rotate-90 transition-transform duration-300"></i>';
-        echo '<span class="text-[10px] font-extrabold tracking-tight">+ Invoice</span>';
-        echo '</a>';
+        // + Invoice Action
+        $mItem('invoice_form', 'fa-solid fa-circle-plus', '+ Invoice', ['invoice_form.php', 'invoice_form']);
 
         // Clients
         $mItem('clients', 'fa-solid fa-users', 'Clients', ['clients.php', 'clients']);
