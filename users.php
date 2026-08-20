@@ -26,9 +26,20 @@ $stCurrentUsers = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE tenant_
 $stCurrentUsers->execute([$tid]);
 $currentUsersCount = (int)$stCurrentUsers->fetchColumn();
 
-// Fetch All Registered SaaS Tenants for Workspace Assignment
-$stAllTenants = $pdo->query("SELECT id, name, code FROM tenants ORDER BY name ASC");
-$allTenants = $stAllTenants->fetchAll();
+$activeUserId = (int)($_SESSION['user_id'] ?? 0);
+$isMasterSuperAdmin = ($tid === 1 && has_role(['owner']));
+
+// Fetch accessible tenants for the logged-in admin user
+if ($isMasterSuperAdmin) {
+    $stAllTenants = $pdo->query("SELECT id, name, code FROM tenants ORDER BY name ASC");
+    $allTenants = $stAllTenants->fetchAll();
+    $accessibleTenants = $allTenants;
+} else {
+    $accessibleTenants = \Core\Tenant::getUserTenants($pdo, $activeUserId);
+    $allTenants = $accessibleTenants;
+}
+$canManageMultipleTenants = (count($accessibleTenants) > 1 || $isMasterSuperAdmin);
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
@@ -632,57 +643,63 @@ page_start('Team & Permissions');
             </div>
 
             <!-- Searchable Multi-Workspace Location Assignment Component -->
-            <div>
-                <div class="flex items-center justify-between mb-1.5">
-                    <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider">Assigned Workspaces / Locations *</label>
-                    <div class="flex items-center space-x-2 text-3xs font-extrabold">
-                        <button type="button" onclick="selectAllWorkspaces('create', true)" class="text-amber-600 hover:underline">+ Select All</button>
-                        <span class="text-slate-300">|</span>
-                        <button type="button" onclick="selectAllWorkspaces('create', false)" class="text-slate-400 hover:underline">Clear All</button>
+            <?php if ($canManageMultipleTenants): ?>
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider">Assigned Workspaces / Locations *</label>
+                        <div class="flex items-center space-x-2 text-3xs font-extrabold">
+                            <button type="button" onclick="selectAllWorkspaces('create', true)" class="text-amber-600 hover:underline">+ Select All</button>
+                            <span class="text-slate-300">|</span>
+                            <button type="button" onclick="selectAllWorkspaces('create', false)" class="text-slate-400 hover:underline">Clear All</button>
+                        </div>
+                    </div>
+
+                    <!-- Live Search Bar -->
+                    <div class="relative mb-2">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" onkeyup="filterWorkspaceSearch(this, 'create-workspace-item')" placeholder="Type to search workspace location by name or code..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
+                    </div>
+
+                    <!-- Searchable Workspace Options List -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 max-h-40 overflow-y-auto space-y-1.5">
+                        <?php foreach ($accessibleTenants as $at): ?>
+                            <label class="create-workspace-item flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/80 hover:border-amber-400 hover:bg-amber-50/30 cursor-pointer transition-all shadow-2xs" data-name="<?=e(strtolower($at['name']))?>" data-code="<?=e(strtolower($at['code']))?>">
+                                <div class="flex items-center space-x-2.5">
+                                    <input type="checkbox" name="target_tenant_ids[]" value="<?=$at['id']?>" class="create-user-tenant-checkbox rounded text-amber-600 focus:ring-amber-500 w-4 h-4" <?=$at['id']==$tid?'checked':''?>>
+                                    <span class="text-xs font-bold text-slate-900"><?=e($at['name'])?></span>
+                                </div>
+                                <span class="text-3xs font-extrabold px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md">code: <?=e($at['code'])?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <p class="text-3xs text-slate-400 mt-1 font-medium">Member will be able to easily switch between all checked workspace locations.</p>
+                </div>
+            <?php else: ?>
+                <input type="hidden" name="target_tenant_ids[]" value="<?=$tid?>">
+            <?php endif; ?>
+
+            <!-- Scope Type Selection (Super-Admin Only) -->
+            <?php if ($isMasterSuperAdmin): ?>
+                <div>
+                    <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Account Access Scope</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex items-center space-x-3 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition-all">
+                            <input type="radio" name="account_scope" value="subaccount" checked class="w-4 h-4 text-amber-600 focus:ring-amber-500">
+                            <div>
+                                <div class="text-xs font-extrabold text-slate-900">Sub-Account Member</div>
+                                <div class="text-3xs font-semibold text-slate-500">Scoped role permissions</div>
+                            </div>
+                        </label>
+                        <label class="flex items-center space-x-3 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:border-purple-400 hover:bg-purple-50/30 transition-all">
+                            <input type="radio" name="account_scope" value="tenant_admin" class="w-4 h-4 text-purple-600 focus:ring-purple-500">
+                            <div>
+                                <div class="text-xs font-extrabold text-slate-900">Tenant Admin</div>
+                                <div class="text-3xs font-semibold text-slate-500">Full tenant administration</div>
+                            </div>
+                        </label>
                     </div>
                 </div>
-
-                <!-- Live Search Bar -->
-                <div class="relative mb-2">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <input type="text" onkeyup="filterWorkspaceSearch(this, 'create-workspace-item')" placeholder="Type to search workspace location by name or code..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
-                </div>
-
-                <!-- Searchable Workspace Options List -->
-                <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 max-h-40 overflow-y-auto space-y-1.5">
-                    <?php foreach ($allTenants as $at): ?>
-                        <label class="create-workspace-item flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/80 hover:border-amber-400 hover:bg-amber-50/30 cursor-pointer transition-all shadow-2xs" data-name="<?=e(strtolower($at['name']))?>" data-code="<?=e(strtolower($at['code']))?>">
-                            <div class="flex items-center space-x-2.5">
-                                <input type="checkbox" name="target_tenant_ids[]" value="<?=$at['id']?>" class="create-user-tenant-checkbox rounded text-amber-600 focus:ring-amber-500 w-4 h-4" <?=$at['id']==$tid?'checked':''?>>
-                                <span class="text-xs font-bold text-slate-900"><?=e($at['name'])?></span>
-                            </div>
-                            <span class="text-3xs font-extrabold px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md">code: <?=e($at['code'])?></span>
-                        </label>
-                    <?php endforeach; ?>
-                </div>
-                <p class="text-3xs text-slate-400 mt-1 font-medium">Member will be able to easily switch between all checked workspace locations.</p>
-            </div>
-
-            <!-- Scope Type Selection -->
-            <div>
-                <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Account Access Scope</label>
-                <div class="grid grid-cols-2 gap-3">
-                    <label class="flex items-center space-x-3 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition-all">
-                        <input type="radio" name="account_scope" value="subaccount" checked class="w-4 h-4 text-amber-600 focus:ring-amber-500">
-                        <div>
-                            <div class="text-xs font-extrabold text-slate-900">Sub-Account Member</div>
-                            <div class="text-3xs font-semibold text-slate-500">Scoped role permissions</div>
-                        </div>
-                    </label>
-                    <label class="flex items-center space-x-3 bg-slate-50/80 p-2.5 rounded-xl border border-slate-200 cursor-pointer hover:border-purple-400 hover:bg-purple-50/30 transition-all">
-                        <input type="radio" name="account_scope" value="tenant_admin" class="w-4 h-4 text-purple-600 focus:ring-purple-500">
-                        <div>
-                            <div class="text-xs font-extrabold text-slate-900">Tenant Admin</div>
-                            <div class="text-3xs font-semibold text-slate-500">Full tenant administration</div>
-                        </div>
-                    </label>
-                </div>
-            </div>
+            <?php endif; ?>
 
             <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">
                 <button type="button" onclick="document.getElementById('new-user-modal').classList.add('hidden')" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all">Cancel</button>
@@ -741,35 +758,39 @@ page_start('Team & Permissions');
             </div>
 
             <!-- Searchable Multi-Workspace Location Assignment Component (Edit Modal) -->
-            <div>
-                <div class="flex items-center justify-between mb-1.5">
-                    <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider">Assigned Workspaces / Locations *</label>
-                    <div class="flex items-center space-x-2 text-3xs font-extrabold">
-                        <button type="button" onclick="selectAllWorkspaces('edit', true)" class="text-amber-600 hover:underline">+ Select All</button>
-                        <span class="text-slate-300">|</span>
-                        <button type="button" onclick="selectAllWorkspaces('edit', false)" class="text-slate-400 hover:underline">Clear All</button>
+            <?php if ($canManageMultipleTenants): ?>
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider">Assigned Workspaces / Locations *</label>
+                        <div class="flex items-center space-x-2 text-3xs font-extrabold">
+                            <button type="button" onclick="selectAllWorkspaces('edit', true)" class="text-amber-600 hover:underline">+ Select All</button>
+                            <span class="text-slate-300">|</span>
+                            <button type="button" onclick="selectAllWorkspaces('edit', false)" class="text-slate-400 hover:underline">Clear All</button>
+                        </div>
+                    </div>
+
+                    <!-- Live Search Bar -->
+                    <div class="relative mb-2">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" onkeyup="filterWorkspaceSearch(this, 'edit-workspace-item')" placeholder="Type to search workspace location by name or code..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
+                    </div>
+
+                    <!-- Searchable Workspace Options List -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 max-h-40 overflow-y-auto space-y-1.5">
+                        <?php foreach ($accessibleTenants as $at): ?>
+                            <label class="edit-workspace-item flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/80 hover:border-amber-400 hover:bg-amber-50/30 cursor-pointer transition-all shadow-2xs" data-name="<?=e(strtolower($at['name']))?>" data-code="<?=e(strtolower($at['code']))?>">
+                                <div class="flex items-center space-x-2.5">
+                                    <input type="checkbox" name="target_tenant_ids[]" value="<?=$at['id']?>" class="edit-user-tenant-checkbox rounded text-amber-600 focus:ring-amber-500 w-4 h-4">
+                                    <span class="text-xs font-bold text-slate-900"><?=e($at['name'])?></span>
+                                </div>
+                                <span class="text-3xs font-extrabold px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md">code: <?=e($at['code'])?></span>
+                            </label>
+                        <?php endforeach; ?>
                     </div>
                 </div>
-
-                <!-- Live Search Bar -->
-                <div class="relative mb-2">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <input type="text" onkeyup="filterWorkspaceSearch(this, 'edit-workspace-item')" placeholder="Type to search workspace location by name or code..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
-                </div>
-
-                <!-- Searchable Workspace Options List -->
-                <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 max-h-40 overflow-y-auto space-y-1.5">
-                    <?php foreach ($allTenants as $at): ?>
-                        <label class="edit-workspace-item flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/80 hover:border-amber-400 hover:bg-amber-50/30 cursor-pointer transition-all shadow-2xs" data-name="<?=e(strtolower($at['name']))?>" data-code="<?=e(strtolower($at['code']))?>">
-                            <div class="flex items-center space-x-2.5">
-                                <input type="checkbox" name="target_tenant_ids[]" value="<?=$at['id']?>" class="edit-user-tenant-checkbox rounded text-amber-600 focus:ring-amber-500 w-4 h-4">
-                                <span class="text-xs font-bold text-slate-900"><?=e($at['name'])?></span>
-                            </div>
-                            <span class="text-3xs font-extrabold px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md">code: <?=e($at['code'])?></span>
-                        </label>
-                    <?php endforeach; ?>
-                </div>
-            </div>
+            <?php else: ?>
+                <input type="hidden" name="target_tenant_ids[]" value="<?=$tid?>">
+            <?php endif; ?>
 
             <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">
                 <button type="button" onclick="document.getElementById('edit-user-modal').classList.add('hidden')" class="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all">Cancel</button>
