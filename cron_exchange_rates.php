@@ -2,9 +2,18 @@
 // cron_exchange_rates.php - Automatic Central Bank of UAE Exchange Rates Sync
 require __DIR__ . '/bootstrap.php';
 
-$pdo = $GLOBALS['pdo'];
+$cronKey = $_GET['key'] ?? '';
+$cliMode = (php_sapi_name() === 'cli');
+
+if (!$cliMode && $cronKey !== 'onesol_cron_secret_2026') {
+    if (empty($_SESSION['user_id']) || !has_role(['owner', 'admin'])) {
+        http_response_code(403);
+        exit(json_encode(['success' => false, 'message' => 'Unauthorized cron invocation']));
+    }
+}
 
 header('Content-Type: application/json; charset=utf-8');
+
 
 // Fetch latest live exchange rates against AED base currency
 $apiUrl = 'https://open.er-api.com/v6/latest/AED';

@@ -2,8 +2,14 @@
 require __DIR__ . '/bootstrap.php';
 require_login();
 
+if (!has_role(['owner', 'admin', 'accountant'])) {
+    flash('error', 'Access denied. Financial report CSV exports require accounting role permissions.');
+    redirect('index');
+}
+
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
+
 
 $type = $_GET['type'] ?? 'pnl';
 $startDate = $_GET['start_date'] ?? date('Y-01-01');

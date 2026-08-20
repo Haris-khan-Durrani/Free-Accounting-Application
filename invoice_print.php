@@ -18,6 +18,10 @@ $items = $st->fetchAll();
 
 $brand = branding();
 $templateId = $_GET['template'] ?? ($inv['template_id'] ?: $brand['default_invoice_template']);
+if (!empty($brand['default_invoice_template']) && $brand['default_invoice_template'] === 'custom_drag_drop' && !isset($_GET['template'])) {
+    $templateId = 'custom_drag_drop';
+}
+
 ?><!doctype html>
 <html>
 <head>

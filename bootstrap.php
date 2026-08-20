@@ -77,7 +77,10 @@ try { $pdo->exec("ALTER TABLE tenants ADD COLUMN from_name VARCHAR(255) NULL"); 
 try { $pdo->exec("ALTER TABLE users ADD COLUMN two_factor_enabled TINYINT(1) NOT NULL DEFAULT 0"); } catch (Throwable $t) {}
 try { $pdo->exec("ALTER TABLE users ADD COLUMN otp_code VARCHAR(10) NULL"); } catch (Throwable $t) {}
 try { $pdo->exec("ALTER TABLE users ADD COLUMN otp_expires_at DATETIME NULL"); } catch (Throwable $t) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN reset_token VARCHAR(64) NULL"); } catch (Throwable $t) {}
+try { $pdo->exec("ALTER TABLE users ADD COLUMN reset_token_expires_at DATETIME NULL"); } catch (Throwable $t) {}
 try { $pdo->exec("ALTER TABLE users MODIFY COLUMN role VARCHAR(50) NOT NULL DEFAULT 'owner'"); } catch (Throwable $t) {}
+
 
 // Helpers
 function e(?string $value): string { 
@@ -145,7 +148,7 @@ function require_login(): void {
 }
 
 function has_role(array $allowedRoles): bool {
-    $userRole = $_SESSION['user_role'] ?? 'owner';
+    $userRole = $_SESSION['user_role'] ?? 'viewer'; // Default to least-privilege on missing session key
     return in_array($userRole, $allowedRoles, true);
 }
 
@@ -196,6 +199,61 @@ function log_audit(PDO $pdo, string $action, string $entityType, ?int $entityId 
         $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
     ]);
 }
+
+function get_invoice_token(array|object $inv): string {
+    $id = is_array($inv) ? ($inv['id'] ?? 0) : ($inv->id ?? 0);
+    $num = is_array($inv) ? ($inv['invoice_number'] ?? '') : ($inv->invoice_number ?? '');
+    $tid = is_array($inv) ? ($inv['tenant_id'] ?? 1) : ($inv->tenant_id ?? 1);
+    global $config;
+    $secret = $config['db_pass'] ?? 'onesol_invoice_secret_key_2026';
+    return substr(hash_hmac('sha256', "inv_{$id}_{$num}_{$tid}", $secret), 0, 32);
+}
+
+function get_public_invoice_url(array|object $inv): string {
+    $id = is_array($inv) ? ($inv['id'] ?? 0) : ($inv->id ?? 0);
+    $token = get_invoice_token($inv);
+    $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http');
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $dir = rtrim(dirname($_SERVER['PHP_SELF'] ?? ''), '/\\');
+    return "{$scheme}://{$host}{$dir}/public_invoice.php?id={$id}&token={$token}";
+}
+
+function get_custom_wording(PDO $pdo, int $tenantId): array {
+    $defaults = [
+        'title'        => 'TAX INVOICE',
+        'invoice_no'   => 'Invoice Number',
+        'invoice_date' => 'Invoice Date',
+        'due_date'     => 'Payment Due Date',
+        'billed_to'    => 'Billed To (Client Details)',
+        'tax_label'    => 'TRN / Tax ID',
+        'subtotal'     => 'Subtotal',
+        'discount'     => 'Discount',
+        'tax_amount'   => 'VAT (5%)',
+        'total'        => 'Total Amount Due',
+        'paid_amount'  => 'Amount Paid',
+        'balance_due'  => 'Balance Due',
+        'terms_label'  => 'Terms & Conditions',
+        'bank_label'   => 'Remittance Bank Details',
+        'sign_label'   => 'Authorized Signatory',
+    ];
+
+    $st = $pdo->prepare("SELECT setting_value FROM settings WHERE tenant_id = ? AND setting_key = 'custom_invoice_wording'");
+    $st->execute([$tenantId]);
+    $json = $st->fetchColumn();
+    if ($json) {
+        $saved = json_decode($json, true);
+        if (is_array($saved)) {
+            foreach ($saved as $k => $v) {
+                if (!empty(trim((string)$v))) {
+                    $defaults[$k] = trim((string)$v);
+                }
+            }
+        }
+    }
+    return $defaults;
+}
+
+
 
 // Initialize Modular Plugin Engine for Active Tenant
 if (\Core\Tenant::hasActiveId()) {

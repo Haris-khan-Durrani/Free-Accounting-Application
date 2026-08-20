@@ -116,7 +116,7 @@ $brand = \Core\Branding::get($pdo, $tid);
     </div>
 
     <div class="pt-2 flex flex-col sm:flex-row gap-3">
-        <a href="public_invoice?id=<?=$invId?>" class="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all">
+        <a href="<?=e(get_public_invoice_url($inv))?>" class="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all">
             <i class="fa-solid fa-file-invoice mr-1"></i>View Paid Invoice
         </a>
         <a href="client_portal" class="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition-all border border-slate-700">

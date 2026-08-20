@@ -7,6 +7,12 @@ $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 $activeTenant = tenant();
 
+// SMTP / email settings — owner or admin only
+if (!has_role(['owner', 'admin'])) {
+    flash('error', 'Access denied. Email settings require admin or owner access.');
+    redirect('index');
+}
+
 $testResult = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

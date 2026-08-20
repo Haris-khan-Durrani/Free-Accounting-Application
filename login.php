@@ -38,8 +38,8 @@ if (\Core\SecurityThrottle::isLockedOut()) {
         $is2faRequired = (!empty($u['two_factor_enabled']) || !empty($u['require_2fa']));
 
         if ($is2faRequired) {
-            // Generate 6-Digit Cryptographic Security Code (OTP)
-            $otpCode = (string)rand(100000, 999999);
+            // Generate 6-Digit Cryptographically Secure OTP
+            $otpCode = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
             $otpExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
 
             $stOtp = $pdo->prepare("UPDATE users SET otp_code = ?, otp_expires_at = ? WHERE id = ?");
@@ -73,6 +73,7 @@ if (\Core\SecurityThrottle::isLockedOut()) {
         $effectiveRole = $workspaceRole ?: ($u['role'] ?? 'owner');
 
         // Direct Login without 2FA
+        session_regenerate_id(true);
         $_SESSION['user_id'] = $u['id'];
         $_SESSION['user_name'] = $u['name'];
         $_SESSION['user_role'] = $effectiveRole;
@@ -127,6 +128,13 @@ $brand = branding();
         </div>
 
         <!-- Flash Alerts -->
+        <?php if ($flashMsg = get_flash()): ?>
+            <div class="<?=$flashMsg['type'] === 'error' ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'?> border rounded-xl p-4 mb-6 text-xs font-semibold flex items-center">
+                <i class="fa-solid <?=$flashMsg['type'] === 'error' ? 'fa-triangle-exclamation text-rose-500' : 'fa-circle-check text-emerald-500'?> mr-2.5 text-base"></i>
+                <span><?=e($flashMsg['message'])?></span>
+            </div>
+        <?php endif; ?>
+
         <?php if (isset($_GET['installed'])): ?>
             <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-4 mb-6 text-xs font-semibold flex items-center">
                 <i class="fa-solid fa-circle-check text-emerald-500 mr-2.5 text-base"></i>
@@ -158,7 +166,7 @@ $brand = branding();
             <div>
                 <div class="flex items-center justify-between mb-2">
                     <label class="block text-xs font-extrabold text-slate-700 uppercase tracking-wider">Password</label>
-                    <span class="text-2xs font-bold text-slate-400">Security Encrypted</span>
+                    <a href="forgot_password" class="text-2xs font-bold text-amber-600 hover:text-amber-700 hover:underline">Forgot Password?</a>
                 </div>
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -167,6 +175,7 @@ $brand = branding();
                     <input type="password" name="password" id="password-field" placeholder="••••••••" required class="w-full rounded-xl border border-slate-300 bg-slate-50 pl-10 pr-3.5 py-3 text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all">
                 </div>
             </div>
+
 
             <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-3.5 border border-transparent text-sm font-black rounded-xl text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg transition-all transform hover:-translate-y-0.5">
                 <i class="fa-solid fa-right-to-bracket mr-2"></i>Sign In to Dashboard

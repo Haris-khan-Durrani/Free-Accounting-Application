@@ -97,7 +97,15 @@ switch ($action) {
     
     // 1. Create New SaaS Sub-Account / Client Tenant (Programmatic Onboarding)
     case 'create_tenant':
+        $tenant = authenticate_api_key($pdo, 'admin');
+
+        // Security check: Only Master Super-Admin (Tenant #1) can provision new SaaS accounts
+        if ((int)($tenant['id'] ?? 0) !== 1) {
+            api_response(false, 'Forbidden. Only Master Super-Admin API keys (Tenant #1) can create new SaaS tenant accounts.', [], 403);
+        }
+
         $companyName = trim($input['company_name'] ?? '');
+
         $email = trim($input['email'] ?? '');
         $password = $input['password'] ?? 'ChangeMe123!';
         $trialMonths = max(1, (int)($input['trial_months'] ?? 4)); // Default 4 months free trial!

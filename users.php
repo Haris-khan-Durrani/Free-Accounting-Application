@@ -8,6 +8,12 @@ $tid = tenant_id();
 $activeTenant = tenant();
 $error = '';
 
+// Team member management — owner or admin only
+if (!has_role(['owner', 'admin'])) {
+    flash('error', 'Access denied. Team management requires admin or owner access.');
+    redirect('index');
+}
+
 // Check User Quota for Current Tenant
 $stTenantPlan = $pdo->prepare("SELECT t.subscription_status, p.max_team_users, p.name plan_name FROM tenants t LEFT JOIN saas_plans p ON p.id = t.plan_id WHERE t.id = ?");
 $stTenantPlan->execute([$tid]);
@@ -176,8 +182,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$st = $pdo->prepare("SELECT u.*, ut.role tenant_role, t.name tenant_workspace_name, t.code tenant_workspace_code FROM users u JOIN user_tenants ut ON ut.user_id = u.id LEFT JOIN tenants t ON t.id = ut.tenant_id WHERE ut.tenant_id = ? OR ? = 1 ORDER BY u.id DESC");
-$st->execute([$tid, ($activeTenant['id'] == 1 ? 1 : 0)]);
+// Strict tenant scope — never leak users from other tenants
+$st = $pdo->prepare("SELECT u.*, ut.role tenant_role, t.name tenant_workspace_name, t.code tenant_workspace_code FROM users u JOIN user_tenants ut ON ut.user_id = u.id LEFT JOIN tenants t ON t.id = ut.tenant_id WHERE ut.tenant_id = ? ORDER BY u.id DESC");
+$st->execute([$tid]);
 $users = $st->fetchAll();
 
 page_start('Team & Permissions');

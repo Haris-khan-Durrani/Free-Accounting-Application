@@ -43,14 +43,22 @@ $currency = $inv['currency'] ?? 'AED';
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($items as $it): ?>
+            <?php foreach ($items as $it): 
+                $iQty = (float)($it['qty'] ?? $it['quantity'] ?? 1);
+                $iPrice = (float)($it['unit_price'] ?? 0);
+                $iAmt = (float)($it['amount'] ?? $it['total'] ?? ($iQty * $iPrice));
+            ?>
                 <tr style="border-bottom: 1px solid #e2e8f0;">
-                    <td style="padding: 10px;"><strong><?=e($it['description'])?></strong><br><small><?=e($it['details'])?></small></td>
-                    <td style="text-align: center; padding: 10px;"><?=e(rtrim(rtrim(number_format((float)$it['qty'], 2), '0'), '.'))?></td>
-                    <td style="text-align: right; padding: 10px;"><?=\Core\Currency::format((float)$it['unit_price'], $currency)?></td>
-                    <td style="text-align: right; padding: 10px; font-weight: bold;"><?=\Core\Currency::format((float)$it['amount'], $currency)?></td>
+                    <td style="padding: 10px;">
+                        <strong><?=e($it['description'] ?? 'Line Item')?></strong>
+                        <?php if (!empty($it['details'])): ?><br><small><?=e($it['details'])?></small><?php endif; ?>
+                    </td>
+                    <td style="text-align: center; padding: 10px;"><?=e(rtrim(rtrim(number_format($iQty, 2), '0'), '.'))?></td>
+                    <td style="text-align: right; padding: 10px;"><?=\Core\Currency::format($iPrice, $currency)?></td>
+                    <td style="text-align: right; padding: 10px; font-weight: bold;"><?=\Core\Currency::format($iAmt, $currency)?></td>
                 </tr>
             <?php endforeach; ?>
+
         </tbody>
     </table>
 
@@ -64,12 +72,13 @@ $currency = $inv['currency'] ?? 'AED';
             <?php endif; ?>
         </div>
         <div style="width: 45%; text-align: right;">
-            <p>Subtotal: <strong><?=\Core\Currency::format((float)$inv['subtotal'], $currency)?></strong></p>
-            <?php if ($inv['discount_amount'] > 0): ?><p>Discount: <strong>- <?=\Core\Currency::format((float)$inv['discount_amount'], $currency)?></strong></p><?php endif; ?>
-            <?php if ($inv['tax_amount'] > 0): ?><p>VAT: <strong>+ <?=\Core\Currency::format((float)$inv['tax_amount'], $currency)?></strong></p><?php endif; ?>
+            <p>Subtotal: <strong><?=\Core\Currency::format((float)($inv['subtotal'] ?? 0), $currency)?></strong></p>
+            <?php if (!empty($inv['discount_amount']) && (float)$inv['discount_amount'] > 0): ?><p>Discount: <strong>- <?=\Core\Currency::format((float)$inv['discount_amount'], $currency)?></strong></p><?php endif; ?>
+            <?php if (!empty($inv['tax_amount']) && (float)$inv['tax_amount'] > 0): ?><p>VAT: <strong>+ <?=\Core\Currency::format((float)$inv['tax_amount'], $currency)?></strong></p><?php endif; ?>
             <div style="background: <?=e($primaryColor)?>; color: #fff; padding: 12px; font-size: 18px; font-weight: bold; border-radius: 4px;">
-                TOTAL: <?=\Core\Currency::format((float)$inv['total'], $currency)?>
+                TOTAL: <?=\Core\Currency::format((float)($inv['total'] ?? 0), $currency)?>
             </div>
+
         </div>
     </div>
 </div>

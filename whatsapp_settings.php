@@ -5,6 +5,12 @@ require_login();
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 
+// WhatsApp/Twilio API keys — owner or admin only
+if (!has_role(['owner', 'admin'])) {
+    flash('error', 'Access denied. WhatsApp & messaging settings require admin or owner access.');
+    redirect('index');
+}
+
 // Ensure all database columns exist
 try { $pdo->exec("ALTER TABLE branding_settings ADD COLUMN whatsapp_provider VARCHAR(30) NOT NULL DEFAULT 'meta'"); } catch (\Throwable $e) {}
 try { $pdo->exec("ALTER TABLE branding_settings ADD COLUMN whatsapp_phone_number_id VARCHAR(100) NULL"); } catch (\Throwable $e) {}

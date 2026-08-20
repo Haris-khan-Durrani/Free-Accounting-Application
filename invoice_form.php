@@ -118,14 +118,30 @@ page_start($invoice ? 'Edit Tax Invoice' : 'Create Tax Invoice');
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Design Template Style</label>
+                <?php
+                $currentTpl = $invoice['template_id'] ?? $brand['default_invoice_template'] ?? 'onesol_executive_gold';
+                $availableTpls = [
+                    'custom_drag_drop' => '⭐ Custom Drag & Drop Builder Design',
+                    'onesol_executive_gold' => '1. OneSol Executive Gold (Flagship)',
+                    'modern_minimal' => '2. Modern Minimalist',
+                    'corporate_executive' => '3. Corporate Executive',
+                    'creative_vibrant' => '4. Creative Vibrant',
+                    'sleek_dark' => '5. Sleek Dark Mode',
+                    'elegant_serif' => '6. Elegant Serif',
+                    'compact_thermal' => '7. Thermal POS Receipt',
+                    'tech_glassmorphism' => '8. Tech Glassmorphism',
+                    'swiss_grid' => '9. Swiss Grid Design',
+                    'borderless_clean' => '10. Borderless Clean',
+                    'twocolumn_split' => '11. Two-Column Split'
+                ];
+                ?>
                 <select name="template_id" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all">
-                    <option value="onesol_executive_gold">1. OneSol Executive Gold (Flagship)</option>
-                    <option value="modern_minimal">2. Modern Minimalist</option>
-                    <option value="corporate_executive">3. Corporate Executive</option>
-                    <option value="creative_vibrant">4. Creative Vibrant</option>
-                    <option value="sleek_dark">5. Sleek Dark Mode</option>
+                    <?php foreach ($availableTpls as $tKey => $tLabel): ?>
+                        <option value="<?=$tKey?>" <?=$currentTpl === $tKey ? 'selected' : ''?>><?=e($tLabel)?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
+
         </div>
     </div>
 

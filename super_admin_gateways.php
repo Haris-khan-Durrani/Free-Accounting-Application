@@ -6,7 +6,12 @@ require __DIR__ . '/layout.php';
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 
-// Save Payment Gateway Settings (Stripe, Network International, PayPal, Wire Transfer)
+// Super Admin Gateways — owner only
+if (!has_role(['owner'])) {
+    flash('error', 'Access denied. This page is restricted to the account owner.');
+    redirect('index');
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_gateways') {
     verify_csrf();
 

@@ -5,6 +5,12 @@ require_login();
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 
+// Only owner, admin, and accountant can record payments or void invoices
+if (!has_role(['owner', 'admin', 'accountant'])) {
+    flash('error', 'Permission denied. You do not have access to record payments.');
+    redirect('invoices');
+}
+
 // 1. Record Payment (Full or Partial)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'record_payment') {
     verify_csrf();
@@ -77,10 +83,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     redirect('invoice_view?id=' . $invId);
 }
 
-// 2. Void Invoice Action
-if (isset($_GET['action']) && $_GET['action'] === 'void' && isset($_GET['id'])) {
+// 2. Void Invoice Action — now POST-based with CSRF to prevent CSRF GET attacks
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'void') {
     verify_csrf();
-    $invId = (int)$_GET['id'];
+    $invId = (int)($_POST['invoice_id'] ?? 0);
 
     $stInv = $pdo->prepare("SELECT * FROM invoices WHERE id = ? AND tenant_id = ?");
     $stInv->execute([$invId, $tid]);
@@ -92,6 +98,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'void' && isset($_GET['id'])) 
 
         log_audit($pdo, 'void_invoice', 'invoices', $invId, "Voided invoice " . $inv['invoice_number']);
         flash('success', "Invoice " . e($inv['invoice_number']) . " has been voided.");
+    } else {
+        flash('error', 'Invoice not found or access denied.');
     }
     redirect('invoice_view?id=' . $invId);
 }

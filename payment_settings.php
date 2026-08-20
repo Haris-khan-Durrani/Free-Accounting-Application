@@ -7,6 +7,12 @@ $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 $activeTenant = tenant();
 
+// Payment gateway settings — owner or admin only
+if (!has_role(['owner', 'admin'])) {
+    flash('error', 'Access denied. Payment settings require admin or owner access.');
+    redirect('index');
+}
+
 // Save Payment Gateway Settings for Current Active Tenant/Subaccount
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_gateways') {
     verify_csrf();

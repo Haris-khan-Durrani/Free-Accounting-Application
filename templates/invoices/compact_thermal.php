@@ -23,13 +23,18 @@ $currency = $inv['currency'] ?? 'AED';
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($items as $it): ?>
+            <?php foreach ($items as $it): 
+                $iQty = (float)($it['qty'] ?? $it['quantity'] ?? 1);
+                $iPrice = (float)($it['unit_price'] ?? 0);
+                $iAmt = (float)($it['amount'] ?? $it['total'] ?? ($iQty * $iPrice));
+            ?>
                 <tr>
-                    <td><?=e(rtrim(rtrim(number_format((float)$it['qty'], 2), '0'), '.'))?></td>
-                    <td><?=e($it['description'])?></td>
-                    <td style="text-align: right;"><?=\Core\Currency::format((float)$it['amount'], $currency)?></td>
+                    <td><?=e(rtrim(rtrim(number_format($iQty, 2), '0'), '.'))?></td>
+                    <td><?=e($it['description'] ?? 'Line Item')?></td>
+                    <td style="text-align: right;"><?=\Core\Currency::format($iAmt, $currency)?></td>
                 </tr>
             <?php endforeach; ?>
+
         </tbody>
     </table>
 

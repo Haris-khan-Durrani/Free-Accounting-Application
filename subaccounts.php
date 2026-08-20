@@ -16,17 +16,31 @@ $maxAllowedSubAccounts = (int)($activePlan['max_subaccounts'] ?? 5);
 // Handle Switch Tenant
 if (isset($_GET['switch'])) {
     $targetId = (int)$_GET['switch'];
-    $st = $pdo->prepare("SELECT * FROM tenants WHERE id = ?");
-    $st->execute([$targetId]);
-    $t = $st->fetch();
-    if ($t) {
-        // Update all tenant session keys so Tenant::getActiveId() picks up the new one
-        $_SESSION['tenant_id']        = $t['id'];
-        $_SESSION['active_tenant_id'] = $t['id'];
-        $_SESSION['user_tenant_id']   = $t['id'];
-        // Clear cached tenant info so the switched workspace is loaded fresh
-        \Core\Tenant::forgetCache();
-        flash('success', 'Switched active sub-account workspace to: ' . $t['name']);
+    $userId   = (int)($_SESSION['user_id'] ?? 0);
+
+    // Verify the user actually has access to this tenant (or is owner)
+    $hasAccess = has_role(['owner']);
+    if (!$hasAccess) {
+        $stCheck = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE user_id = ? AND tenant_id = ?");
+        $stCheck->execute([$userId, $targetId]);
+        $hasAccess = (int)$stCheck->fetchColumn() > 0;
+    }
+
+    if ($hasAccess) {
+        $st = $pdo->prepare("SELECT * FROM tenants WHERE id = ?");
+        $st->execute([$targetId]);
+        $t = $st->fetch();
+        if ($t) {
+            // Update all tenant session keys so Tenant::getActiveId() picks up the new one
+            $_SESSION['tenant_id']        = $t['id'];
+            $_SESSION['active_tenant_id'] = $t['id'];
+            $_SESSION['user_tenant_id']   = $t['id'];
+            // Clear cached tenant info so the switched workspace is loaded fresh
+            \Core\Tenant::forgetCache();
+            flash('success', 'Switched active sub-account workspace to: ' . $t['name']);
+        }
+    } else {
+        flash('error', 'Access denied. You are not assigned to that workspace.');
     }
     redirect('subaccounts.php');
 }

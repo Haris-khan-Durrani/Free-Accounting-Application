@@ -54,9 +54,20 @@ class Branding {
             ];
         }
 
+        // Check if default_invoice_template override is set in settings table
+        try {
+            $stTpl = $pdo->prepare("SELECT setting_value FROM settings WHERE tenant_id = ? AND setting_key = 'default_invoice_template'");
+            $stTpl->execute([$tid]);
+            $overrideTpl = $stTpl->fetchColumn();
+            if ($overrideTpl) {
+                $b['default_invoice_template'] = $overrideTpl;
+            }
+        } catch (\Throwable $t) {}
+
         self::$cache[$tid] = $b;
         return $b;
     }
+
 
     public static function forgetCache(?int $tenantId = null): void {
         $tid = $tenantId ?? (Tenant::hasActiveId() ? Tenant::getActiveId() : 1);

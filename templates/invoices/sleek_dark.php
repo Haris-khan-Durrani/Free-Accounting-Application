@@ -40,14 +40,19 @@ $currency = $inv['currency'] ?? 'AED';
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($items as $it): ?>
+            <?php foreach ($items as $it): 
+                $iQty = (float)($it['qty'] ?? $it['quantity'] ?? 1);
+                $iPrice = (float)($it['unit_price'] ?? 0);
+                $iAmt = (float)($it['amount'] ?? $it['total'] ?? ($iQty * $iPrice));
+            ?>
                 <tr style="border-bottom: 1px solid #334155;">
-                    <td style="padding: 10px; color: #e2e8f0;"><strong><?=e($it['description'])?></strong></td>
-                    <td style="padding: 10px; text-align: center; color: #94a3b8;"><?=e(rtrim(rtrim(number_format((float)$it['qty'], 2), '0'), '.'))?></td>
-                    <td style="padding: 10px; text-align: right; color: #94a3b8;"><?=\Core\Currency::format((float)$it['unit_price'], $currency)?></td>
-                    <td style="padding: 10px; text-align: right; font-weight: bold; color: #f8fafc;"><?=\Core\Currency::format((float)$it['amount'], $currency)?></td>
+                    <td style="padding: 10px; color: #e2e8f0;"><strong><?=e($it['description'] ?? 'Line Item')?></strong></td>
+                    <td style="padding: 10px; text-align: center; color: #94a3b8;"><?=e(rtrim(rtrim(number_format($iQty, 2), '0'), '.'))?></td>
+                    <td style="padding: 10px; text-align: right; color: #94a3b8;"><?=\Core\Currency::format($iPrice, $currency)?></td>
+                    <td style="padding: 10px; text-align: right; font-weight: bold; color: #f8fafc;"><?=\Core\Currency::format($iAmt, $currency)?></td>
                 </tr>
             <?php endforeach; ?>
+
         </tbody>
     </table>
 

@@ -2,8 +2,14 @@
 require __DIR__ . '/bootstrap.php';
 require_login();
 
+if (!has_role(['owner', 'admin', 'accountant'])) {
+    flash('error', 'Access denied. Tax audit file exports require financial role access.');
+    redirect('index');
+}
+
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
+
 $startDate = $_GET['start_date'] ?? date('Y-01-01');
 $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 

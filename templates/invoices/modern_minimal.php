@@ -57,17 +57,22 @@ $currency = $inv['currency'] ?? 'AED';
             </tr>
         </thead>
         <tbody>
-            <?php foreach ($items as $it): ?>
+            <?php foreach ($items as $it): 
+                $iQty = (float)($it['qty'] ?? $it['quantity'] ?? 1);
+                $iPrice = (float)($it['unit_price'] ?? 0);
+                $iAmt = (float)($it['amount'] ?? $it['total'] ?? ($iQty * $iPrice));
+            ?>
                 <tr>
                     <td>
-                        <strong><?=e($it['description'])?></strong>
-                        <?php if ($it['details']): ?><small><?=e($it['details'])?></small><?php endif; ?>
+                        <strong><?=e($it['description'] ?? 'Line Item')?></strong>
+                        <?php if (!empty($it['details'])): ?><small><?=e($it['details'])?></small><?php endif; ?>
                     </td>
-                    <td class="center"><?=e(rtrim(rtrim(number_format((float)$it['qty'], 2), '0'), '.'))?></td>
-                    <td class="right"><?=\Core\Currency::format((float)$it['unit_price'], $currency)?></td>
-                    <td class="right strong"><?=\Core\Currency::format((float)$it['amount'], $currency)?></td>
+                    <td class="center"><?=e(rtrim(rtrim(number_format($iQty, 2), '0'), '.'))?></td>
+                    <td class="right"><?=\Core\Currency::format($iPrice, $currency)?></td>
+                    <td class="right strong"><?=\Core\Currency::format($iAmt, $currency)?></td>
                 </tr>
             <?php endforeach; ?>
+
         </tbody>
     </table>
 
@@ -82,17 +87,18 @@ $currency = $inv['currency'] ?? 'AED';
             <?php endif; ?>
         </div>
         <div class="inv-totals">
-            <div><span>Subtotal:</span> <strong><?=\Core\Currency::format((float)$inv['subtotal'], $currency)?></strong></div>
-            <?php if ($inv['discount_amount'] > 0): ?>
+            <div><span>Subtotal:</span> <strong><?=\Core\Currency::format((float)($inv['subtotal'] ?? 0), $currency)?></strong></div>
+            <?php if (!empty($inv['discount_amount']) && (float)$inv['discount_amount'] > 0): ?>
                 <div><span>Discount:</span> <strong>- <?=\Core\Currency::format((float)$inv['discount_amount'], $currency)?></strong></div>
             <?php endif; ?>
-            <?php if ($inv['tax_amount'] > 0): ?>
+            <?php if (!empty($inv['tax_amount']) && (float)$inv['tax_amount'] > 0): ?>
                 <div><span>VAT / Tax:</span> <strong>+ <?=\Core\Currency::format((float)$inv['tax_amount'], $currency)?></strong></div>
             <?php endif; ?>
             <div class="grand-total" style="background: <?=e($primaryColor)?>; color: #fff;">
-                <span>TOTAL DUE:</span> <strong><?=\Core\Currency::format((float)$inv['total'], $currency)?></strong>
+                <span>TOTAL DUE:</span> <strong><?=\Core\Currency::format((float)($inv['total'] ?? 0), $currency)?></strong>
             </div>
         </div>
+
     </div>
 
     <?php if ($brand['show_qr_code']): ?>

@@ -147,16 +147,16 @@ page_start('Dynamic Branding & Company Profile');
                 </select>
             </div>
         <?php endif; ?>
-        <?php /* TEMP HIDDEN
+        <?php if (has_role(['owner', 'admin'])): ?>
         <a href="domain_settings?tenant_id=<?=$targetTenantId?>" class="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all space-x-2">
             <i class="fa-solid fa-globe text-amber-300 text-sm"></i>
             <span>Whitelabel Domain Settings</span>
         </a>
-        */ ?>
+        <?php endif; ?>
     </div>
 </div>
 
-<?php /* TEMP HIDDEN — Whitelabel Custom Domain promo card
+<?php if (has_role(['owner', 'admin'])): ?>
 <!-- Whitelabel Custom Domain Promo Card -->
 <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-5 text-white border border-slate-800 shadow-xl mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
     <div class="flex items-center space-x-4">
@@ -176,7 +176,8 @@ page_start('Dynamic Branding & Company Profile');
         <i class="fa-solid fa-arrow-right text-2xs"></i>
     </a>
 </div>
-*/ ?>
+<?php endif; ?>
+
 
 <form method="post" enctype="multipart/form-data" class="space-y-8">
     <?=csrf_field()?>

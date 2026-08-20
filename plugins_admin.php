@@ -9,6 +9,12 @@ $tid = tenant_id();
 $msg = '';
 $error = '';
 
+// Plugin management — owner only
+if (!has_role(['owner'])) {
+    flash('error', 'Access denied. Plugin management is restricted to the account owner.');
+    redirect('index');
+}
+
 // Handle Actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_plugin'])) {
     if (!empty($_FILES['plugin_zip']['name'])) {

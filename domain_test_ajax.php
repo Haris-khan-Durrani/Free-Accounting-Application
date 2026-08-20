@@ -2,7 +2,13 @@
 require __DIR__ . '/bootstrap.php';
 require_login();
 
+if (!has_role(['owner', 'admin'])) {
+    http_response_code(403);
+    exit(json_encode(['success' => false, 'status' => 'error', 'message' => 'Access denied. Custom domain configuration requires admin or owner access.']));
+}
+
 header('Content-Type: application/json; charset=utf-8');
+
 
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();

@@ -23,21 +23,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $enteredOtp = trim($_POST['otp_code'] ?? '');
 
         if ($user['otp_code'] && $user['otp_code'] === $enteredOtp && strtotime($user['otp_expires_at']) >= time()) {
-            // Clear OTP
-            $stClear = $pdo->prepare("UPDATE users SET otp_code = NULL, otp_expires_at = NULL WHERE id = ?");
-            $stClear->execute([$pendingUserId]);
+            // Clear OTP after successful verification
+            $pdo->prepare("UPDATE users SET otp_code = NULL, otp_expires_at = NULL WHERE id = ?")->execute([$user['id']]);
+
+            // Resolve workspace role
+            $tId = (int)($user['tenant_id'] ?? 1);
+            $stRole = $pdo->prepare("SELECT role FROM user_tenants WHERE user_id = ? AND tenant_id = ? LIMIT 1");
+            $stRole->execute([$user['id'], $tId]);
+            $workspaceRole = $stRole->fetchColumn();
+            $effectiveRole = $workspaceRole ?: ($user['role'] ?? 'owner');
 
             // Set Full Session
+            session_regenerate_id(true);
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_name'] = $user['name'];
-            $_SESSION['user_role'] = $user['role'] ?? 'owner';
-            $tId = (int)($user['tenant_id'] ?? 1);
+            $_SESSION['user_role'] = $effectiveRole;
             $_SESSION['active_tenant_id'] = $tId;
             $_SESSION['user_tenant_id'] = $tId;
             $_SESSION['tenant_id'] = $tId;
             unset($_SESSION['2fa_pending_user_id']);
 
-            log_audit($pdo, 'otp_verified', 'users', $user['id'], "User {$user['email']} completed 2FA verification");
+            log_audit($pdo, 'otp_verified', 'users', $user['id'], "User {$user['email']} completed 2FA verification with role '{$effectiveRole}'");
             flash('success', 'Two-Factor Security Verification Complete! Welcome back.');
             redirect('index');
         } else {
@@ -46,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'resend_otp') {
-        $otpCode = (string)rand(100000, 999999);
+        $otpCode = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $otpExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
 
         $stOtp = $pdo->prepare("UPDATE users SET otp_code = ?, otp_expires_at = ? WHERE id = ?");

@@ -161,7 +161,9 @@ function page_start(string $title): void {
         echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-building text-slate-400 text-3xs"></i><span>Workspaces & Branding</span></div>';
         echo '<a href="tenants_admin" class="flex items-center px-2.5 py-1.5 text-xs font-extrabold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-building-user w-5 text-purple-600 text-center"></i><span>SaaS Tenant Workspaces (+New)</span></a>';
         echo '<a href="settings" class="flex items-center px-2.5 py-1.5 text-xs font-extrabold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-sliders w-5 text-amber-500 text-center"></i><span>Master Settings Hub</span></a>';
-        // echo '<a href="domain_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-blue-50/70 hover:text-blue-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-globe w-5 text-blue-500 text-center"></i><span>Whitelabel Domain &amp; SSL</span></a>'; // TEMP HIDDEN
+        if (has_role(['owner', 'admin'])) {
+            echo '<a href="domain_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-blue-50/70 hover:text-blue-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-globe w-5 text-blue-500 text-center"></i><span>Whitelabel Domain &amp; SSL</span></a>';
+        }
         echo '<a href="subaccounts" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-sitemap w-5 text-blue-500 text-center"></i><span>Workspaces & Branches</span></a>';
         echo '<a href="branding" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-palette w-5 text-amber-500 text-center"></i><span>Branding & Logo Setup</span></a>';
         echo '</div>';
@@ -191,17 +193,21 @@ function page_start(string $title): void {
         echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-crown text-slate-400 text-3xs"></i><span>SaaS Subscription & Plan</span></div>';
         echo '<a href="billing" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-credit-card w-5 text-amber-500 text-center"></i><span>Subscription Plan</span></a>';
         echo '<a href="recurring_invoices" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-rotate w-5 text-purple-600 text-center"></i><span>Auto-Subscription Billing</span></a>';
-        echo '<a href="subscriptions_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-layer-group w-5 text-amber-500 text-center"></i><span>Create SaaS Plan Tiers</span></a>';
-        echo '<a href="users" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-users-gear w-5 text-blue-500 text-center"></i><span>Team Members</span></a>';
+        if (has_role(['owner', 'admin'])) {
+            echo '<a href="subscriptions_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-layer-group w-5 text-amber-500 text-center"></i><span>Create SaaS Plan Tiers</span></a>';
+            echo '<a href="users" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-users-gear w-5 text-blue-500 text-center"></i><span>Team Members</span></a>';
+        }
         echo '</div>';
 
         // Group 5: Security & Integrations
         echo '<div>';
         echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-shield-halved text-slate-400 text-3xs"></i><span>Security & Integrations</span></div>';
-        echo '<a href="payment_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-purple-50/70 hover:text-purple-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-credit-card w-5 text-purple-500 text-center"></i><span>Payment Gateways</span></a>';
-        echo '<a href="whatsapp_settings" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-emerald-50/70 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-brands fa-whatsapp w-5 text-emerald-500 text-center"></i><span>WhatsApp API</span></a>';
+        if (has_role(['owner', 'admin'])) {
+            echo '<a href="payment_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-purple-50/70 hover:text-purple-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-credit-card w-5 text-purple-500 text-center"></i><span>Payment Gateways</span></a>';
+            echo '<a href="whatsapp_settings" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-emerald-50/70 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-brands fa-whatsapp w-5 text-emerald-500 text-center"></i><span>WhatsApp API</span></a>';
+            echo '<a href="email_settings" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-server w-5 text-amber-500 text-center"></i><span>Custom SMTP</span></a>';
+        }
         echo '<a href="security" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-shield-halved w-5 text-indigo-500 text-center"></i><span>2FA & Security</span></a>';
-        echo '<a href="email_settings" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-server w-5 text-amber-500 text-center"></i><span>Custom SMTP</span></a>';
         echo '<a href="api_keys" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-key w-5 text-amber-500 text-center"></i><span>API Key Manager</span></a>';
         echo '<a href="automation" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-purple-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-diagram-project w-5 text-purple-500 text-center"></i><span>n8n Automations</span></a>';
         echo '</div>';
@@ -209,11 +215,15 @@ function page_start(string $title): void {
         // Group 6: SaaS Admin & Help
         echo '<div>';
         echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-crown text-amber-500 text-3xs"></i><span>SaaS Admin & Extensions</span></div>';
-        echo '<a href="plugins_admin" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-puzzle-piece w-5 text-purple-600 text-center"></i><span>Plug & Play Extensions</span></a>';
-        echo '<a href="tenants_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-users-gear w-5 text-emerald-500 text-center"></i><span>Subscriber Accounts</span></a>';
-        echo '<a href="super_admin_gateways" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-credit-card w-5 text-indigo-500 text-center"></i><span>Super Admin Gateways</span></a>';
+        if (has_role(['owner'])) {
+            echo '<a href="plugins_admin" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-puzzle-piece w-5 text-purple-600 text-center"></i><span>Plug & Play Extensions</span></a>';
+            echo '<a href="tenants_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-users-gear w-5 text-emerald-500 text-center"></i><span>Subscriber Accounts</span></a>';
+            echo '<a href="super_admin_gateways" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-credit-card w-5 text-indigo-500 text-center"></i><span>Super Admin Gateways</span></a>';
+        }
         echo '<a href="guide" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-book-open w-5 text-blue-500 text-center"></i><span>Interactive User Guide</span></a>';
-        echo '<a href="audit_log" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-slate-900 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-clock-rotate-left w-5 text-slate-400 text-center"></i><span>System Audit Log</span></a>';
+        if (has_role(['owner', 'admin'])) {
+            echo '<a href="audit_log" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-slate-900 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-clock-rotate-left w-5 text-slate-400 text-center"></i><span>System Audit Log</span></a>';
+        }
         
         // Execute Plugin Menu Hooks
         \Services\PluginEngine::do_action('management_menu_items');
@@ -319,7 +329,9 @@ function page_start(string $title): void {
 
         // Bottom User Footer
         echo '<div class="pt-4 border-t border-slate-800 flex justify-between items-center">';
-        echo '<span class="text-xs text-slate-400">Signed in as <strong>Owner</strong></span>';
+        $sessionRole = strtoupper($_SESSION['user_role'] ?? 'user');
+        $sessionName = e($_SESSION['user_name'] ?? 'User');
+        echo '<span class="text-xs text-slate-400">Signed in as <strong>' . $sessionName . '</strong> &bull; <span class="text-amber-400 font-bold">' . e($sessionRole) . '</span></span>';
         echo '<a href="logout" class="px-4 py-2 bg-rose-500/20 text-rose-400 font-bold text-xs rounded-xl border border-rose-500/30"><i class="fa-solid fa-right-from-bracket mr-1.5"></i>Logout</a>';
         echo '</div>';
 

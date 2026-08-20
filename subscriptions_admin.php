@@ -5,6 +5,12 @@ require __DIR__ . '/layout.php';
 
 $pdo = $GLOBALS['pdo'];
 
+// SaaS Plan administration — owner only
+if (!has_role(['owner'])) {
+    flash('error', 'Access denied. This page is restricted to the account owner.');
+    redirect('index');
+}
+
 // Process SaaS Plan Tier CRUD, Lifetime Internal Status, and Trial Extensions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();

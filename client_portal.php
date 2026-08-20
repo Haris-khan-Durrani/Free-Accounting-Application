@@ -198,7 +198,7 @@ $totalDue = max(0, (float)$summary['total_due']);
                                 <td class="px-6 py-4 text-right text-emerald-400 font-bold"><?=e($inv['currency'])?> <?=number_format((float)$inv['paid_amount'], 2)?></td>
                                 <td class="px-6 py-4 text-right text-amber-400 font-bold"><?=e($inv['currency'])?> <?=number_format($bal, 2)?></td>
                                 <td class="px-6 py-4 text-center">
-                                    <a href="public_invoice?id=<?=$inv['id']?>" target="_blank" class="px-3.5 py-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 rounded-xl text-xs font-bold transition-all inline-flex items-center space-x-1">
+                                    <a href="<?=e(get_public_invoice_url($inv))?>" target="_blank" class="px-3.5 py-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 rounded-xl text-xs font-bold transition-all inline-flex items-center space-x-1">
                                         <span>View & Pay</span>
                                         <i class="fa-solid fa-arrow-right text-2xs"></i>
                                     </a>

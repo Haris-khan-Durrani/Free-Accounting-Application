@@ -28,6 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'toggle_tenant_mandatory_2fa') {
+        if (!has_role(['owner', 'admin'])) {
+            flash('error', 'Access denied. Only workspace owners and admins can configure workspace 2FA policy.');
+            redirect('security');
+        }
+
         $require2fa = isset($_POST['require_2fa']) ? 1 : 0;
         $st = $pdo->prepare("UPDATE tenants SET require_2fa = ? WHERE id = ?");
         $st->execute([$require2fa, $tid]);
@@ -36,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('success', $require2fa ? 'Mandatory 2FA enforcement ENABLED for all team members in this workspace.' : 'Mandatory 2FA enforcement DISABLED for workspace.');
         redirect('security');
     }
+
 }
 
 // Fetch Active Security Log

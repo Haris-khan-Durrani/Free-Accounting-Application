@@ -29,7 +29,11 @@ $totalPaid = (float)$invoice['paid_amount'];
 $balanceDue = max(0, (float)$invoice['total'] - $totalPaid);
 
 $brand = branding();
-$templateId = $invoice['template_id'] ?: $brand['default_invoice_template'] ?: 'onesol_executive_gold';
+$templateId = $_GET['tpl'] ?? $invoice['template_id'] ?? $brand['default_invoice_template'] ?? 'onesol_executive_gold';
+if (!empty($brand['default_invoice_template']) && $brand['default_invoice_template'] === 'custom_drag_drop' && !isset($_GET['tpl'])) {
+    $templateId = 'custom_drag_drop';
+}
+
 
 page_start('View Invoice ' . $invoice['invoice_number']);
 ?>

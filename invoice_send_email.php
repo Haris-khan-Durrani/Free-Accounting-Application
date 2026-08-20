@@ -35,9 +35,7 @@ if (empty($inv['client_email'])) {
 $tenantInfo = tenant();
 $brand = branding();
 $currency = $inv['currency'];
-$total = money((float)$inv['total'], $currency);
-
-$publicUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . dirname($_SERVER['PHP_SELF']) . '/public_invoice.php?id=' . $inv['id'];
+$publicUrl = get_public_invoice_url($inv);
 
 // Build Email Subject & HTML Body
 $subject = sprintf('Tax Invoice #%s from %s', $inv['invoice_number'], $tenantInfo['name']);

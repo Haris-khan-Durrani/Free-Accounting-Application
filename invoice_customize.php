@@ -8,6 +8,7 @@ $tid = tenant_id();
 $brand = branding();
 
 $templates = [
+    'custom_drag_drop' => '⭐ Custom Drag & Drop Builder Design (Your Saved Template)',
     'onesol_executive_gold' => '1. OneSol Executive Gold (Flagship Proposal Layout)',
     'modern_minimal' => '2. Modern Minimalist (Clean Corporate)',
     'corporate_executive' => '3. Corporate Executive (Formal & Navy Header)',
@@ -21,6 +22,7 @@ $templates = [
     'twocolumn_split' => '11. Two-Column Split (Executive Modern)'
 ];
 
+
 // Handle AJAX Auto-Save or Form Post
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_default_template') {
     verify_csrf();
@@ -29,6 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     if (isset($templates[$selectedTemplate])) {
         $st = $pdo->prepare("INSERT INTO settings (tenant_id, setting_key, setting_value) VALUES (?, 'default_invoice_template', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
         $st->execute([$tid, $selectedTemplate, $selectedTemplate]);
+
+        try {
+            $stBr = $pdo->prepare("UPDATE branding_settings SET default_invoice_template = ? WHERE tenant_id = ?");
+            $stBr->execute([$selectedTemplate, $tid]);
+        } catch (\Throwable $t) {}
+
         log_audit($pdo, 'update_template', 'settings', null, "Updated default invoice template to $selectedTemplate");
         flash('success', '✓ Default invoice template saved successfully! All new invoices will use this design.');
     }
@@ -43,8 +51,15 @@ if (isset($_GET['template']) && isset($templates[$_GET['template']])) {
     $selectedTemplate = $_GET['template'];
     $st = $pdo->prepare("INSERT INTO settings (tenant_id, setting_key, setting_value) VALUES (?, 'default_invoice_template', ?) ON DUPLICATE KEY UPDATE setting_value = ?");
     $st->execute([$tid, $selectedTemplate, $selectedTemplate]);
+
+    try {
+        $stBr = $pdo->prepare("UPDATE branding_settings SET default_invoice_template = ? WHERE tenant_id = ?");
+        $stBr->execute([$selectedTemplate, $tid]);
+    } catch (\Throwable $t) {}
+
     $brand['default_invoice_template'] = $selectedTemplate;
 }
+
 
 page_start('10+ Live Invoice Customizer');
 ?>
@@ -151,17 +166,22 @@ page_start('10+ Live Invoice Customizer');
             $mockItems = [
                 [
                     'description' => 'Custom SaaS Platform Architecture & Core Setup',
+                    'qty' => 1,
                     'quantity' => 1,
                     'unit_price' => 1500.00,
+                    'amount' => 1500.00,
                     'total' => 1500.00
                 ],
                 [
                     'description' => 'Multi-Tenant Payment Gateway & Subscription Integration',
+                    'qty' => 1,
                     'quantity' => 1,
                     'unit_price' => 1000.00,
+                    'amount' => 1000.00,
                     'total' => 1000.00
                 ]
             ];
+
 
             echo \Services\InvoiceRenderer::render($mockInvoice, $mockItems, $brand, $activeTemplate);
             ?>

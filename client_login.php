@@ -93,6 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             unset($_SESSION['pending_otp_email'], $_SESSION['latest_otp_code'], $_SESSION['mail_sent_status']);
 
+            session_regenerate_id(true);
             $_SESSION['client_id']        = $client['id'];
             $_SESSION['client_tenant_id'] = $client['tenant_id'];
             $_SESSION['client_name']      = $client['company_name'];
@@ -102,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect('client_portal.php');
         } else {
             $step = 'otp';
-            $error = 'Invalid or expired 6-digit security code. Please check your email or use the auto-generated code below.';
+            $error = 'Invalid or expired 6-digit security code. Please check your email.';
         }
     }
 }
@@ -165,23 +166,7 @@ $brand = branding();
         <form method="post" class="space-y-5">
             <?=csrf_field()?>
             <input type="hidden" name="action" value="verify_otp">
-            
-            <?php if (!$mailSent && !empty($latestOtp)): ?>
-                <!-- Fancy Development / Sandbox OTP Preview Card when SMTP is unconfigured -->
-                <div class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 space-y-2">
-                    <div class="flex items-center justify-between text-xs font-bold text-amber-400">
-                        <span class="flex items-center space-x-1.5"><i class="fa-solid fa-flask text-amber-400"></i><span>Development Sandbox Mode</span></span>
-                        <span class="text-3xs bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-500/30 uppercase font-black tracking-wider">Auto OTP</span>
-                    </div>
-                    <p class="text-2xs text-slate-300 leading-relaxed">Custom SMTP settings not yet configured. Use your generated security code below:</p>
-                    <div class="flex items-center justify-between bg-slate-950 p-3 rounded-xl border border-slate-800">
-                        <span class="font-mono text-xl font-black text-amber-400 tracking-widest"><?=$latestOtp?></span>
-                        <button type="button" onclick="document.getElementById('otp-input').value = '<?=$latestOtp?>';" class="px-3.5 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 text-xs font-black rounded-lg transition-all shadow-md">
-                            <i class="fa-solid fa-bolt mr-1"></i>Auto-Fill OTP
-                        </button>
-                    </div>
-                </div>
-            <?php endif; ?>
+
 
             <div>
                 <div class="flex items-center justify-between mb-2">

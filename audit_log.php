@@ -5,6 +5,12 @@ require_login();
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 
+// Audit log is restricted to admins and owners
+if (!has_role(['owner', 'admin'])) {
+    flash('error', 'Access denied. The audit log requires admin or owner access.');
+    redirect('index');
+}
+
 // Handle CSV Export
 if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     header('Content-Type: text/csv');
@@ -14,7 +20,6 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     fputcsv($out, ['Log ID', 'Timestamp', 'User', 'Action', 'Entity Type', 'Entity ID', 'Details', 'IP Address']);
 
     $stCsv = $pdo->prepare("
-        SELECT a.*, u.name as user_name, u.email as user_email
         SELECT a.id, a.created_at, COALESCE(u.name, 'System/Client') as user_name, a.action, a.entity_type, a.entity_id, a.details, a.ip_address
         FROM audit_logs a
         LEFT JOIN users u ON u.id = a.user_id
@@ -22,6 +27,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
         ORDER BY a.id DESC
     ");
     $stCsv->execute([$tid]);
+
 
     while ($r = $stCsv->fetch(PDO::FETCH_ASSOC)) {
         fputcsv($out, $r);

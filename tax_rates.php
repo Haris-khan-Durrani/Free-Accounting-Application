@@ -7,6 +7,12 @@ $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 $error = '';
 
+// Tax rate management — owner or admin only
+if (!has_role(['owner', 'admin'])) {
+    flash('error', 'Access denied. Tax rate settings require admin or owner access.');
+    redirect('index');
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_tax') {
     verify_csrf();
     $name = trim($_POST['name'] ?? '');

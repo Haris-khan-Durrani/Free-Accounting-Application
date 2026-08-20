@@ -6,6 +6,12 @@ $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 $user = $_SESSION['user_name'] ?? 'User';
 
+// SQL backup is owner-only — exposes full DB
+if (!has_role(['owner'])) {
+    flash('error', 'Access denied. Database backup is restricted to the account owner.');
+    redirect('index');
+}
+
 if (isset($_GET['action']) && $_GET['action'] === 'download') {
     verify_csrf();
 

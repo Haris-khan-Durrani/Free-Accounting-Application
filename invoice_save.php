@@ -40,6 +40,14 @@ if (!$client || !$number || !$rows) {
     redirect('invoice_form.php' . ($id ? '?id=' . $id : ''));
 }
 
+// Verify selected client belongs to the active tenant
+$stClientCheck = $pdo->prepare("SELECT COUNT(*) FROM clients WHERE id = ? AND tenant_id = ?");
+$stClientCheck->execute([$client, $tid]);
+if ((int)$stClientCheck->fetchColumn() === 0) {
+    flash('error', 'Selected client record was not found in your workspace.');
+    redirect('invoice_form.php' . ($id ? '?id=' . $id : ''));
+}
+
 $type = ($_POST['discount_type'] ?? 'fixed') === 'percent' ? 'percent' : 'fixed';
 $dv = max(0, (float)($_POST['discount_value'] ?? 0));
 $da = round(calc_discount($subtotal, $type, $dv), 2);

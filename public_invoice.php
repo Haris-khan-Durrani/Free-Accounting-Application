@@ -3,20 +3,39 @@ require __DIR__ . '/bootstrap.php';
 
 $pdo = $GLOBALS['pdo'];
 $id = (int)($_GET['id'] ?? 0);
+$token = trim($_GET['token'] ?? '');
 
 $st = $pdo->prepare('SELECT i.*, c.company_name, c.contact_name, c.email, c.phone, c.address, c.tax_number FROM invoices i JOIN clients c ON c.id = i.client_id WHERE i.id = ?');
 $st->execute([$id]);
 $inv = $st->fetch();
 
-if (!$inv) exit('Invoice unavailable or invalid token.');
+if (!$inv) {
+    http_response_code(404);
+    exit('Invoice unavailable or invalid token.');
+}
 
-$st = $pdo->prepare('SELECT * FROM invoice_items WHERE invoice_id = ? ORDER BY sort_order, id');
-$st->execute([$id]);
-$items = $st->fetchAll();
+// Token & Session Security Guard: Only allow if token matches OR logged in user belongs to this tenant
+$expectedToken = get_invoice_token($inv);
+$isAuthorizedUser = !empty($_SESSION['user_id']) && (int)($_SESSION['active_tenant_id'] ?? $_SESSION['tenant_id'] ?? 0) === (int)$inv['tenant_id'];
+$isValidToken = !empty($token) && hash_equals($expectedToken, $token);
 
-// Get tenant branding
+if (!$isAuthorizedUser && !$isValidToken) {
+    http_response_code(403);
+    exit('Access denied. Invalid or missing invoice access token.');
+}
+
+$itemsSt = $pdo->prepare('SELECT * FROM invoice_items WHERE invoice_id = ? ORDER BY sort_order, id');
+$itemsSt->execute([$id]);
+$items = $itemsSt->fetchAll();
+
+// Get tenant branding & public link
 $brand = \Core\Branding::get($pdo, (int)$inv['tenant_id']);
 $templateId = $inv['template_id'] ?: $brand['default_invoice_template'];
+if (!empty($brand['default_invoice_template']) && $brand['default_invoice_template'] === 'custom_drag_drop') {
+    $templateId = 'custom_drag_drop';
+}
+$publicShareUrl = get_public_invoice_url($inv);
+
 ?><!doctype html>
 <html>
 <head>
@@ -38,8 +57,8 @@ $templateId = $inv['template_id'] ?: $brand['default_invoice_template'];
             <h2 style="margin:2px 0 0 0; font-size:18px; color:#fff;"><?=e($brand['company_name'])?></h2>
         </div>
         <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button class="btn" style="background:#25D366; color:#fff; font-weight:bold; border:none; padding:8px 14px; border-radius:8px; cursor:pointer;" onclick="window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent('Tax Invoice <?=e($inv['invoice_number'])?> from <?=e($brand['company_name'])?> - Total: <?=e($inv['currency'])?> <?=number_format((float)$inv['total'], 2)?>. View & Pay Online: ' + window.location.href), '_blank')">💬 Share via WhatsApp</button>
-            <button class="btn" style="background:#3b82f6; color:#fff; font-weight:bold; border:none; padding:8px 14px; border-radius:8px; cursor:pointer;" onclick="navigator.clipboard.writeText(window.location.href); alert('Invoice payment link copied to clipboard!');">📋 Copy Link</button>
+            <button class="btn" style="background:#25D366; color:#fff; font-weight:bold; border:none; padding:8px 14px; border-radius:8px; cursor:pointer;" onclick="window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent('Tax Invoice <?=e($inv['invoice_number'])?> from <?=e($brand['company_name'])?> - Total: <?=e($inv['currency'])?> <?=number_format((float)$inv['total'], 2)?>. View & Pay Online: ' + <?=json_encode($publicShareUrl)?>), '_blank')">💬 Share via WhatsApp</button>
+            <button class="btn" style="background:#3b82f6; color:#fff; font-weight:bold; border:none; padding:8px 14px; border-radius:8px; cursor:pointer;" onclick="navigator.clipboard.writeText(<?=json_encode($publicShareUrl)?>); alert('Invoice payment link copied to clipboard!');">📋 Copy Link</button>
             <button class="btn btn-gold" onclick="window.print()">🖨️ Print / Download PDF</button>
         </div>
     </div>
@@ -50,3 +69,4 @@ $templateId = $inv['template_id'] ?: $brand['default_invoice_template'];
 </div>
 </body>
 </html>
+
