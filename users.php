@@ -507,25 +507,36 @@ page_start('Team & Permissions');
                 </div>
             </div>
 
-            <!-- Multi-Workspace Location Assignment -->
+            <!-- Searchable Multi-Workspace Location Assignment Component -->
             <div>
                 <div class="flex items-center justify-between mb-1.5">
-                    <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider">Assigned Workspaces / Locations (Select Multiple) *</label>
-                    <?php if ($isMasterSuperAdmin): ?>
-                        <a href="tenants_admin" target="_blank" class="inline-flex items-center px-2 py-0.5 text-3xs font-extrabold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-md border border-purple-200 transition-all">
-                            <i class="fa-solid fa-plus-circle mr-1"></i>+ Create Workspace
-                        </a>
-                    <?php endif; ?>
+                    <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider">Assigned Workspaces / Locations *</label>
+                    <div class="flex items-center space-x-2 text-3xs font-extrabold">
+                        <button type="button" onclick="selectAllWorkspaces('create', true)" class="text-amber-600 hover:underline">+ Select All</button>
+                        <span class="text-slate-300">|</span>
+                        <button type="button" onclick="selectAllWorkspaces('create', false)" class="text-slate-400 hover:underline">Clear All</button>
+                    </div>
                 </div>
-                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-36 overflow-y-auto space-y-2">
+
+                <!-- Live Search Bar -->
+                <div class="relative mb-2">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" onkeyup="filterWorkspaceSearch(this, 'create-workspace-item')" placeholder="Type to search workspace location by name or code..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
+                </div>
+
+                <!-- Searchable Workspace Options List -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 max-h-40 overflow-y-auto space-y-1.5">
                     <?php foreach ($allTenants as $at): ?>
-                        <label class="flex items-center space-x-2.5 cursor-pointer hover:text-amber-600 text-xs font-bold text-slate-800">
-                            <input type="checkbox" name="target_tenant_ids[]" value="<?=$at['id']?>" class="create-user-tenant-checkbox rounded text-amber-600 focus:ring-amber-500 w-4 h-4" <?=$at['id']==$tid?'checked':''?>>
-                            <span><?=e($at['name'])?> <span class="text-3xs font-normal text-slate-400">(code: <?=e($at['code'])?>)</span></span>
+                        <label class="create-workspace-item flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/80 hover:border-amber-400 hover:bg-amber-50/30 cursor-pointer transition-all shadow-2xs" data-name="<?=e(strtolower($at['name']))?>" data-code="<?=e(strtolower($at['code']))?>">
+                            <div class="flex items-center space-x-2.5">
+                                <input type="checkbox" name="target_tenant_ids[]" value="<?=$at['id']?>" class="create-user-tenant-checkbox rounded text-amber-600 focus:ring-amber-500 w-4 h-4" <?=$at['id']==$tid?'checked':''?>>
+                                <span class="text-xs font-bold text-slate-900"><?=e($at['name'])?></span>
+                            </div>
+                            <span class="text-3xs font-extrabold px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md">code: <?=e($at['code'])?></span>
                         </label>
                     <?php endforeach; ?>
                 </div>
-                <p class="text-3xs text-slate-400 mt-1 font-medium">Member can easily switch between all checked workspace locations.</p>
+                <p class="text-3xs text-slate-400 mt-1 font-medium">Member will be able to easily switch between all checked workspace locations.</p>
             </div>
 
             <!-- Scope Type Selection -->
@@ -605,13 +616,32 @@ page_start('Team & Permissions');
                 </div>
             </div>
 
+            <!-- Searchable Multi-Workspace Location Assignment Component (Edit Modal) -->
             <div>
-                <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Assigned Workspaces / Locations (Multi-Select) *</label>
-                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-36 overflow-y-auto space-y-2">
+                <div class="flex items-center justify-between mb-1.5">
+                    <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider">Assigned Workspaces / Locations *</label>
+                    <div class="flex items-center space-x-2 text-3xs font-extrabold">
+                        <button type="button" onclick="selectAllWorkspaces('edit', true)" class="text-amber-600 hover:underline">+ Select All</button>
+                        <span class="text-slate-300">|</span>
+                        <button type="button" onclick="selectAllWorkspaces('edit', false)" class="text-slate-400 hover:underline">Clear All</button>
+                    </div>
+                </div>
+
+                <!-- Live Search Bar -->
+                <div class="relative mb-2">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" onkeyup="filterWorkspaceSearch(this, 'edit-workspace-item')" placeholder="Type to search workspace location by name or code..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
+                </div>
+
+                <!-- Searchable Workspace Options List -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 max-h-40 overflow-y-auto space-y-1.5">
                     <?php foreach ($allTenants as $at): ?>
-                        <label class="flex items-center space-x-2.5 cursor-pointer hover:text-amber-600 text-xs font-bold text-slate-800">
-                            <input type="checkbox" name="target_tenant_ids[]" value="<?=$at['id']?>" class="edit-user-tenant-checkbox rounded text-amber-600 focus:ring-amber-500 w-4 h-4">
-                            <span><?=e($at['name'])?> <span class="text-3xs font-normal text-slate-400">(code: <?=e($at['code'])?>)</span></span>
+                        <label class="edit-workspace-item flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200/80 hover:border-amber-400 hover:bg-amber-50/30 cursor-pointer transition-all shadow-2xs" data-name="<?=e(strtolower($at['name']))?>" data-code="<?=e(strtolower($at['code']))?>">
+                            <div class="flex items-center space-x-2.5">
+                                <input type="checkbox" name="target_tenant_ids[]" value="<?=$at['id']?>" class="edit-user-tenant-checkbox rounded text-amber-600 focus:ring-amber-500 w-4 h-4">
+                                <span class="text-xs font-bold text-slate-900"><?=e($at['name'])?></span>
+                            </div>
+                            <span class="text-3xs font-extrabold px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md">code: <?=e($at['code'])?></span>
                         </label>
                     <?php endforeach; ?>
                 </div>
@@ -633,6 +663,29 @@ page_start('Team & Permissions');
 </form>
 
 <script>
+function filterWorkspaceSearch(inputEl, itemClass) {
+    const query = inputEl.value.toLowerCase().trim();
+    document.querySelectorAll('.' + itemClass).forEach(item => {
+        const name = item.getAttribute('data-name') || '';
+        const code = item.getAttribute('data-code') || '';
+        if (!query || name.includes(query) || code.includes(query)) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+function selectAllWorkspaces(modalType, checkAll) {
+    const selector = modalType === 'create' ? '.create-user-tenant-checkbox' : '.edit-user-tenant-checkbox';
+    document.querySelectorAll(selector).forEach(cb => {
+        const parent = cb.closest('label');
+        if (!parent || parent.style.display !== 'none') {
+            cb.checked = checkAll;
+        }
+    });
+}
+
 function openEditUserModal(user, assignedTenantIds) {
     document.getElementById('edit-user-id').value = user.id;
     document.getElementById('edit-user-name').value = user.name;
@@ -660,4 +713,5 @@ function confirmDeleteUser(userId, userName) {
 </script>
 
 <?php page_end(); ?>
+
 
