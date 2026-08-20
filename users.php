@@ -166,7 +166,119 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
 
+    if ($action === 'resend_welcome') {
+        $targetUserId = (int)($_POST['user_id'] ?? 0);
+        $stU = $pdo->prepare("SELECT u.*, GROUP_CONCAT(t.name SEPARATOR ', ') as workspace_names 
+                              FROM users u 
+                              LEFT JOIN user_tenants ut ON ut.user_id = u.id 
+                              LEFT JOIN tenants t ON t.id = ut.tenant_id 
+                              WHERE u.id = ? GROUP BY u.id");
+        $stU->execute([$targetUserId]);
+        $uData = $stU->fetch();
+
+        if (!$uData) {
+            $error = 'User not found.';
+        } else {
+            $assignedTenantNameStr = $uData['workspace_names'] ?: 'Company Workspace';
+            $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+            $loginUrl = $protocol . '://' . $host . $scriptDir . '/login.php';
+
+            $subject = "Welcome to " . e($assignedTenantNameStr) . " - Account Credentials";
+            $htmlBody = "
+                <div style='font-family: system-ui, -apple-system, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;'>
+                    <div style='text-align: center; margin-bottom: 20px;'>
+                        <h2 style='color: #0f172a; margin: 0; font-size: 22px;'>Welcome to " . e($assignedTenantNameStr) . "! 🎉</h2>
+                        <p style='color: #64748b; font-size: 13px; margin-top: 6px;'>Your team member account credentials reminder.</p>
+                    </div>
+                    <div style='background: #f8fafc; padding: 18px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #f1f5f9;'>
+                        <table style='width: 100%; border-collapse: collapse; font-size: 13px; color: #334155;'>
+                            <tr><td style='padding: 6px 0; font-weight: bold; width: 140px;'>Assigned Workspaces:</td><td style='padding: 6px 0; font-weight: 700; color: #0f172a;'>" . e($assignedTenantNameStr) . "</td></tr>
+                            <tr><td style='padding: 6px 0; font-weight: bold;'>Permission Role:</td><td style='padding: 6px 0;'><span style='background: #fef3c7; color: #92400e; padding: 3px 10px; border-radius: 99px; font-weight: 800; font-size: 11px; text-transform: uppercase;'>" . e($uData['role']) . "</span></td></tr>
+                            <tr><td style='padding: 6px 0; font-weight: bold;'>Login Email:</td><td style='padding: 6px 0; font-weight: 600;'>" . e($uData['email']) . "</td></tr>
+                        </table>
+                    </div>
+                    <div style='text-align: center; margin-top: 24px;'>
+                        <a href='" . e($loginUrl) . "' style='display: inline-block; padding: 12px 28px; background: linear-gradient(to right, #f59e0b, #d97706); color: #ffffff; text-decoration: none; font-weight: 800; border-radius: 12px; font-size: 14px;'>Log In to Workspace &rarr;</a>
+                    </div>
+                </div>
+            ";
+
+            try {
+                $sent = \Services\Mailer::send($pdo, (int)($uData['tenant_id'] ?: 1), $uData['email'], $subject, $htmlBody);
+                if ($sent) {
+                    log_audit($pdo, 'resend_welcome_email', 'users', $targetUserId, "Resent welcome email to {$uData['email']}");
+                    flash('success', "Welcome email successfully dispatched to {$uData['email']}!");
+                } else {
+                    flash('warning', "Email dispatch attempted. Please verify custom SMTP settings.");
+                }
+            } catch (Throwable $t) {
+                $error = 'Failed to send welcome email: ' . $t->getMessage();
+            }
+            redirect('users');
+        }
+    }
+
+    if ($action === 'send_password_reset') {
+        $targetUserId = (int)($_POST['user_id'] ?? 0);
+        $stU = $pdo->prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
+        $stU->execute([$targetUserId]);
+        $uData = $stU->fetch();
+
+        if (!$uData) {
+            $error = 'User not found.';
+        } else {
+            $token = bin2hex(random_bytes(32));
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+1 hour'));
+
+            $stUpd = $pdo->prepare("UPDATE users SET reset_token = ?, reset_token_expires_at = ? WHERE id = ?");
+            $stUpd->execute([$token, $expiresAt, $targetUserId]);
+
+            $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http');
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $dir = rtrim(dirname($_SERVER['PHP_SELF'] ?? ''), '/\\');
+            $resetUrl = "{$scheme}://{$host}{$dir}/reset_password.php?token={$token}";
+
+            $subject = "Password Reset Request - OneSol";
+            $htmlBody = "
+                <div style='font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;'>
+                    <div style='text-align: center; margin-bottom: 24px;'>
+                        <h2 style='color: #0f172a; margin: 0 0 8px 0; font-size: 22px; font-weight: 800;'>Reset Your Password</h2>
+                        <p style='color: #64748b; font-size: 13px; margin: 0;'>OneSol Invoice Manager Security System</p>
+                    </div>
+                    <p style='color: #334155; font-size: 14px; line-height: 1.5;'>Hello <strong>" . e($uData['name']) . "</strong>,</p>
+                    <p style='color: #475569; font-size: 14px; line-height: 1.5;'>An administrator requested a password reset for your account (<strong>" . e($uData['email']) . "</strong>). Click the button below to set a new password:</p>
+                    
+                    <div style='text-align: center; margin: 28px 0;'>
+                        <a href='" . e($resetUrl) . "' style='display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; font-weight: 800; font-size: 14px; padding: 12px 28px; border-radius: 12px; shadow: 0 4px 6px -1px rgba(0,0,0,0.1);'>Reset Password Now</a>
+                    </div>
+                    
+                    <p style='color: #64748b; font-size: 12px; line-height: 1.5;'>If the button above does not work, copy and paste the following link into your browser:</p>
+                    <p style='word-break: break-all; font-size: 11px; color: #2563eb; background: #f8fafc; padding: 10px; border-radius: 8px; font-family: monospace;'>" . e($resetUrl) . "</p>
+                    
+                    <hr style='border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;' />
+                    <p style='color: #94a3b8; font-size: 11px; margin: 0;'>This link is valid for <strong>1 hour</strong>.</p>
+                </div>
+            ";
+
+            try {
+                $sent = \Services\Mailer::send($pdo, (int)($uData['tenant_id'] ?: 1), $uData['email'], $subject, $htmlBody);
+                if ($sent) {
+                    log_audit($pdo, 'admin_password_reset_sent', 'users', $targetUserId, "Admin sent password reset email to {$uData['email']}");
+                    flash('success', "Password reset link email successfully sent to {$uData['email']}!");
+                } else {
+                    flash('warning', "Password reset link generated. Please verify custom SMTP settings.");
+                }
+            } catch (Throwable $t) {
+                $error = 'Failed to send password reset email: ' . $t->getMessage();
+            }
+            redirect('users');
+        }
+    }
+
     if ($action === 'delete_user') {
+
         $deleteUserId = (int)($_POST['user_id'] ?? 0);
         $activeUserId = (int)($_SESSION['user_id'] ?? 0);
 
@@ -406,7 +518,13 @@ page_start('Team & Permissions');
                         </td>
                         <td class="px-6 py-4 text-xs text-slate-500"><?=e(date('d M Y', strtotime($u['created_at'])))?></td>
                         <td class="px-6 py-4 text-right space-x-1">
-                            <button onclick='openEditUserModal(<?=json_encode($u, JSON_HEX_APOS|JSON_HEX_QUOT)?>, <?=json_encode($assignedIds)?>)' class="inline-flex items-center p-2 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50 text-xs transition-all" title="Edit Member">
+                            <button onclick="confirmResendWelcome(<?=$u['id']?>, '<?=e($u['email'])?>')" class="inline-flex items-center p-2 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 text-xs transition-all" title="Resend Welcome Email">
+                                <i class="fa-solid fa-paper-plane text-sm"></i>
+                            </button>
+                            <button onclick="confirmSendReset(<?=$u['id']?>, '<?=e($u['email'])?>')" class="inline-flex items-center p-2 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50 text-xs transition-all" title="Send Password Reset Link">
+                                <i class="fa-solid fa-key text-sm"></i>
+                            </button>
+                            <button onclick='openEditUserModal(<?=json_encode($u, JSON_HEX_APOS|JSON_HEX_QUOT)?>, <?=json_encode($assignedIds)?>)' class="inline-flex items-center p-2 rounded-lg text-slate-500 hover:text-purple-600 hover:bg-purple-50 text-xs transition-all" title="Edit Member">
                                 <i class="fa-solid fa-pen-to-square text-sm"></i>
                             </button>
                             <?php if ((int)$u['id'] !== (int)($_SESSION['user_id'] ?? 0)): ?>
@@ -440,11 +558,17 @@ page_start('Team & Permissions');
                         <div class="text-2xs text-slate-400"><?=e($u['email'])?> &bull; <?=e(implode(', ', array_column($assignedList, 'name')))?></div>
                     </div>
                 </div>
-                <div class="flex items-center space-x-2">
+                <div class="flex items-center space-x-1">
                     <span class="px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-amber-100 text-amber-800">
                         <?=strtoupper(e($u['tenant_role'] ?: $u['role']))?>
                     </span>
-                    <button onclick='openEditUserModal(<?=json_encode($u, JSON_HEX_APOS|JSON_HEX_QUOT)?>, <?=json_encode($assignedIds)?>)' class="p-1 text-slate-500 hover:text-amber-600">
+                    <button onclick="confirmResendWelcome(<?=$u['id']?>, '<?=e($u['email'])?>')" class="p-1 text-slate-500 hover:text-blue-600" title="Resend Welcome Email">
+                        <i class="fa-solid fa-paper-plane text-xs"></i>
+                    </button>
+                    <button onclick="confirmSendReset(<?=$u['id']?>, '<?=e($u['email'])?>')" class="p-1 text-slate-500 hover:text-amber-600" title="Send Password Reset Link">
+                        <i class="fa-solid fa-key text-xs"></i>
+                    </button>
+                    <button onclick='openEditUserModal(<?=json_encode($u, JSON_HEX_APOS|JSON_HEX_QUOT)?>, <?=json_encode($assignedIds)?>)' class="p-1 text-slate-500 hover:text-purple-600">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
                     <?php if ((int)$u['id'] !== (int)($_SESSION['user_id'] ?? 0)): ?>
@@ -655,6 +779,20 @@ page_start('Team & Permissions');
     </div>
 </div>
 
+<!-- Resend Welcome Modal Form -->
+<form id="resend-welcome-form" method="post" class="hidden">
+    <?=csrf_field()?>
+    <input type="hidden" name="action" value="resend_welcome">
+    <input type="hidden" name="user_id" id="resend-welcome-user-id">
+</form>
+
+<!-- Send Reset Password Modal Form -->
+<form id="send-reset-form" method="post" class="hidden">
+    <?=csrf_field()?>
+    <input type="hidden" name="action" value="send_password_reset">
+    <input type="hidden" name="user_id" id="send-reset-user-id">
+</form>
+
 <!-- Delete User Modal Form -->
 <form id="delete-user-form" method="post" class="hidden">
     <?=csrf_field()?>
@@ -704,6 +842,20 @@ function openEditUserModal(user, assignedTenantIds) {
     document.getElementById('edit-user-modal').classList.remove('hidden');
 }
 
+function confirmResendWelcome(userId, userEmail) {
+    if (confirm("Resend account welcome email to " + userEmail + "?")) {
+        document.getElementById('resend-welcome-user-id').value = userId;
+        document.getElementById('resend-welcome-form').submit();
+    }
+}
+
+function confirmSendReset(userId, userEmail) {
+    if (confirm("Send password reset token link email to " + userEmail + "?")) {
+        document.getElementById('send-reset-user-id').value = userId;
+        document.getElementById('send-reset-form').submit();
+    }
+}
+
 function confirmDeleteUser(userId, userName) {
     if (confirm("Are you sure you want to remove team member '" + userName + "' from this workspace?")) {
         document.getElementById('delete-user-id').value = userId;
@@ -713,5 +865,6 @@ function confirmDeleteUser(userId, userName) {
 </script>
 
 <?php page_end(); ?>
+
 
 
