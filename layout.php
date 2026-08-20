@@ -145,7 +145,7 @@ function page_start(string $title): void {
         echo '<a href="reports_vat201" class="flex items-center px-4 py-2 text-xs font-bold text-slate-900 hover:bg-emerald-50/60 hover:text-emerald-700 transition-colors"><i class="fa-solid fa-file-invoice-dollar w-6 text-emerald-600 text-center"></i><span>UAE FTA VAT 201 Declaration</span></a>';
         echo '<a href="reports_corporate_tax" class="flex items-center px-4 py-2 text-xs font-bold text-slate-900 hover:bg-blue-50/60 hover:text-blue-700 transition-colors"><i class="fa-solid fa-percent w-6 text-blue-600 text-center"></i><span>UAE Corporate Tax (9%)</span></a>';
         echo '<a href="export_faf" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-amber-50/60 hover:text-amber-700 transition-colors"><i class="fa-solid fa-file-export w-6 text-amber-600 text-center"></i><span>Export FTA Audit File (.faf)</span></a>';
-        echo '<a href="reports_vat_summary" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-slate-900 transition-colors"><i class="fa-solid fa-calculator w-6 text-slate-400 text-center"></i><span>General VAT Summary</span></a>';
+        echo '<a href="reports_tax" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-slate-900 transition-colors"><i class="fa-solid fa-calculator w-6 text-slate-400 text-center"></i><span>General VAT Summary</span></a>';
         echo '</div>';
 
         // Category 3: Analytics & Audit
@@ -154,8 +154,8 @@ function page_start(string $title): void {
         echo '<span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Business Analytics</span>';
         echo '</div>';
         echo '<div class="py-1">';
-        echo '<a href="reports_sales_by_client" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50/60 hover:text-blue-600 transition-colors"><i class="fa-solid fa-user-tag w-6 text-blue-500 text-center"></i><span>Client Revenue Analysis</span></a>';
-        echo '<a href="reports_expenses_by_category" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-rose-50/60 hover:text-rose-600 transition-colors"><i class="fa-solid fa-pie-chart w-6 text-rose-500 text-center"></i><span>Expense Breakdown</span></a>';
+        echo '<a href="reports_client_sales" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50/60 hover:text-blue-600 transition-colors"><i class="fa-solid fa-user-tag w-6 text-blue-500 text-center"></i><span>Client Revenue Analysis</span></a>';
+        echo '<a href="reports_expense_category" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-rose-50/60 hover:text-rose-600 transition-colors"><i class="fa-solid fa-pie-chart w-6 text-rose-500 text-center"></i><span>Expense Breakdown</span></a>';
         echo '</div>';
 
         echo '</div>';
