@@ -182,10 +182,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Strict tenant scope — never leak users from other tenants
-$st = $pdo->prepare("SELECT u.*, ut.role tenant_role, t.name tenant_workspace_name, t.code tenant_workspace_code FROM users u JOIN user_tenants ut ON ut.user_id = u.id LEFT JOIN tenants t ON t.id = ut.tenant_id WHERE ut.tenant_id = ? ORDER BY u.id DESC");
-$st->execute([$tid]);
+// Filter parameters
+$filterSearch    = trim($_GET['q'] ?? '');
+$filterWorkspace = isset($_GET['workspace_id']) && $_GET['workspace_id'] !== '' ? (int)$_GET['workspace_id'] : 0;
+$filterRole      = trim($_GET['role'] ?? '');
+
+$isMasterSuperAdmin = (has_role(['owner']) && tenant_id() === 1);
+
+// Construct Query Dynamically
+$where = [];
+$params = [];
+
+if ($isMasterSuperAdmin) {
+    if ($filterWorkspace > 0) {
+        $where[] = "(ut.tenant_id = ? OR u.tenant_id = ?)";
+        $params[] = $filterWorkspace;
+        $params[] = $filterWorkspace;
+    }
+} else {
+    $where[] = "(ut.tenant_id = ? OR u.tenant_id = ?)";
+    $params[] = $tid;
+    $params[] = $tid;
+}
+
+if ($filterRole !== '') {
+    $where[] = "(ut.role = ? OR u.role = ?)";
+    $params[] = $filterRole;
+    $params[] = $filterRole;
+}
+
+if ($filterSearch !== '') {
+    $where[] = "(u.name LIKE ? OR u.email LIKE ?)";
+    $params[] = '%' . $filterSearch . '%';
+    $params[] = '%' . $filterSearch . '%';
+}
+
+$whereSql = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
+
+$sql = "SELECT DISTINCT u.*, 
+               COALESCE(ut.role, u.role) AS tenant_role, 
+               t.name AS tenant_workspace_name, 
+               t.code AS tenant_workspace_code 
+        FROM users u 
+        LEFT JOIN user_tenants ut ON ut.user_id = u.id 
+        LEFT JOIN tenants t ON t.id = COALESCE(ut.tenant_id, u.tenant_id) 
+        {$whereSql} 
+        ORDER BY u.id DESC";
+
+$st = $pdo->prepare($sql);
+$st->execute($params);
 $users = $st->fetchAll();
+
+$hasActiveFilters = ($filterSearch !== '' || $filterWorkspace > 0 || $filterRole !== '');
 
 page_start('Team & Permissions');
 ?>
@@ -194,15 +242,22 @@ page_start('Team & Permissions');
     <div>
         <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Team & Permissions</h1>
         <p class="mt-1 text-xs sm:text-sm text-slate-500">
-            Manage user access for <strong><?=e($activeTenant['name'])?></strong>. 
-            Quota: <strong class="text-slate-800"><?=$currentUsersCount?> / <?=$isLifetime ? 'Unlimited (Internal)' : $maxUsersAllowed?> Allowed Users</strong>
+            <?php if ($isMasterSuperAdmin && $filterWorkspace === 0): ?>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-2xs font-extrabold bg-purple-100 text-purple-800 mr-1.5"><i class="fa-solid fa-crown mr-1"></i>Super-Admin Global View</span>
+                Managing team members across <strong>All SaaS Workspaces</strong>.
+            <?php else: ?>
+                Manage user access for <strong><?=e($activeTenant['name'])?></strong>. 
+                Quota: <strong class="text-slate-800"><?=$currentUsersCount?> / <?=$isLifetime ? 'Unlimited (Internal)' : $maxUsersAllowed?> Allowed Users</strong>
+            <?php endif; ?>
         </p>
     </div>
     <div class="mt-4 sm:mt-0 flex items-center space-x-2">
-        <a href="tenants_admin" class="inline-flex items-center px-3.5 py-2 border border-purple-300 text-xs font-extrabold rounded-xl text-purple-800 bg-purple-50 hover:bg-purple-100 shadow-xs transition-all">
-            <i class="fa-solid fa-building-user mr-1.5 text-purple-600"></i>+ Create Tenant Workspace
-        </a>
-        <?php if ($isLifetime || $currentUsersCount < $maxUsersAllowed): ?>
+        <?php if ($isMasterSuperAdmin): ?>
+            <a href="tenants_admin" class="inline-flex items-center px-3.5 py-2 border border-purple-300 text-xs font-extrabold rounded-xl text-purple-800 bg-purple-50 hover:bg-purple-100 shadow-xs transition-all">
+                <i class="fa-solid fa-building-user mr-1.5 text-purple-600"></i>+ Create Tenant Workspace
+            </a>
+        <?php endif; ?>
+        <?php if ($isLifetime || $currentUsersCount < $maxUsersAllowed || $isMasterSuperAdmin): ?>
             <button onclick="document.getElementById('new-user-modal').classList.remove('hidden')" class="inline-flex items-center px-4 py-2 border border-transparent text-xs font-extrabold rounded-xl text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-md transition-all">
                 <i class="fa-solid fa-user-plus mr-1.5"></i>Add Team Member
             </button>
@@ -220,11 +275,65 @@ page_start('Team & Permissions');
     </div>
 <?php endif; ?>
 
+<!-- 🔍 Advanced Search & Filter Bar -->
+<form method="get" class="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+        <!-- Search Query Input -->
+        <div class="<?=$isMasterSuperAdmin ? 'sm:col-span-5' : 'sm:col-span-7'?> relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" name="q" value="<?=e($filterSearch)?>" placeholder="Search team member by name or email address..." class="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
+        </div>
+
+        <!-- Super-Admin Workspace Selector -->
+        <?php if ($isMasterSuperAdmin): ?>
+            <div class="sm:col-span-3">
+                <select name="workspace_id" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
+                    <option value="">🏢 All Workspaces (Global)</option>
+                    <?php foreach ($allTenants as $at): ?>
+                        <option value="<?=$at['id']?>" <?=$filterWorkspace === (int)$at['id'] ? 'selected' : ''?>><?=e($at['name'])?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        <?php endif; ?>
+
+        <!-- Role Filter Dropdown -->
+        <div class="<?=$isMasterSuperAdmin ? 'sm:col-span-2' : 'sm:col-span-3'?>">
+            <select name="role" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
+                <option value="">👑 All Roles</option>
+                <option value="owner" <?=$filterRole==='owner'?'selected':''?>>Owner</option>
+                <option value="admin" <?=$filterRole==='admin'?'selected':''?>>Admin</option>
+                <option value="accountant" <?=$filterRole==='accountant'?'selected':''?>>Accountant</option>
+                <option value="sales" <?=$filterRole==='sales'?'selected':''?>>Sales</option>
+                <option value="viewer" <?=$filterRole==='viewer'?'selected':''?>>Viewer</option>
+            </select>
+        </div>
+
+        <!-- Filter Submit / Reset Buttons -->
+        <div class="sm:col-span-2 flex items-center space-x-2">
+            <button type="submit" class="w-full px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-xs transition-all flex items-center justify-center">
+                <i class="fa-solid fa-filter mr-1.5 text-2xs"></i>Filter
+            </button>
+            <?php if ($hasActiveFilters): ?>
+                <a href="users.php" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl text-xs transition-all flex items-center" title="Reset Filters">
+                    <i class="fa-solid fa-xmark"></i>
+                </a>
+            <?php endif; ?>
+        </div>
+    </div>
+</form>
+
 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-12">
     <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
         <h2 class="text-base sm:text-lg font-bold text-slate-900">Active Team Members (<?=count($users)?>)</h2>
-        <span class="text-xs font-extrabold text-slate-500"><?=$currentUsersCount?> / <?=$isLifetime ? 'Unlimited' : $maxUsersAllowed?> Limit</span>
+        <span class="text-xs font-extrabold text-slate-500">
+            <?php if ($isMasterSuperAdmin): ?>
+                Total Team Members: <?=count($users)?>
+            <?php else: ?>
+                <?=$currentUsersCount?> / <?=$isLifetime ? 'Unlimited' : $maxUsersAllowed?> Limit
+            <?php endif; ?>
+        </span>
     </div>
+
 
     <!-- Desktop Table View -->
     <div class="hidden sm:block overflow-x-auto">
