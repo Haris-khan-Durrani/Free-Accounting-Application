@@ -30,6 +30,47 @@ try { $pdo->exec("ALTER TABLE branding_settings ADD COLUMN remove_powered_by TIN
 
 $message = '';
 $error = '';
+$sslLog = '';
+
+/**
+ * Builds the Nginx server block config string for a custom domain.
+ * PHP cannot write outside open_basedir — superadmin pastes this in aaPanel terminal.
+ */
+function build_nginx_conf(string $domain): string {
+    $certDir = "/www/server/panel/vhost/cert/{$domain}";
+    $appRoot = '/www/wwwroot/acc.hariskhandurrani.com';
+    return <<<NGINX
+# ─── OneSol Whitelabel: {$domain} ───────────────────────────────────────────
+server {
+    listen 80;
+    listen 443 ssl;
+    http2 on;
+    server_name {$domain};
+    root {$appRoot};
+    index index.php index.html;
+
+    ssl_certificate     {$certDir}/fullchain.pem;
+    ssl_certificate_key {$certDir}/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         EECDH+CHACHA20:EECDH+AES128:RSA+AES128:EECDH+AES256:RSA+AES256:!MD5;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 10m;
+    error_page 497 https://\$host\$request_uri;
+
+    include enable-php-83.conf;
+
+    location ~ \.well-known { allow all; }
+    location ~ ^/(\.user.ini|\.htaccess|\.git|\.env|\.svn|\.project|LICENSE|README\.md) { return 404; }
+    location / { try_files \$uri \$uri/ \$uri.php?\$query_string; }
+    location ~ .*\.(gif|jpg|jpeg|png|bmp|swf)$ { expires 30d; error_log /dev/null; access_log /dev/null; }
+    location ~ .*\.(js|css)?$ { expires 12h; error_log /dev/null; access_log /dev/null; }
+
+    access_log /www/wwwlogs/{$domain}.log;
+    error_log  /www/wwwlogs/{$domain}.error.log;
+}
+NGINX;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_domain') {
     verify_csrf();
@@ -37,16 +78,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $customDomain = preg_replace('#^https?://#i', '', $customDomain);
     $customDomain = preg_replace('#/.*$#', '', $customDomain);
     $customDomain = strtolower($customDomain);
-    
+
     $removePoweredBy = isset($_POST['remove_powered_by']) ? 1 : 0;
 
     $st = $pdo->prepare("UPDATE branding_settings SET custom_domain = ?, remove_powered_by = ? WHERE tenant_id = ?");
     $st->execute([$customDomain, $removePoweredBy, $targetTenantId]);
 
     \Core\Tenant::forgetCache($targetTenantId);
-
     log_audit($pdo, 'update_domain_settings', 'branding_settings', $targetTenantId, "Updated whitelabel custom domain: $customDomain for workspace #$targetTenantId");
-    $message = "Whitelabel domain configuration for '$targetTenantName' updated successfully.";
+
+    if (!empty($customDomain)) {
+        $message = "✅ Domain '{$customDomain}' saved for workspace '{$targetTenantName}'. Follow the terminal setup steps below to activate SSL.";
+    } else {
+        $message = "Whitelabel domain configuration for '$targetTenantName' cleared successfully.";
+    }
+
 }
 
 $brand = \Core\Branding::get($pdo, $targetTenantId);
@@ -86,6 +132,21 @@ page_start('Whitelabel Domain Settings');
     <div class="mb-6 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-4 text-xs font-bold flex items-center space-x-2">
         <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
         <span><?=e($message)?></span>
+    </div>
+<?php endif; ?>
+
+<?php if ($error): ?>
+    <div class="mb-6 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl p-4 text-xs font-bold space-y-2">
+        <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-triangle-exclamation text-rose-600 text-base"></i>
+            <span><?=e($error)?></span>
+        </div>
+        <?php if ($sslLog): ?>
+        <details class="mt-2">
+            <summary class="cursor-pointer text-rose-600 font-black text-2xs uppercase tracking-wider">View SSL Provisioning Log</summary>
+            <pre class="mt-2 text-2xs bg-rose-100 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap text-rose-900 font-mono"><?=e($sslLog)?></pre>
+        </details>
+        <?php endif; ?>
     </div>
 <?php endif; ?>
 
@@ -154,44 +215,80 @@ page_start('Whitelabel Domain Settings');
         </div>
     </div>
 
-    <!-- DNS Setup Guide Column -->
+    <!-- Server Setup Guide Column -->
     <div class="space-y-6">
-        <div class="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-6 border border-slate-800 shadow-xl space-y-4">
-            <div class="flex items-center space-x-3 text-amber-400">
-                <i class="fa-solid fa-network-wired text-xl"></i>
-                <h3 class="text-sm font-extrabold tracking-tight">DNS CNAME Setup Instructions</h3>
-            </div>
-            
-            <p class="text-xs text-slate-300 leading-relaxed">
-                Log into your domain registrar (GoDaddy, Cloudflare, Namecheap) and add the following <strong>CNAME Record</strong>:
-            </p>
 
-            <div class="bg-slate-950/80 rounded-xl p-3.5 border border-slate-800/80 font-mono text-2xs space-y-2">
-                <div class="flex justify-between items-center text-slate-400">
-                    <span>RECORD TYPE:</span>
-                    <strong class="text-amber-400">CNAME</strong>
-                </div>
-                <div class="flex justify-between items-center text-slate-400">
-                    <span>HOST / NAME:</span>
-                    <strong class="text-white">billing</strong> (or subdomain)
-                </div>
-                <div class="flex justify-between items-center text-slate-400">
-                    <span>TARGET / POINTS TO:</span>
-                    <strong class="text-emerald-400"><?=e($serverHost)?></strong>
-                </div>
-                <div class="flex justify-between items-center text-slate-400">
-                    <span>TTL:</span>
-                    <strong class="text-slate-300">Auto / 3600</strong>
-                </div>
+        <!-- Step 1: DNS -->
+        <div class="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-5 border border-slate-800 shadow-xl space-y-3">
+            <div class="flex items-center space-x-2 text-amber-400">
+                <span class="w-5 h-5 rounded-full bg-amber-400 text-slate-900 text-2xs font-black flex items-center justify-center">1</span>
+                <h3 class="text-xs font-extrabold tracking-tight uppercase">Tenant DNS Record</h3>
             </div>
-
-            <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-2xs text-blue-200 flex items-start space-x-2">
-                <i class="fa-solid fa-lightbulb text-amber-400 text-xs mt-0.5"></i>
-                <span>After saving your DNS record, click the <strong>Test & Verify DNS</strong> button to validate instant propagation.</span>
+            <p class="text-2xs text-slate-400">Tenant adds this to their domain registrar:</p>
+            <div class="bg-slate-950/80 rounded-xl p-3 border border-slate-800 font-mono text-2xs space-y-1.5">
+                <div class="flex justify-between text-slate-400"><span>TYPE:</span><strong class="text-amber-400">CNAME  or  A</strong></div>
+                <div class="flex justify-between text-slate-400"><span>HOST:</span><strong class="text-white"><?= $customDomain ? e(explode('.', $customDomain)[0]) : 'billing' ?></strong></div>
+                <div class="flex justify-between text-slate-400"><span>POINTS TO:</span><strong class="text-emerald-400"><?=e($serverHost)?></strong></div>
+                <div class="flex justify-between text-slate-400"><span>TTL:</span><strong class="text-slate-300">Auto / 3600</strong></div>
             </div>
         </div>
+
+        <!-- Step 2: aaPanel Terminal — SSL (Superadmin only) -->
+        <?php if (has_role(['owner', 'admin'])): ?>
+
+        <div class="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-5 border border-slate-800 shadow-xl space-y-3">
+            <div class="flex items-center space-x-2 text-emerald-400">
+                <span class="w-5 h-5 rounded-full bg-emerald-400 text-slate-900 text-2xs font-black flex items-center justify-center">2</span>
+                <h3 class="text-xs font-extrabold tracking-tight uppercase">aaPanel Terminal — Issue SSL</h3>
+            </div>
+            <p class="text-2xs text-slate-400">Run these commands once in aaPanel → Terminal:</p>
+            <div class="bg-slate-950 rounded-xl p-3 border border-slate-700 font-mono text-2xs text-emerald-300 space-y-1 select-all" id="sslCmds">
+<?php
+$d = $customDomain ?: 'your-tenant-domain.com';
+$wr = '/www/wwwroot/acc.hariskhandurrani.com';
+$cd = "/www/server/panel/vhost/cert/{$d}";
+echo "# Install acme.sh if not done yet:\n";
+echo "curl https://get.acme.sh | sh\n";
+echo "~/.acme.sh/acme.sh --set-default-ca --server letsencrypt\n\n";
+echo "# Issue SSL cert:\n";
+echo "~/.acme.sh/acme.sh --issue -d " . e($d) . " --webroot " . e($wr) . "\n\n";
+echo "# Install cert:\n";
+echo "mkdir -p " . e($cd) . "\n";
+echo "~/.acme.sh/acme.sh --install-cert -d " . e($d) . " \\\n";
+echo "  --fullchain-file " . e($cd) . "/fullchain.pem \\\n";
+echo "  --key-file " . e($cd) . "/privkey.pem \\\n";
+echo "  --reloadcmd \"nginx -s reload\"";
+?>
+            </div>
+            <button onclick="copyText('sslCmds','btnCopySSL')" id="btnCopySSL" class="w-full py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-2xs font-black transition-all">
+                <i class="fa-solid fa-copy mr-1"></i> Copy SSL Commands
+            </button>
+        </div>
+
+        <!-- Step 3: Nginx Config -->
+        <div class="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl p-5 border border-slate-800 shadow-xl space-y-3">
+            <div class="flex items-center space-x-2 text-blue-400">
+                <span class="w-5 h-5 rounded-full bg-blue-400 text-slate-900 text-2xs font-black flex items-center justify-center">3</span>
+                <h3 class="text-xs font-extrabold tracking-tight uppercase">aaPanel — Add Nginx Site Config</h3>
+            </div>
+            <p class="text-2xs text-slate-400">In aaPanel → Website → Add Site, OR paste this into <code class="text-amber-300">/www/server/panel/vhost/nginx/<?=e($customDomain ?: 'tenant-domain.com')?>.conf</code>:</p>
+            <div class="bg-slate-950 rounded-xl p-3 border border-slate-700 font-mono text-2xs text-blue-200 max-h-48 overflow-y-auto select-all" id="nginxConf"><?=e(build_nginx_conf($customDomain ?: 'your-tenant-domain.com'))?></div>
+            <div class="flex space-x-2">
+                <button onclick="copyText('nginxConf','btnCopyNginx')" id="btnCopyNginx" class="flex-1 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-2xs font-black transition-all">
+                    <i class="fa-solid fa-copy mr-1"></i> Copy Nginx Config
+                </button>
+                <button onclick="safe_shell_exec_reload()" class="flex-1 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-2xs font-black transition-all">
+                    <i class="fa-solid fa-rotate-right mr-1"></i> After Paste → nginx -s reload
+                </button>
+            </div>
+            <p class="text-2xs text-slate-500 mt-1">After adding the config, run: <code class="text-amber-300">nginx -t && nginx -s reload</code></p>
+        </div>
+
+        <?php endif; // end superadmin-only steps 2 & 3 ?>
+
     </div>
 </div>
+
 
 <script>
 function testDomainDns() {
@@ -262,6 +359,24 @@ function testDomainDns() {
         btn.innerHTML = '<i class="fa-solid fa-bolt text-amber-300"></i> <span>Test & Verify DNS</span>';
         resultBox.className = 'p-4 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-300 text-rose-900';
         resultBox.innerText = 'Server request failed: ' + err.message;
+    });
+}
+
+function copyText(elId, btnId) {
+    const el  = document.getElementById(elId);
+    const btn = document.getElementById(btnId);
+    const text = el.innerText || el.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Copied!';
+        btn.classList.add('bg-emerald-600');
+        setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('bg-emerald-600'); }, 2000);
+    }).catch(() => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        document.execCommand('copy');
     });
 }
 </script>

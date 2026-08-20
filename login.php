@@ -64,15 +64,23 @@ if (\Core\SecurityThrottle::isLockedOut()) {
             redirect('2fa_verify');
         }
 
+        // Resolve the workspace-scoped role from user_tenants (overrides the global users.role)
+        // This ensures sub-account members (accountant, sales, viewer) don't inherit owner-level access
+        $stRole = $pdo->prepare("SELECT role FROM user_tenants WHERE user_id = ? AND tenant_id = ? LIMIT 1");
+        $stRole->execute([$u['id'], $tenantId]);
+        $workspaceRole = $stRole->fetchColumn();
+        // Use workspace role if found, otherwise fall back to users.role (for primary owner account)
+        $effectiveRole = $workspaceRole ?: ($u['role'] ?? 'owner');
+
         // Direct Login without 2FA
         $_SESSION['user_id'] = $u['id'];
         $_SESSION['user_name'] = $u['name'];
-        $_SESSION['user_role'] = $u['role'] ?? 'owner';
+        $_SESSION['user_role'] = $effectiveRole;
         $_SESSION['active_tenant_id'] = $tenantId;
         $_SESSION['user_tenant_id'] = $tenantId;
         $_SESSION['tenant_id'] = $tenantId;
 
-        log_audit($pdo, 'login', 'users', $u['id'], "User {$u['email']} logged in successfully");
+        log_audit($pdo, 'login', 'users', $u['id'], "User {$u['email']} logged in successfully with role '{$effectiveRole}'");
         redirect('index');
     } else {
         \Core\SecurityThrottle::recordFailedAttempt();

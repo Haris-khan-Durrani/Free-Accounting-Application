@@ -39,7 +39,7 @@ page_start('Master System & Workspace Settings');
         </div>
     </a>
 
-    <!-- Card 2: Whitelabel Custom Domain & SSL -->
+    <?php /* TEMP HIDDEN — Whitelabel Domain & SSL card
     <a href="domain_settings" class="group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-500/50 transition-all">
         <div class="flex items-center justify-between mb-4">
             <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
@@ -54,6 +54,7 @@ page_start('Master System & Workspace Settings');
             <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
         </div>
     </a>
+    */ ?>
 
     <!-- Card 3: WhatsApp & Twilio Messaging Gateway -->
     <a href="whatsapp_settings" class="group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-emerald-500/50 transition-all">

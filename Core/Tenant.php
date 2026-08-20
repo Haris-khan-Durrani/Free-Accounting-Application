@@ -17,16 +17,15 @@ class Tenant {
 
         $host = preg_replace('#:\d+$#', '', strtolower(trim($host)));
 
-        return Cache::remember('tenant_domain_' . $host, 600, function() use ($pdo, $host) {
-            try {
-                $st = $pdo->prepare("SELECT tenant_id FROM branding_settings WHERE custom_domain = ?");
-                $st->execute([$host]);
-                $tid = $st->fetchColumn();
-                return $tid ? (int)$tid : null;
-            } catch (\Throwable $e) {
-                return null;
-            }
-        });
+        // Query DB directly — no caching so domain changes take effect immediately
+        try {
+            $st = $pdo->prepare("SELECT tenant_id FROM branding_settings WHERE custom_domain = ?");
+            $st->execute([$host]);
+            $tid = $st->fetchColumn();
+            return $tid ? (int)$tid : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     public static function getActiveId(): int {
@@ -68,15 +67,14 @@ class Tenant {
 
     public static function getActive(PDO $pdo): array {
         $id = self::getActiveId();
-        return Cache::remember('tenant_active_info', 600, function() use ($pdo, $id) {
-            $st = $pdo->prepare("SELECT * FROM tenants WHERE id = ?");
-            $st->execute([$id]);
-            $t = $st->fetch();
-            if (!$t) {
-                throw new TenantContextException("Active tenant record [ID {$id}] not found in database.");
-            }
-            return $t;
-        }, $id);
+        // Query DB directly — no caching so workspace name/settings changes are instant
+        $st = $pdo->prepare("SELECT * FROM tenants WHERE id = ?");
+        $st->execute([$id]);
+        $t = $st->fetch();
+        if (!$t) {
+            throw new TenantContextException("Active tenant record [ID {$id}] not found in database.");
+        }
+        return $t;
     }
 
     public static function forgetCache(?int $tenantId = null): void {

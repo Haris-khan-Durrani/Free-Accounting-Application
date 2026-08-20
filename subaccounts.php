@@ -20,7 +20,12 @@ if (isset($_GET['switch'])) {
     $st->execute([$targetId]);
     $t = $st->fetch();
     if ($t) {
-        $_SESSION['tenant_id'] = $t['id'];
+        // Update all tenant session keys so Tenant::getActiveId() picks up the new one
+        $_SESSION['tenant_id']        = $t['id'];
+        $_SESSION['active_tenant_id'] = $t['id'];
+        $_SESSION['user_tenant_id']   = $t['id'];
+        // Clear cached tenant info so the switched workspace is loaded fresh
+        \Core\Tenant::forgetCache();
         flash('success', 'Switched active sub-account workspace to: ' . $t['name']);
     }
     redirect('subaccounts.php');
