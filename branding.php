@@ -147,36 +147,7 @@ page_start('Dynamic Branding & Company Profile');
                 </select>
             </div>
         <?php endif; ?>
-        <?php if (has_role(['owner', 'admin'])): ?>
-        <a href="domain_settings?tenant_id=<?=$targetTenantId?>" class="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all space-x-2">
-            <i class="fa-solid fa-globe text-amber-300 text-sm"></i>
-            <span>Whitelabel Domain Settings</span>
-        </a>
-        <?php endif; ?>
-    </div>
-</div>
 
-<?php if (has_role(['owner', 'admin'])): ?>
-<!-- Whitelabel Custom Domain Promo Card -->
-<div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-2xl p-5 text-white border border-slate-800 shadow-xl mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
-    <div class="flex items-center space-x-4">
-        <div class="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl font-bold border border-blue-500/30">
-            <i class="fa-solid fa-globe"></i>
-        </div>
-        <div>
-            <div class="flex items-center space-x-2">
-                <h3 class="font-extrabold text-base text-white">Whitelabel Custom Domain &amp; SSL</h3>
-                <span class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 text-3xs font-black uppercase">Enterprise Feature</span>
-            </div>
-            <p class="text-xs text-slate-300 mt-0.5">Host payment portals under your own domain (e.g., <code>billing.yourcompany.com</code>) with automated DNS verification.</p>
-        </div>
-    </div>
-    <a href="domain_settings" class="whitespace-nowrap px-4 py-2 bg-white text-slate-900 hover:bg-slate-100 rounded-xl text-xs font-black transition-all flex items-center space-x-1.5 shadow-sm">
-        <span>Configure Domain &amp; Test DNS</span>
-        <i class="fa-solid fa-arrow-right text-2xs"></i>
-    </a>
-</div>
-<?php endif; ?>
 
 
 <form method="post" enctype="multipart/form-data" class="space-y-8">

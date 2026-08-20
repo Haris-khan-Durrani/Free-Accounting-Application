@@ -45,22 +45,7 @@ page_start('Master System & Workspace Settings');
         </div>
     </a>
 
-    <?php if (has_role(['owner', 'admin'])): ?>
-    <a href="domain_settings" class="group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-500/50 transition-all">
-        <div class="flex items-center justify-between mb-4">
-            <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center text-xl font-bold group-hover:scale-110 transition-transform">
-                <i class="fa-solid fa-globe"></i>
-            </div>
-            <span class="text-3xs font-extrabold px-2 py-1 bg-blue-100 text-blue-800 rounded-md uppercase">Whitelabel</span>
-        </div>
-        <h3 class="font-extrabold text-base text-slate-900 group-hover:text-blue-600 transition-colors">Custom Domain &amp; SSL</h3>
-        <p class="text-xs text-slate-500 mt-1">Bind custom domain (billing.company.com) with real-time CNAME DNS lookup &amp; SSL indicators.</p>
-        <div class="mt-4 pt-3 border-t border-slate-100 text-2xs font-extrabold text-blue-600 flex items-center justify-between">
-            <span>Test &amp; Verify DNS</span>
-            <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
-        </div>
-    </a>
-    <?php endif; ?>
+
 
     <!-- Card 3: WhatsApp & Twilio Messaging Gateway -->
     <a href="whatsapp_settings" class="group bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-xl hover:border-emerald-500/50 transition-all">
