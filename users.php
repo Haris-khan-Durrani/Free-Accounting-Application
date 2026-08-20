@@ -39,7 +39,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
         $role = $_POST['role'] ?? 'accountant';
-        $targetTenantId = (int)($_POST['target_tenant_id'] ?? $tid);
+        $targetTenantIds = array_map('intval', (array)($_POST['target_tenant_ids'] ?? [$tid]));
+        if (empty($targetTenantIds)) {
+            $targetTenantIds = [$tid];
+        }
+        $primaryTenantId = $targetTenantIds[0];
         $accountScope = $_POST['account_scope'] ?? 'subaccount';
 
         if ($accountScope === 'tenant_admin') {
@@ -54,20 +58,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $hash = password_hash($password, PASSWORD_DEFAULT);
                 $st = $pdo->prepare("INSERT INTO users (tenant_id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)");
-                $st->execute([$targetTenantId, $name, $email, $hash, $role]);
+                $st->execute([$primaryTenantId, $name, $email, $hash, $role]);
                 $newUserId = (int)$pdo->lastInsertId();
 
-                $stUt = $pdo->prepare("INSERT INTO user_tenants (user_id, tenant_id, role) VALUES (?, ?, ?)");
-                $stUt->execute([$newUserId, $targetTenantId, $role]);
+                // Multi-assign user to all selected workspace locations
+                $stUt = $pdo->prepare("INSERT INTO user_tenants (user_id, tenant_id, role) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE role = ?");
+                foreach ($targetTenantIds as $tId) {
+                    $stUt->execute([$newUserId, $tId, $role, $role]);
+                }
 
-                // Find tenant name for message & email
-                $assignedTenantName = $activeTenant['name'];
+                // Find assigned workspace names
+                $assignedTenantNames = [];
                 foreach ($allTenants as $at) {
-                    if ($at['id'] == $targetTenantId) {
-                        $assignedTenantName = $at['name'];
-                        break;
+                    if (in_array((int)$at['id'], $targetTenantIds, true)) {
+                        $assignedTenantNames[] = $at['name'];
                     }
                 }
+                $assignedTenantNameStr = implode(', ', $assignedTenantNames);
 
                 // Dispatch Welcome Email to the new team member
                 $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
@@ -75,16 +82,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
                 $loginUrl = $protocol . '://' . $host . $scriptDir . '/login.php';
 
-                $subject = "Welcome to " . e($assignedTenantName) . " - Your Account Credentials";
+                $subject = "Welcome to " . e($assignedTenantNameStr) . " - Your Account Credentials";
                 $htmlBody = "
                     <div style='font-family: system-ui, -apple-system, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;'>
                         <div style='text-align: center; margin-bottom: 20px;'>
-                            <h2 style='color: #0f172a; margin: 0; font-size: 22px;'>Welcome to " . e($assignedTenantName) . "! 🎉</h2>
-                            <p style='color: #64748b; font-size: 13px; margin-top: 6px;'>Your team member account has been created and assigned to your workspace.</p>
+                            <h2 style='color: #0f172a; margin: 0; font-size: 22px;'>Welcome to " . e($assignedTenantNameStr) . "! 🎉</h2>
+                            <p style='color: #64748b; font-size: 13px; margin-top: 6px;'>Your team member account has been created and assigned to your workspace locations.</p>
                         </div>
                         <div style='background: #f8fafc; padding: 18px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #f1f5f9;'>
                             <table style='width: 100%; border-collapse: collapse; font-size: 13px; color: #334155;'>
-                                <tr><td style='padding: 6px 0; font-weight: bold; width: 140px;'>Workspace:</td><td style='padding: 6px 0; font-weight: 700; color: #0f172a;'>" . e($assignedTenantName) . "</td></tr>
+                                <tr><td style='padding: 6px 0; font-weight: bold; width: 140px;'>Assigned Workspaces:</td><td style='padding: 6px 0; font-weight: 700; color: #0f172a;'>" . e($assignedTenantNameStr) . "</td></tr>
                                 <tr><td style='padding: 6px 0; font-weight: bold;'>Permission Role:</td><td style='padding: 6px 0;'><span style='background: #fef3c7; color: #92400e; padding: 3px 10px; border-radius: 99px; font-weight: 800; font-size: 11px; text-transform: uppercase;'>" . e($role) . "</span></td></tr>
                                 <tr><td style='padding: 6px 0; font-weight: bold;'>Login Email:</td><td style='padding: 6px 0; font-weight: 600;'>" . e($email) . "</td></tr>
                                 <tr><td style='padding: 6px 0; font-weight: bold;'>Password:</td><td style='padding: 6px 0;'><code style='background: #e2e8f0; color: #0f172a; padding: 3px 8px; border-radius: 6px; font-family: monospace; font-weight: bold;'>" . e($password) . "</code></td></tr>
@@ -98,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $emailNotice = '';
                 try {
-                    $sent = \Services\Mailer::send($pdo, $targetTenantId, $email, $subject, $htmlBody);
+                    $sent = \Services\Mailer::send($pdo, $primaryTenantId, $email, $subject, $htmlBody);
                     if ($sent) {
                         $emailNotice = " & a Welcome Email with login details was sent to $email!";
                     }
@@ -106,8 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $emailNotice = " (Note: Welcome email could not be delivered. Check custom SMTP settings).";
                 }
 
-                log_audit($pdo, 'create_user', 'users', $newUserId, "Created user $email with role $role assigned to workspace $assignedTenantName");
-                flash('success', "User account for $email created successfully and assigned to '$assignedTenantName'" . $emailNotice);
+                log_audit($pdo, 'create_user', 'users', $newUserId, "Created user $email with role $role assigned to workspaces $assignedTenantNameStr");
+                flash('success', "User account for $email created successfully and assigned to workspaces: '$assignedTenantNameStr'" . $emailNotice);
                 redirect('users');
             } catch (PDOException $e) {
                 $error = 'Failed to create user. Email address may already exist.';
@@ -120,7 +127,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name = trim($_POST['name'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $role = $_POST['role'] ?? 'accountant';
-        $targetTenantId = (int)($_POST['target_tenant_id'] ?? $tid);
+        $targetTenantIds = array_map('intval', (array)($_POST['target_tenant_ids'] ?? [$tid]));
+        if (empty($targetTenantIds)) {
+            $targetTenantIds = [$tid];
+        }
+        $primaryTenantId = $targetTenantIds[0];
         $password = $_POST['password'] ?? '';
 
         if (!$editUserId || !$name || !$email) {
@@ -130,28 +141,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($password) && strlen($password) >= 8) {
                     $hash = password_hash($password, PASSWORD_DEFAULT);
                     $stU = $pdo->prepare("UPDATE users SET name = ?, email = ?, role = ?, tenant_id = ?, password_hash = ? WHERE id = ?");
-                    $stU->execute([$name, $email, $role, $targetTenantId, $hash, $editUserId]);
+                    $stU->execute([$name, $email, $role, $primaryTenantId, $hash, $editUserId]);
                 } else {
                     $stU = $pdo->prepare("UPDATE users SET name = ?, email = ?, role = ?, tenant_id = ? WHERE id = ?");
-                    $stU->execute([$name, $email, $role, $targetTenantId, $editUserId]);
+                    $stU->execute([$name, $email, $role, $primaryTenantId, $editUserId]);
                 }
 
-                $stUt = $pdo->prepare("UPDATE user_tenants SET tenant_id = ?, role = ? WHERE user_id = ? AND tenant_id = ?");
-                $stUt->execute([$targetTenantId, $role, $editUserId, $tid]);
-                if ($stUt->rowCount() == 0) {
-                    // Update any existing user_tenant entry for user
-                    $stUt2 = $pdo->prepare("UPDATE user_tenants SET tenant_id = ?, role = ? WHERE user_id = ?");
-                    $stUt2->execute([$targetTenantId, $role, $editUserId]);
+                // Re-sync all assigned workspace locations for this user
+                $stDelUt = $pdo->prepare("DELETE FROM user_tenants WHERE user_id = ?");
+                $stDelUt->execute([$editUserId]);
+
+                $stInsUt = $pdo->prepare("INSERT INTO user_tenants (user_id, tenant_id, role) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE role = ?");
+                foreach ($targetTenantIds as $tId) {
+                    $stInsUt->execute([$editUserId, $tId, $role, $role]);
                 }
 
                 log_audit($pdo, 'edit_user', 'users', $editUserId, "Updated user #$editUserId ($email)");
-                flash('success', "Team member '$name' updated successfully!");
+                flash('success', "Team member '$name' workspace assignments updated successfully!");
                 redirect('users');
             } catch (PDOException $e) {
                 $error = 'Failed to update user. Email address may already be in use.';
             }
         }
     }
+
 
     if ($action === 'delete_user') {
         $deleteUserId = (int)($_POST['user_id'] ?? 0);
@@ -232,6 +245,20 @@ $sql = "SELECT DISTINCT u.*,
 $st = $pdo->prepare($sql);
 $st->execute($params);
 $users = $st->fetchAll();
+
+$userTenantMap = [];
+if (!empty($users)) {
+    $uIds = array_column($users, 'id');
+    $inClause = implode(',', array_fill(0, count($uIds), '?'));
+    $stUtMap = $pdo->prepare("SELECT ut.user_id, ut.tenant_id, t.name, t.code 
+                              FROM user_tenants ut 
+                              JOIN tenants t ON t.id = ut.tenant_id 
+                              WHERE ut.user_id IN ($inClause)");
+    $stUtMap->execute($uIds);
+    foreach ($stUtMap->fetchAll() as $row) {
+        $userTenantMap[$row['user_id']][] = $row;
+    }
+}
 
 $hasActiveFilters = ($filterSearch !== '' || $filterWorkspace > 0 || $filterRole !== '');
 
@@ -334,7 +361,6 @@ page_start('Team & Permissions');
         </span>
     </div>
 
-
     <!-- Desktop Table View -->
     <div class="hidden sm:block overflow-x-auto">
         <table class="w-full text-left border-collapse">
@@ -342,14 +368,20 @@ page_start('Team & Permissions');
                 <tr class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-400 uppercase tracking-wider">
                     <th class="px-6 py-3.5">User Name</th>
                     <th class="px-6 py-3.5">Email Address</th>
-                    <th class="px-6 py-3.5">Assigned Workspace</th>
+                    <th class="px-6 py-3.5">Assigned Workspaces</th>
                     <th class="px-6 py-3.5">Role</th>
                     <th class="px-6 py-3.5">Date Added</th>
                     <th class="px-6 py-3.5 text-right">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 text-sm">
-                <?php foreach ($users as $u): ?>
+                <?php foreach ($users as $u): 
+                    $assignedList = $userTenantMap[$u['id']] ?? [];
+                    if (empty($assignedList)) {
+                        $assignedList = [['tenant_id' => $u['tenant_id'], 'name' => $u['tenant_workspace_name'] ?: 'Corporate HQ']];
+                    }
+                    $assignedIds = array_column($assignedList, 'tenant_id');
+                ?>
                     <tr class="hover:bg-slate-50/80 transition-all">
                         <td class="px-6 py-4 font-bold text-slate-900 flex items-center space-x-3">
                             <div class="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-xs">
@@ -359,9 +391,13 @@ page_start('Team & Permissions');
                         </td>
                         <td class="px-6 py-4 text-slate-600"><?=e($u['email'])?></td>
                         <td class="px-6 py-4">
-                            <span class="px-2.5 py-1 rounded-lg text-2xs font-extrabold bg-slate-100 text-slate-800 border border-slate-200">
-                                <i class="fa-solid fa-building text-amber-500 mr-1"></i><?=e($u['tenant_workspace_name'] ?: 'Corporate HQ')?>
-                            </span>
+                            <div class="flex flex-wrap gap-1 max-w-xs">
+                                <?php foreach ($assignedList as $at): ?>
+                                    <span class="px-2 py-0.5 rounded-lg text-2xs font-extrabold bg-slate-100 text-slate-800 border border-slate-200" title="Assigned Workspace">
+                                        <i class="fa-solid fa-building text-amber-500 mr-1"></i><?=e($at['name'])?>
+                                    </span>
+                                <?php endforeach; ?>
+                            </div>
                         </td>
                         <td class="px-6 py-4">
                             <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800">
@@ -370,7 +406,7 @@ page_start('Team & Permissions');
                         </td>
                         <td class="px-6 py-4 text-xs text-slate-500"><?=e(date('d M Y', strtotime($u['created_at'])))?></td>
                         <td class="px-6 py-4 text-right space-x-1">
-                            <button onclick='openEditUserModal(<?=json_encode($u, JSON_HEX_APOS|JSON_HEX_QUOT)?>)' class="inline-flex items-center p-2 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50 text-xs transition-all" title="Edit Member">
+                            <button onclick='openEditUserModal(<?=json_encode($u, JSON_HEX_APOS|JSON_HEX_QUOT)?>, <?=json_encode($assignedIds)?>)' class="inline-flex items-center p-2 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50 text-xs transition-all" title="Edit Member">
                                 <i class="fa-solid fa-pen-to-square text-sm"></i>
                             </button>
                             <?php if ((int)$u['id'] !== (int)($_SESSION['user_id'] ?? 0)): ?>
@@ -387,7 +423,13 @@ page_start('Team & Permissions');
 
     <!-- Mobile Touch View -->
     <div class="sm:hidden divide-y divide-slate-100">
-        <?php foreach ($users as $u): ?>
+        <?php foreach ($users as $u): 
+            $assignedList = $userTenantMap[$u['id']] ?? [];
+            if (empty($assignedList)) {
+                $assignedList = [['tenant_id' => $u['tenant_id'], 'name' => $u['tenant_workspace_name'] ?: 'Corporate HQ']];
+            }
+            $assignedIds = array_column($assignedList, 'tenant_id');
+        ?>
             <div class="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                     <div class="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-600 text-xs">
@@ -395,14 +437,14 @@ page_start('Team & Permissions');
                     </div>
                     <div>
                         <div class="font-bold text-slate-900 text-sm"><?=e($u['name'])?></div>
-                        <div class="text-2xs text-slate-400"><?=e($u['email'])?> &bull; <?=e($u['tenant_workspace_name'] ?: 'Corporate HQ')?></div>
+                        <div class="text-2xs text-slate-400"><?=e($u['email'])?> &bull; <?=e(implode(', ', array_column($assignedList, 'name')))?></div>
                     </div>
                 </div>
                 <div class="flex items-center space-x-2">
                     <span class="px-2.5 py-0.5 rounded-full text-2xs font-extrabold bg-amber-100 text-amber-800">
                         <?=strtoupper(e($u['tenant_role'] ?: $u['role']))?>
                     </span>
-                    <button onclick='openEditUserModal(<?=json_encode($u, JSON_HEX_APOS|JSON_HEX_QUOT)?>)' class="p-1 text-slate-500 hover:text-amber-600">
+                    <button onclick='openEditUserModal(<?=json_encode($u, JSON_HEX_APOS|JSON_HEX_QUOT)?>, <?=json_encode($assignedIds)?>)' class="p-1 text-slate-500 hover:text-amber-600">
                         <i class="fa-solid fa-pen-to-square text-xs"></i>
                     </button>
                     <?php if ((int)$u['id'] !== (int)($_SESSION['user_id'] ?? 0)): ?>
@@ -465,19 +507,25 @@ page_start('Team & Permissions');
                 </div>
             </div>
 
-            <!-- Company Workspace Assignment -->
+            <!-- Multi-Workspace Location Assignment -->
             <div>
                 <div class="flex items-center justify-between mb-1.5">
-                    <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider">Assigned Company Workspace *</label>
-                    <a href="tenants_admin" target="_blank" class="inline-flex items-center px-2 py-0.5 text-3xs font-extrabold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-md border border-purple-200 transition-all">
-                        <i class="fa-solid fa-plus-circle mr-1"></i>+ Create Tenant
-                    </a>
+                    <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider">Assigned Workspaces / Locations (Select Multiple) *</label>
+                    <?php if ($isMasterSuperAdmin): ?>
+                        <a href="tenants_admin" target="_blank" class="inline-flex items-center px-2 py-0.5 text-3xs font-extrabold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-md border border-purple-200 transition-all">
+                            <i class="fa-solid fa-plus-circle mr-1"></i>+ Create Workspace
+                        </a>
+                    <?php endif; ?>
                 </div>
-                <select name="target_tenant_id" class="w-full rounded-xl border border-slate-300 bg-slate-50/80 px-3.5 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-36 overflow-y-auto space-y-2">
                     <?php foreach ($allTenants as $at): ?>
-                        <option value="<?=$at['id']?>" <?=$at['id']==$tid?'selected':''?>><?=e($at['name'])?> (code: <?=e($at['code'])?>)</option>
+                        <label class="flex items-center space-x-2.5 cursor-pointer hover:text-amber-600 text-xs font-bold text-slate-800">
+                            <input type="checkbox" name="target_tenant_ids[]" value="<?=$at['id']?>" class="create-user-tenant-checkbox rounded text-amber-600 focus:ring-amber-500 w-4 h-4" <?=$at['id']==$tid?'checked':''?>>
+                            <span><?=e($at['name'])?> <span class="text-3xs font-normal text-slate-400">(code: <?=e($at['code'])?>)</span></span>
+                        </label>
                     <?php endforeach; ?>
-                </select>
+                </div>
+                <p class="text-3xs text-slate-400 mt-1 font-medium">Member can easily switch between all checked workspace locations.</p>
             </div>
 
             <!-- Scope Type Selection -->
@@ -558,12 +606,15 @@ page_start('Team & Permissions');
             </div>
 
             <div>
-                <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Assigned Company Workspace *</label>
-                <select name="target_tenant_id" id="edit-user-tenant" class="w-full rounded-xl border border-slate-300 bg-slate-50/80 px-3.5 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
+                <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Assigned Workspaces / Locations (Multi-Select) *</label>
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 max-h-36 overflow-y-auto space-y-2">
                     <?php foreach ($allTenants as $at): ?>
-                        <option value="<?=$at['id']?>"><?=e($at['name'])?> (code: <?=e($at['code'])?>)</option>
+                        <label class="flex items-center space-x-2.5 cursor-pointer hover:text-amber-600 text-xs font-bold text-slate-800">
+                            <input type="checkbox" name="target_tenant_ids[]" value="<?=$at['id']?>" class="edit-user-tenant-checkbox rounded text-amber-600 focus:ring-amber-500 w-4 h-4">
+                            <span><?=e($at['name'])?> <span class="text-3xs font-normal text-slate-400">(code: <?=e($at['code'])?>)</span></span>
+                        </label>
                     <?php endforeach; ?>
-                </select>
+                </div>
             </div>
 
             <div class="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">
@@ -582,14 +633,21 @@ page_start('Team & Permissions');
 </form>
 
 <script>
-function openEditUserModal(user) {
+function openEditUserModal(user, assignedTenantIds) {
     document.getElementById('edit-user-id').value = user.id;
     document.getElementById('edit-user-name').value = user.name;
     document.getElementById('edit-user-email').value = user.email;
     document.getElementById('edit-user-role').value = user.tenant_role || user.role || 'accountant';
-    if (document.getElementById('edit-user-tenant')) {
-        document.getElementById('edit-user-tenant').value = user.tenant_id || 1;
+
+    assignedTenantIds = (assignedTenantIds || []).map(id => parseInt(id));
+    if (assignedTenantIds.length === 0 && user.tenant_id) {
+        assignedTenantIds = [parseInt(user.tenant_id)];
     }
+
+    document.querySelectorAll('.edit-user-tenant-checkbox').forEach(cb => {
+        cb.checked = assignedTenantIds.includes(parseInt(cb.value));
+    });
+
     document.getElementById('edit-user-modal').classList.remove('hidden');
 }
 
@@ -602,3 +660,4 @@ function confirmDeleteUser(userId, userName) {
 </script>
 
 <?php page_end(); ?>
+
