@@ -140,24 +140,53 @@ class Tenant {
             }
         } catch (\PDOException $e) {}
 
-        // Seed default Chart of Accounts if not existing
+        // Seed comprehensive default Chart of Accounts if not existing
         try {
-            $stC = $pdo->prepare("SELECT COUNT(*) FROM chart_of_accounts WHERE tenant_id = ?");
-            $stC->execute([$tenantId]);
-            if ($stC->fetchColumn() == 0) {
-                $defaultAccounts = [
-                    ['1010', 'Cash & Bank Accounts', 'asset', 'Main operating bank account and petty cash', 1],
-                    ['1100', 'Accounts Receivable', 'asset', 'Outstanding customer invoice balances', 1],
-                    ['2000', 'Accounts Payable', 'liability', 'Vendor bills and supplier balances payable', 1],
-                    ['2100', 'Sales Tax / VAT Payable', 'liability', 'Accrued VAT payable to tax authorities', 1],
-                    ['3000', 'Owner\'s Equity', 'equity', 'Owner capital investment and retained earnings', 1],
-                    ['4000', 'Sales & Service Income', 'revenue', 'Revenue earned from invoices and sales', 1],
-                    ['5000', 'Cost of Goods Sold', 'expense', 'Direct costs associated with sold goods/services', 1],
-                    ['6000', 'Operating Expenses', 'expense', 'General business and administrative expenses', 1],
-                ];
+            $defaultAccounts = [
+                // ASSETS (1000s)
+                ['1010', 'Cash & Petty Cash', 'asset', 'Main operating cash and petty cash fund', 1],
+                ['1020', 'Main Operating Bank Account', 'asset', 'Primary corporate bank account', 1],
+                ['1100', 'Accounts Receivable (A/R)', 'asset', 'Outstanding customer invoice balances', 1],
+                ['1200', 'Inventory & Stock Assets', 'asset', 'Physical products and merchandise in stock', 0],
+                ['1300', 'Prepaid Expenses & Deposits', 'asset', 'Advance payments and security deposits', 0],
+                ['1500', 'Office Equipment & Furniture', 'asset', 'Fixed assets, computers, and office furniture', 0],
 
-                $stIns = $pdo->prepare("INSERT INTO chart_of_accounts (tenant_id, account_code, account_name, account_type, description, is_system) VALUES (?, ?, ?, ?, ?, ?)");
-                foreach ($defaultAccounts as $acc) {
+                // LIABILITIES (2000s)
+                ['2000', 'Accounts Payable (A/P)', 'liability', 'Vendor bills and supplier balances payable', 1],
+                ['2100', 'Sales Tax / VAT Payable (5%)', 'liability', 'Accrued VAT payable to tax authorities', 1],
+                ['2110', 'Corporate Tax Payable (9%)', 'liability', 'Accrued UAE Corporate Tax provision', 1],
+                ['2200', 'Accrued Payroll & Salaries', 'liability', 'Employee wages and benefits payable', 0],
+
+                // EQUITY (3000s)
+                ['3000', 'Owner\'s Equity & Capital', 'equity', 'Owner capital investment and retained earnings', 1],
+                ['3100', 'Owner\'s Drawings & Capital Withdrawals', 'equity', 'Owner distributions and personal withdrawals', 0],
+
+                // REVENUE (4000s)
+                ['4000', 'Sales & Product Income', 'revenue', 'Revenue earned from sales of products and items', 1],
+                ['4100', 'Service & Consulting Revenue', 'revenue', 'Revenue from professional services and fees', 1],
+                ['4200', 'Subscription & Recurring Revenue', 'revenue', 'Income from auto-recurring subscription plans', 0],
+
+                // COST OF GOODS SOLD (5000s)
+                ['5000', 'Cost of Goods Sold (COGS)', 'expense', 'Direct cost of goods and materials sold', 1],
+                ['5100', 'Direct Subcontractor Costs', 'expense', 'Outsourced labor and direct project execution costs', 0],
+
+                // OPERATING EXPENSES (6000s)
+                ['6000', 'Advertising & Marketing', 'expense', 'Promotions, digital ads, and branding expenses', 0],
+                ['6100', 'Rent & Office Utilities', 'expense', 'Office lease, electricity, water, and internet', 0],
+                ['6200', 'Salaries & Employee Compensation', 'expense', 'Staff salaries, bonuses, and medical insurance', 0],
+                ['6300', 'Software & Cloud Subscriptions', 'expense', 'SaaS tools, web hosting, and software licenses', 0],
+                ['6400', 'Professional & Legal Fees', 'expense', 'Audit, accounting, legal, and consultancy fees', 0],
+                ['6500', 'Bank Fees & Merchant Charges', 'expense', 'Credit card gateway fees and bank service charges', 0],
+                ['6600', 'Travel, Meals & Entertainment', 'expense', 'Business travel, lodging, and client entertainment', 0],
+                ['6800', 'General Office Expenses', 'expense', 'Stationery, office supplies, and administrative costs', 1],
+            ];
+
+            $stCheck = $pdo->prepare("SELECT COUNT(*) FROM chart_of_accounts WHERE tenant_id = ? AND account_code = ?");
+            $stIns = $pdo->prepare("INSERT INTO chart_of_accounts (tenant_id, account_code, account_name, account_type, description, is_system) VALUES (?, ?, ?, ?, ?, ?)");
+
+            foreach ($defaultAccounts as $acc) {
+                $stCheck->execute([$tenantId, $acc[0]]);
+                if ((int)$stCheck->fetchColumn() === 0) {
                     try {
                         $stIns->execute([$tenantId, $acc[0], $acc[1], $acc[2], $acc[3], $acc[4]]);
                     } catch (\PDOException $e) {}

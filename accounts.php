@@ -30,6 +30,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// Ensure default Chart of Accounts are pre-seeded
+\Core\Tenant::seedAccounts($pdo, $tid);
+
 $st = $pdo->prepare("SELECT * FROM chart_of_accounts WHERE tenant_id = ? ORDER BY account_code ASC");
 $st->execute([$tid]);
 $accounts = $st->fetchAll();
