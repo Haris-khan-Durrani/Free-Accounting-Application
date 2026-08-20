@@ -13,31 +13,37 @@ $stPlan->execute([$currentTid]);
 $activePlan = $stPlan->fetch() ?: ['max_subaccounts' => 5];
 $maxAllowedSubAccounts = (int)($activePlan['max_subaccounts'] ?? 5);
 
+$userId = (int)($_SESSION['user_id'] ?? 0);
+
 // Handle Switch Tenant
 if (isset($_GET['switch'])) {
     $targetId = (int)$_GET['switch'];
-    $userId   = (int)($_SESSION['user_id'] ?? 0);
 
-    // Verify the user actually has access to this tenant (or is owner)
-    $hasAccess = has_role(['owner']);
-    if (!$hasAccess) {
-        $stCheck = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE user_id = ? AND tenant_id = ?");
-        $stCheck->execute([$userId, $targetId]);
-        $hasAccess = (int)$stCheck->fetchColumn() > 0;
-    }
+    // Verify the user actually has access to this target workspace
+    $userTenants = \Core\Tenant::getUserTenants($pdo, $userId);
+    $allowedIds = array_map('intval', array_column($userTenants, 'id'));
 
-    if ($hasAccess) {
+    if (in_array($targetId, $allowedIds, true)) {
         $st = $pdo->prepare("SELECT * FROM tenants WHERE id = ?");
         $st->execute([$targetId]);
         $t = $st->fetch();
         if ($t) {
-            // Update all tenant session keys so Tenant::getActiveId() picks up the new one
+            // Update all tenant session keys so Tenant::getActiveId() picks up the new workspace
             $_SESSION['tenant_id']        = $t['id'];
             $_SESSION['active_tenant_id'] = $t['id'];
             $_SESSION['user_tenant_id']   = $t['id'];
+
+            // Sync user role for target tenant from user_tenants
+            $stRole = $pdo->prepare("SELECT role FROM user_tenants WHERE user_id = ? AND tenant_id = ? LIMIT 1");
+            $stRole->execute([$userId, $t['id']]);
+            $tRole = $stRole->fetchColumn();
+            if ($tRole) {
+                $_SESSION['user_role'] = $tRole;
+            }
+
             // Clear cached tenant info so the switched workspace is loaded fresh
             \Core\Tenant::forgetCache();
-            flash('success', 'Switched active sub-account workspace to: ' . $t['name']);
+            flash('success', 'Switched active workspace to: ' . $t['name']);
         }
     } else {
         flash('error', 'Access denied. You are not assigned to that workspace.');
@@ -67,6 +73,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $st->execute([$name, $code, $currency]);
             $newTenantId = (int)$pdo->lastInsertId();
 
+            // Automatically assign creating user to the new workspace in user_tenants
+            $stUt = $pdo->prepare("INSERT INTO user_tenants (user_id, tenant_id, role) VALUES (?, ?, 'owner') ON DUPLICATE KEY UPDATE role = 'owner'");
+            $stUt->execute([$userId, $newTenantId]);
+
             // Seed Branding Settings for new tenant
             $stB = $pdo->prepare("INSERT INTO branding_settings (tenant_id, company_name) VALUES (?, ?)");
             $stB->execute([$newTenantId, $name]);
@@ -83,7 +93,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-$tenants = $pdo->query("SELECT * FROM tenants ORDER BY id ASC")->fetchAll();
+// Fetch ONLY workspaces assigned to this logged-in user
+$tenants = \Core\Tenant::getUserTenants($pdo, $userId);
+
 
 page_start('Multi-Tenant Workspaces & Sub-Accounts');
 ?>

@@ -83,10 +83,47 @@ class Tenant {
     }
 
     public static function getUserTenants(PDO $pdo, int $userId): array {
-        $st = $pdo->prepare("SELECT t.*, ut.role FROM tenants t JOIN user_tenants ut ON ut.tenant_id = t.id WHERE ut.user_id = ? AND t.status = 'active'");
+        // If Master Super-Admin (Tenant #1 Owner), return all active tenants
+        try {
+            $stMaster = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE user_id = ? AND tenant_id = 1 AND role = 'owner'");
+            $stMaster->execute([$userId]);
+            if ((int)$stMaster->fetchColumn() > 0) {
+                return $pdo->query("SELECT t.*, 'owner' AS role FROM tenants t WHERE t.status = 'active' ORDER BY t.id ASC")->fetchAll() ?: [];
+            }
+        } catch (\Throwable $e) {}
+
+        // Otherwise return ONLY workspaces assigned to this user ID in user_tenants or primary user tenant_id
+        $st = $pdo->prepare("SELECT DISTINCT t.*, ut.role 
+                             FROM tenants t 
+                             JOIN user_tenants ut ON ut.tenant_id = t.id 
+                             WHERE ut.user_id = ? AND t.status = 'active' 
+                             ORDER BY t.id ASC");
         $st->execute([$userId]);
-        return $st->fetchAll() ?: [];
+        $list = $st->fetchAll() ?: [];
+
+        if (empty($list)) {
+            // Fallback: check primary user tenant_id from users table
+            $stUser = $pdo->prepare("SELECT u.tenant_id, u.role, t.name, t.code, t.currency, t.status 
+                                     FROM users u 
+                                     JOIN tenants t ON t.id = u.tenant_id 
+                                     WHERE u.id = ? AND t.status = 'active'");
+            $stUser->execute([$userId]);
+            $uRow = $stUser->fetch();
+            if ($uRow) {
+                $list = [[
+                    'id' => (int)$uRow['tenant_id'],
+                    'name' => $uRow['name'],
+                    'code' => $uRow['code'],
+                    'currency' => $uRow['currency'],
+                    'status' => $uRow['status'],
+                    'role' => $uRow['role']
+                ]];
+            }
+        }
+
+        return $list;
     }
+
 
     public static function seedAccounts(PDO $pdo, int $tenantId): void {
         // Seed default branding settings if not existing

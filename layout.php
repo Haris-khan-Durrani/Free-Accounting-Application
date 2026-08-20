@@ -71,14 +71,40 @@ function page_start(string $title): void {
     }
     echo '<span class="font-extrabold text-sm sm:text-base tracking-tight text-white group-hover:text-amber-400 transition-colors whitespace-nowrap">' . e($brand['company_name']) . '</span>';
     echo '</a>';
-    
-    if (!empty($_SESSION['user_id'])) {
+       if (!empty($_SESSION['user_id'])) {
         echo '<div class="h-4 w-px bg-slate-800 hidden sm:block"></div>';
-        echo '<a href="subaccounts" class="inline-flex items-center space-x-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white px-2.5 py-1 rounded-xl text-2xs sm:text-xs font-bold border border-slate-800/90 transition-all shadow-xs">';
-        echo '<i class="fa-solid fa-building text-amber-400 text-3xs"></i>';
-        echo '<span class="truncate max-w-[90px] sm:max-w-[130px]">' . e($activeTenant['name']) . '</span>';
-        echo '<i class="fa-solid fa-chevron-down text-[9px] text-slate-500"></i>';
-        echo '</a>';
+        
+        $myTenants = \Core\Tenant::getUserTenants($GLOBALS['pdo'], (int)$_SESSION['user_id']);
+        if (count($myTenants) > 1) {
+            echo '<div class="relative group py-2">';
+            echo '<button class="inline-flex items-center space-x-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white px-2.5 py-1 rounded-xl text-2xs sm:text-xs font-bold border border-slate-800/90 transition-all shadow-xs">';
+            echo '<i class="fa-solid fa-building text-amber-400 text-3xs"></i>';
+            echo '<span class="truncate max-w-[90px] sm:max-w-[130px]">' . e($activeTenant['name']) . '</span>';
+            echo '<i class="fa-solid fa-chevron-down text-[9px] text-slate-500"></i>';
+            echo '</button>';
+            echo '<div class="absolute left-0 top-full pt-1 w-56 hidden group-hover:block z-50">';
+            echo '<div class="bg-white rounded-xl shadow-2xl border border-slate-200 py-1 text-left text-xs font-semibold overflow-hidden">';
+            echo '<div class="px-3 py-1.5 text-[10px] font-black uppercase text-slate-400 border-b border-slate-100">Switch Workspace</div>';
+            foreach ($myTenants as $mt) {
+                $isCurr = ($mt['id'] == $activeTenant['id']);
+                echo '<a href="subaccounts?switch=' . $mt['id'] . '" class="flex items-center justify-between px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-amber-600 transition-colors ' . ($isCurr ? 'font-black text-amber-600 bg-amber-50/50' : '') . '">';
+                echo '<span class="truncate">' . e($mt['name']) . '</span>';
+                if ($isCurr) {
+                    echo '<i class="fa-solid fa-check text-amber-500 text-2xs"></i>';
+                }
+                echo '</a>';
+            }
+            echo '<a href="subaccounts" class="flex items-center space-x-1 px-3 py-2 text-slate-500 hover:text-slate-900 border-t border-slate-100 text-[11px] font-bold bg-slate-50/80"><i class="fa-solid fa-sitemap mr-1"></i>Manage Workspaces</a>';
+            echo '</div>';
+            echo '</div>';
+            echo '</div>';
+        } else {
+            echo '<a href="subaccounts" class="inline-flex items-center space-x-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white px-2.5 py-1 rounded-xl text-2xs sm:text-xs font-bold border border-slate-800/90 transition-all shadow-xs">';
+            echo '<i class="fa-solid fa-building text-amber-400 text-3xs"></i>';
+            echo '<span class="truncate max-w-[90px] sm:max-w-[130px]">' . e($activeTenant['name']) . '</span>';
+            echo '<i class="fa-solid fa-chevron-down text-[9px] text-slate-500"></i>';
+            echo '</a>';
+        }
     }
     echo '</div>';
 
@@ -118,36 +144,27 @@ function page_start(string $title): void {
         echo '<div class="py-1">';
         echo '<a href="reports_vat201" class="flex items-center px-4 py-2 text-xs font-bold text-slate-900 hover:bg-emerald-50/60 hover:text-emerald-700 transition-colors"><i class="fa-solid fa-file-invoice-dollar w-6 text-emerald-600 text-center"></i><span>UAE FTA VAT 201 Declaration</span></a>';
         echo '<a href="reports_corporate_tax" class="flex items-center px-4 py-2 text-xs font-bold text-slate-900 hover:bg-blue-50/60 hover:text-blue-700 transition-colors"><i class="fa-solid fa-percent w-6 text-blue-600 text-center"></i><span>UAE Corporate Tax (9%)</span></a>';
-        echo '<a href="export_faf" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-amber-50/60 hover:text-amber-700 transition-colors"><i class="fa-solid fa-file-arrow-down w-6 text-amber-500 text-center"></i><span>Export FTA Audit File (.faf)</span></a>';
-        echo '<a href="reports_tax" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-indigo-50/60 hover:text-indigo-600 transition-colors"><i class="fa-solid fa-calculator w-6 text-indigo-500 text-center"></i><span>VAT Return Summary</span></a>';
+        echo '<a href="export_faf" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-amber-50/60 hover:text-amber-700 transition-colors"><i class="fa-solid fa-file-export w-6 text-amber-600 text-center"></i><span>Export FTA Audit File (.faf)</span></a>';
+        echo '<a href="reports_vat_summary" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-slate-900 transition-colors"><i class="fa-solid fa-calculator w-6 text-slate-400 text-center"></i><span>General VAT Summary</span></a>';
         echo '</div>';
 
-        // Category 3: Analytics & Breakdown
+        // Category 3: Analytics & Audit
         echo '<div class="bg-slate-50/90 border-y border-slate-100 px-4 py-2 flex items-center space-x-2 mt-1">';
         echo '<i class="fa-solid fa-chart-pie text-slate-400 text-xs"></i>';
-        echo '<span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Sales & Expense Analytics</span>';
+        echo '<span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">Business Analytics</span>';
         echo '</div>';
         echo '<div class="py-1">';
-        echo '<a href="reports_client_sales" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50/60 hover:text-blue-600 transition-colors"><i class="fa-solid fa-users w-6 text-blue-500 text-center"></i><span>Client Revenue Analysis</span></a>';
-        echo '<a href="reports_expense_category" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-rose-50/60 hover:text-rose-600 transition-colors"><i class="fa-solid fa-receipt w-6 text-rose-500 text-center"></i><span>Expenses by Category</span></a>';
-        echo '</div>';
-
-        // Category 4: General Ledger
-        echo '<div class="bg-slate-50/90 border-y border-slate-100 px-4 py-2 flex items-center space-x-2 mt-1">';
-        echo '<i class="fa-solid fa-book text-slate-400 text-xs"></i>';
-        echo '<span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">General Ledger</span>';
-        echo '</div>';
-        echo '<div class="py-1">';
-        echo '<a href="accounts" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-blue-600 transition-colors"><i class="fa-solid fa-book w-6 text-slate-500 text-center"></i><span>Chart of Accounts</span></a>';
-        echo '<a href="journal" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-blue-600 transition-colors"><i class="fa-solid fa-list-ol w-6 text-slate-500 text-center"></i><span>General Ledger</span></a>';
+        echo '<a href="reports_sales_by_client" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-blue-50/60 hover:text-blue-600 transition-colors"><i class="fa-solid fa-user-tag w-6 text-blue-500 text-center"></i><span>Client Revenue Analysis</span></a>';
+        echo '<a href="reports_expenses_by_category" class="flex items-center px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-rose-50/60 hover:text-rose-600 transition-colors"><i class="fa-solid fa-pie-chart w-6 text-rose-500 text-center"></i><span>Expense Breakdown</span></a>';
         echo '</div>';
 
         echo '</div>';
         echo '</div>';
         echo '</div>';
 
-        // Direct Settings Link in Top Header Bar
-        echo '<a href="settings" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['settings.php', 'settings', 'branding.php', 'payment_settings.php']) . '"><i class="fa-solid fa-sliders text-amber-400 text-2xs"></i><span>Settings</span></a>';        // Management Dropdown Menu (Balanced 2-Column Mega Menu)
+        echo '<a href="settings" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['settings.php', 'settings', 'branding.php', 'payment_settings.php']) . '"><i class="fa-solid fa-sliders text-amber-400 text-2xs"></i><span>Settings</span></a>';
+
+        // Management Dropdown Menu (Balanced 2-Column Mega Menu)
         echo '<div class="relative group py-2">';
         echo '<button class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap font-semibold text-slate-300 hover:text-white hover:bg-slate-800/70 transition-all"><i class="fa-solid fa-gear text-cyan-400 text-2xs"></i><span>Management</span><i class="fa-solid fa-chevron-down text-[9px] ml-0.5 opacity-70"></i></button>';
         echo '<div class="absolute right-0 top-full pt-1 w-[580px] hidden group-hover:block z-[100]">';
@@ -159,11 +176,7 @@ function page_start(string $title): void {
         // Group 1: Workspaces & Branding
         echo '<div>';
         echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-building text-slate-400 text-3xs"></i><span>Workspaces & Branding</span></div>';
-        echo '<a href="tenants_admin" class="flex items-center px-2.5 py-1.5 text-xs font-extrabold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-building-user w-5 text-purple-600 text-center"></i><span>SaaS Tenant Workspaces (+New)</span></a>';
         echo '<a href="settings" class="flex items-center px-2.5 py-1.5 text-xs font-extrabold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-sliders w-5 text-amber-500 text-center"></i><span>Master Settings Hub</span></a>';
-        if (has_role(['owner', 'admin'])) {
-            echo '<a href="domain_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-slate-900 hover:bg-blue-50/70 hover:text-blue-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-globe w-5 text-blue-500 text-center"></i><span>Whitelabel Domain &amp; SSL</span></a>';
-        }
         echo '<a href="subaccounts" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-sitemap w-5 text-blue-500 text-center"></i><span>Workspaces & Branches</span></a>';
         echo '<a href="branding" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-palette w-5 text-amber-500 text-center"></i><span>Branding & Logo Setup</span></a>';
         echo '</div>';
@@ -212,12 +225,12 @@ function page_start(string $title): void {
         echo '<a href="automation" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-purple-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-diagram-project w-5 text-purple-500 text-center"></i><span>n8n Automations</span></a>';
         echo '</div>';
 
-        // Group 6: SaaS Admin & Help
+        // Group 6: SaaS Admin & Extensions
         echo '<div>';
         echo '<div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 px-2.5 py-1 mb-1 flex items-center space-x-1.5 border-b border-slate-100"><i class="fa-solid fa-crown text-amber-500 text-3xs"></i><span>SaaS Admin & Extensions</span></div>';
-        if (has_role(['owner'])) {
+        if (has_role(['owner']) && tenant_id() === 1) {
+            echo '<a href="tenants_admin" class="flex items-center px-2.5 py-1.5 text-xs font-extrabold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-building-user w-5 text-purple-600 text-center"></i><span>SaaS Tenant Workspaces (+New)</span></a>';
             echo '<a href="plugins_admin" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors mb-1 cursor-pointer relative z-10"><i class="fa-solid fa-puzzle-piece w-5 text-purple-600 text-center"></i><span>Plug & Play Extensions</span></a>';
-            echo '<a href="tenants_admin" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-emerald-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-users-gear w-5 text-emerald-500 text-center"></i><span>Subscriber Accounts</span></a>';
             echo '<a href="super_admin_gateways" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-credit-card w-5 text-indigo-500 text-center"></i><span>Super Admin Gateways</span></a>';
         }
         echo '<a href="guide" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-blue-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-book-open w-5 text-blue-500 text-center"></i><span>Interactive User Guide</span></a>';
@@ -227,11 +240,13 @@ function page_start(string $title): void {
         
         // Execute Plugin Menu Hooks
         \Services\PluginEngine::do_action('management_menu_items');
-        echo '</div>';
+        echo '</div>'; // Close Group 6
 
-        echo '</div>';
-        echo '</div>';
-        echo '</div>';
+        echo '</div>'; // Close Right Column
+        echo '</div>'; // Close Grid
+        echo '</div>'; // Close Dropdown
+        echo '</div>'; // Close Relative Container
+
 
         // Action Button: Create New Invoice
         echo '<a href="invoice_form" class="ml-1.5 whitespace-nowrap flex-shrink-0 inline-flex items-center px-3 py-1.5 border border-amber-400/40 text-xs font-black rounded-xl shadow-md text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 transition-all transform hover:-translate-y-0.5">';
