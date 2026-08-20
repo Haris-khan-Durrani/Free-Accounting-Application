@@ -65,21 +65,25 @@ function page_start(string $title): void {
     echo '<div class="flex items-center space-x-3 sm:space-x-4 flex-shrink-0 mr-4 lg:mr-8">';
     echo '<a href="index" class="flex items-center space-x-2.5 group flex-shrink-0">';
     if (!empty($brand['logo_url'])) {
-        echo '<img src="' . e($brand['logo_url']) . '" alt="Logo" class="h-7 w-auto rounded bg-white p-0.5 object-contain shadow-xs">';
+        echo '<img src="' . e($brand['logo_url']) . '" alt="' . e($brand['company_name']) . '" class="h-8 w-auto rounded bg-white p-0.5 object-contain shadow-xs">';
+        echo '<span class="hidden md:inline-block font-extrabold text-sm sm:text-base tracking-tight text-white group-hover:text-amber-400 transition-colors whitespace-nowrap">' . e($brand['company_name']) . '</span>';
     } else {
         echo '<div class="h-7 w-7 rounded-lg bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center font-black text-slate-950 text-xs shadow-sm"><i class="fa-solid fa-bolt"></i></div>';
+        echo '<span class="font-extrabold text-sm sm:text-base tracking-tight text-white group-hover:text-amber-400 transition-colors whitespace-nowrap">' . e($brand['company_name']) . '</span>';
     }
-    echo '<span class="font-extrabold text-sm sm:text-base tracking-tight text-white group-hover:text-amber-400 transition-colors whitespace-nowrap">' . e($brand['company_name']) . '</span>';
     echo '</a>';
-       if (!empty($_SESSION['user_id'])) {
-        echo '<div class="h-4 w-px bg-slate-800 hidden sm:block"></div>';
+
+    if (!empty($_SESSION['user_id'])) {
+        echo '<div class="h-4 w-px bg-slate-800 hidden md:block"></div>';
         
         $myTenants = \Core\Tenant::getUserTenants($GLOBALS['pdo'], (int)$_SESSION['user_id']);
+        // Desktop Workspace Switcher Pill (hidden on mobile, managed inside mobile menu)
+        echo '<div class="hidden md:flex items-center">';
         if (count($myTenants) > 1) {
             echo '<div class="relative group py-2">';
-            echo '<button class="inline-flex items-center space-x-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white px-2.5 py-1 rounded-xl text-2xs sm:text-xs font-bold border border-slate-800/90 transition-all shadow-xs">';
+            echo '<button class="inline-flex items-center space-x-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white px-2.5 py-1 rounded-xl text-xs font-bold border border-slate-800/90 transition-all shadow-xs">';
             echo '<i class="fa-solid fa-building text-amber-400 text-3xs"></i>';
-            echo '<span class="truncate max-w-[90px] sm:max-w-[130px]">' . e($activeTenant['name']) . '</span>';
+            echo '<span class="truncate max-w-[130px]">' . e($activeTenant['name']) . '</span>';
             echo '<i class="fa-solid fa-chevron-down text-[9px] text-slate-500"></i>';
             echo '</button>';
             echo '<div class="absolute left-0 top-full pt-1 w-56 hidden group-hover:block z-50">';
@@ -99,12 +103,13 @@ function page_start(string $title): void {
             echo '</div>';
             echo '</div>';
         } else {
-            echo '<a href="subaccounts" class="inline-flex items-center space-x-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white px-2.5 py-1 rounded-xl text-2xs sm:text-xs font-bold border border-slate-800/90 transition-all shadow-xs">';
+            echo '<a href="subaccounts" class="inline-flex items-center space-x-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-300 hover:text-white px-2.5 py-1 rounded-xl text-xs font-bold border border-slate-800/90 transition-all shadow-xs">';
             echo '<i class="fa-solid fa-building text-amber-400 text-3xs"></i>';
-            echo '<span class="truncate max-w-[90px] sm:max-w-[130px]">' . e($activeTenant['name']) . '</span>';
+            echo '<span class="truncate max-w-[130px]">' . e($activeTenant['name']) . '</span>';
             echo '<i class="fa-solid fa-chevron-down text-[9px] text-slate-500"></i>';
             echo '</a>';
         }
+        echo '</div>';
     }
     echo '</div>';
 
@@ -327,6 +332,30 @@ function page_start(string $title): void {
         echo '</div>';
         echo '<button onclick="toggleMobileAppMenu()" class="h-9 w-9 rounded-full bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center font-bold text-lg">×</button>';
         echo '</div>';
+
+        // Mobile Workspace Switcher Section
+        $mobileTenants = \Core\Tenant::getUserTenants($GLOBALS['pdo'], (int)$_SESSION['user_id']);
+        if (count($mobileTenants) > 0) {
+            echo '<div class="mb-6 bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5">';
+            echo '<div class="text-2xs font-extrabold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">';
+            echo '<span><i class="fa-solid fa-building text-amber-400 mr-1.5"></i>Active Workspace</span>';
+            echo '<a href="subaccounts" onclick="toggleMobileAppMenu()" class="text-3xs text-amber-400 font-bold hover:underline">Manage (+New)</a>';
+            echo '</div>';
+            echo '<div class="space-y-1.5 max-h-36 overflow-y-auto">';
+            foreach ($mobileTenants as $mt) {
+                $isCurr = ($mt['id'] == $activeTenant['id']);
+                echo '<a href="subaccounts?switch=' . $mt['id'] . '" class="flex items-center justify-between p-2.5 rounded-xl border text-xs font-bold transition-all ' . ($isCurr ? 'bg-amber-500/10 border-amber-500/40 text-amber-400' : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800') . '">';
+                echo '<div class="flex items-center space-x-2 truncate"><i class="fa-solid fa-location-dot ' . ($isCurr ? 'text-amber-400' : 'text-slate-500') . '"></i><span class="truncate">' . e($mt['name']) . '</span></div>';
+                if ($isCurr) {
+                    echo '<span class="text-3xs font-extrabold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 uppercase">Active</span>';
+                } else {
+                    echo '<span class="text-3xs font-semibold text-slate-400">Switch &rarr;</span>';
+                }
+                echo '</a>';
+            }
+            echo '</div>';
+            echo '</div>';
+        }
 
         // Grid 1: Core Apps
         echo '<div class="mb-6">';
