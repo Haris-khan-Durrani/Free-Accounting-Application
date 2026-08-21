@@ -64,6 +64,10 @@ if ($gateway === 'tabby') {
 } elseif ($gateway === 'network') {
     $checkoutUrl = \Services\PaymentGatewayService::createNetworkCheckoutOrder($pdo, 'invoice_payment', $tid, (float)$inv['total'], $baseUrl);
     $result = ['redirect_url' => $checkoutUrl];
+} elseif ($gateway === 'ziina') {
+    $result = \Services\PaymentGatewayService::createInvoiceZiinaCheckout($pdo, $inv, $items, $baseUrl);
+} elseif ($gateway === 'zbooni') {
+    $result = \Services\PaymentGatewayService::createInvoiceZbooniCheckout($pdo, $inv, $items, $baseUrl);
 }
 
 // Return JSON or Redirect

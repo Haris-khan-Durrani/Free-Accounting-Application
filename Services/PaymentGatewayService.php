@@ -14,6 +14,10 @@ class PaymentGatewayService {
         'tabby_secret_key',
         'tamara_api_token',
         'tamara_notification_token',
+        'ziina_api_token',
+        'ziina_webhook_secret',
+        'zbooni_api_key',
+        'zbooni_secret_key',
         'smtp_password',
         'meta_whatsapp_token',
         'twilio_auth_token',
@@ -421,5 +425,132 @@ class PaymentGatewayService {
 
         return ['error' => 'Tamara Session Error: ' . ($data['message'] ?? ($data['errors'][0]['error_code'] ?? 'Unable to create Tamara session.'))];
     }
+
+    /**
+     * Create Ziina Payment Intent & Checkout Link API Call
+     */
+    public static function createInvoiceZiinaCheckout(PDO $pdo, array $inv, array $items, string $appUrl): array {
+        $tid = (int)$inv['tenant_id'];
+        $apiToken = self::getSetting($pdo, 'ziina_api_token', '', $tid);
+        $isEnabled = self::getSetting($pdo, 'ziina_enabled', '0', $tid);
+
+        if ($isEnabled === '0' || empty($apiToken)) {
+            return ['error' => 'Ziina payment gateway is disabled or API credentials missing for this workspace.'];
+        }
+
+        $invId = (int)$inv['id'];
+        $token = function_exists('get_invoice_token') ? get_invoice_token($inv) : '';
+        $currency = strtoupper($inv['currency'] ?? 'AED');
+        $totalAmount = (float)$inv['total'];
+
+        // Ziina expects amount in fils / smallest currency unit (e.g. AED 100.00 = 10000 fils)
+        $amountInFils = (int)round($totalAmount * 100);
+
+        $payload = [
+            'amount' => $amountInFils,
+            'currency' => $currency,
+            'success_url' => $appUrl . "/stripe_return.php?invoice_id={$invId}&token={$token}&gateway=ziina",
+            'cancel_url' => $appUrl . "/public_invoice.php?id={$invId}&token={$token}&status=cancel",
+            'message' => 'Tax Invoice #' . ($inv['invoice_number'] ?? $invId),
+            'metadata' => [
+                'invoice_id' => (string)$invId,
+                'invoice_number' => (string)($inv['invoice_number'] ?? $invId),
+                'tenant_id' => (string)$tid
+            ]
+        ];
+
+        $ch = curl_init('https://api-v2.ziina.com/v1/payment_intent');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $apiToken,
+                'Content-Type: application/json'
+            ],
+            CURLOPT_TIMEOUT => 15
+        ]);
+
+        $res = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) {
+            return ['error' => 'Ziina API Connection Error: ' . $err];
+        }
+
+        $data = json_decode($res, true);
+        if (isset($data['redirect_url'])) {
+            return ['redirect_url' => $data['redirect_url']];
+        }
+
+        return ['error' => 'Ziina Checkout Error: ' . ($data['message'] ?? 'Unable to create Ziina payment intent.')];
+    }
+
+    /**
+     * Create Zbooni Order Payment Link API Call
+     */
+    public static function createInvoiceZbooniCheckout(PDO $pdo, array $inv, array $items, string $appUrl): array {
+        $tid = (int)$inv['tenant_id'];
+        $apiKey = self::getSetting($pdo, 'zbooni_api_key', '', $tid);
+        $isEnabled = self::getSetting($pdo, 'zbooni_enabled', '0', $tid);
+
+        if ($isEnabled === '0' || empty($apiKey)) {
+            return ['error' => 'Zbooni payment gateway is disabled or API credentials missing for this workspace.'];
+        }
+
+        $invId = (int)$inv['id'];
+        $token = function_exists('get_invoice_token') ? get_invoice_token($inv) : '';
+        $currency = strtoupper($inv['currency'] ?? 'AED');
+        $totalAmount = (float)$inv['total'];
+
+        $payload = [
+            'amount' => sprintf('%.2f', $totalAmount),
+            'currency' => $currency,
+            'customer_email' => $inv['email'] ?? 'customer@example.com',
+            'customer_name' => $inv['contact_name'] ?: ($inv['company_name'] ?? 'Valued Customer'),
+            'customer_phone' => $inv['phone'] ?? '',
+            'description' => 'Tax Invoice #' . ($inv['invoice_number'] ?? $invId),
+            'notes' => 'Invoice ID: ' . $invId,
+            'redirect_url' => $appUrl . "/stripe_return.php?invoice_id={$invId}&token={$token}&gateway=zbooni"
+        ];
+
+        $ch = curl_init('https://api.zbooni.com/v1/orders/');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Token ' . $apiKey,
+                'Content-Type: application/json'
+            ],
+            CURLOPT_TIMEOUT => 15
+        ]);
+
+        $res = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) {
+            return ['error' => 'Zbooni API Connection Error: ' . $err];
+        }
+
+        $data = json_decode($res, true);
+        if (isset($data['checkout_url'])) {
+            return ['redirect_url' => $data['checkout_url']];
+        }
+
+        if (isset($data['payment_url'])) {
+            return ['redirect_url' => $data['payment_url']];
+        }
+
+        if (isset($data['url'])) {
+            return ['redirect_url' => $data['url']];
+        }
+
+        return ['error' => 'Zbooni Checkout Error: ' . ($data['detail'] ?? ($data['message'] ?? 'Unable to create Zbooni order.'))];
+    }
 }
+
+
 
