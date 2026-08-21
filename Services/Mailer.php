@@ -28,15 +28,21 @@ class Mailer {
         
         $rawPass = $tenant['smtp_password'] ?? '';
         $decryptedPass = \Core\Crypto::decrypt($rawPass);
-        $smtpPass = ($decryptedPass !== null && $decryptedPass !== '') ? $decryptedPass : $rawPass;
+
+        // Only use decrypted password if it produced clean, printable string data
+        if (!empty($decryptedPass) && ctype_print($decryptedPass)) {
+            $smtpPass = $decryptedPass;
+        } else {
+            $smtpPass = $rawPass;
+        }
 
         // If custom SMTP is configured, use Socket SMTP connection with fallback
         if ($smtpHost && $smtpUser) {
             try {
                 return self::sendViaSmtp($smtpHost, $smtpPort, $smtpEnc, $smtpUser, $smtpPass, $fromEmail, $fromName, $toEmail, $subject, $htmlBody);
             } catch (Exception $eSmtp) {
-                // If decrypted password failed and rawPass is different, retry with rawPass
-                if ($rawPass !== '' && $rawPass !== $smtpPass) {
+                // If decrypted password failed and rawPass is different and printable, retry with rawPass
+                if ($rawPass !== '' && $rawPass !== $smtpPass && ctype_print($rawPass)) {
                     try {
                         return self::sendViaSmtp($smtpHost, $smtpPort, $smtpEnc, $smtpUser, $rawPass, $fromEmail, $fromName, $toEmail, $subject, $htmlBody);
                     } catch (Exception $eRaw) {
