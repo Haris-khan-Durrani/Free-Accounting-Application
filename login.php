@@ -38,12 +38,13 @@ if (\Core\SecurityThrottle::isLockedOut()) {
         $is2faRequired = (!empty($u['two_factor_enabled']) || !empty($u['require_2fa']));
 
         if ($is2faRequired) {
-            // Generate 6-Digit Cryptographically Secure OTP
+            // Generate 6-Digit Cryptographically Secure OTP & Hash before storing
             $otpCode = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $otpHash = hash('sha256', $otpCode);
             $otpExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
 
             $stOtp = $pdo->prepare("UPDATE users SET otp_code = ?, otp_expires_at = ? WHERE id = ?");
-            $stOtp->execute([$otpCode, $otpExpires, $u['id']]);
+            $stOtp->execute([$otpHash, $otpExpires, $u['id']]);
 
             // Send OTP Code via Tenant Custom SMTP Mailer
             $subject = "Your 6-Digit Login Security Code (OTP) - OneSol";

@@ -19,8 +19,11 @@ class PluginEngine {
         if (self::$initialized) return;
         self::$initialized = true;
 
-        // Emergency Safe Mode Bypass
-        if (isset($_GET['plugin_safe_mode']) && $_GET['plugin_safe_mode'] == '1') {
+        // Emergency Safe Mode Bypass (Requires Server Env Flag or Authenticated Platform Owner)
+        $isServerSafeMode = (getenv('PLUGIN_SAFE_MODE') === 'true' || getenv('PLUGIN_SAFE_MODE') === '1');
+        $isAdminUser = (!empty($_SESSION['user_id']) && (!empty($_SESSION['user_role']) && $_SESSION['user_role'] === 'owner'));
+        
+        if ($isServerSafeMode || (isset($_GET['plugin_safe_mode']) && $_GET['plugin_safe_mode'] === '1' && $isAdminUser)) {
             return;
         }
 

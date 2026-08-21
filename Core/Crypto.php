@@ -6,7 +6,18 @@ use Exception;
 class Crypto {
     private static function getMasterKey(): string {
         $config = file_exists(__DIR__ . '/../config.php') ? require(__DIR__ . '/../config.php') : [];
-        $appKey = $config['app_key'] ?? ($config['session_secret'] ?? 'onesol-default-secret-key-32chars!!');
+        $appKey = $config['app_key'] ?? getenv('APP_KEY') ?? ($config['session_secret'] ?? '');
+
+        if (empty($appKey) || $appKey === 'onesol-default-secret-key-32chars!!') {
+            $keyFile = __DIR__ . '/../storage/app_key.txt';
+            if (file_exists($keyFile)) {
+                $appKey = trim((string)file_get_contents($keyFile));
+            } else {
+                $appKey = bin2hex(random_bytes(32));
+                @file_put_contents($keyFile, $appKey, LOCK_EX);
+            }
+        }
+
         return hash('sha256', $appKey, true); // 32 bytes binary key
     }
 

@@ -6,10 +6,44 @@ $pdo = $GLOBALS['pdo'];
 $tenantId = (int)($_GET['tenant_id'] ?? 1);
 
 $payload = file_get_contents('php://input');
+
+if (empty($payload)) {
+    http_response_code(400);
+    echo json_encode(['status' => 'ignored', 'reason' => 'Empty payload']);
+    exit;
+}
+
+// Cryptographic HMAC Verification
+$headers = getallheaders();
+$hmacHeader = $_SERVER['HTTP_X_SHOPIFY_HMAC_SHA256'] ?? $headers['X-Shopify-Hmac-Sha256'] ?? $headers['x-shopify-hmac-sha256'] ?? '';
+
+$shopifySecret = \Services\PaymentGatewayService::getSetting($pdo, 'shopify_webhook_secret', getenv('SHOPIFY_WEBHOOK_SECRET') ?: '', $tenantId);
+
+if (empty($shopifySecret)) {
+    http_response_code(503);
+    echo json_encode(['error' => 'Shopify webhook secret is not configured for this tenant']);
+    exit;
+}
+
+if (empty($hmacHeader)) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Missing X-Shopify-Hmac-Sha256 header']);
+    exit;
+}
+
+$calculatedHmac = base64_encode(hash_hmac('sha256', $payload, $shopifySecret, true));
+
+if (!hash_equals($calculatedHmac, $hmacHeader)) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Invalid Shopify webhook signature']);
+    exit;
+}
+
 $data = json_decode($payload, true);
 
 if (!$data) {
-    echo json_encode(['status' => 'ignored', 'reason' => 'Empty payload']);
+    http_response_code(400);
+    echo json_encode(['status' => 'ignored', 'reason' => 'Invalid JSON payload']);
     exit;
 }
 

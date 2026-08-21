@@ -1,6 +1,17 @@
 RewriteEngine On
 RewriteBase /invoice/OneSol_Invoice_Manager_PHP_MySQL/onesol_invoice_manager/
 
+# Deny direct HTTP access to sensitive application files & storage
+<FilesMatch "^\.env|\.git|\.htaccess|config\.php|database\.sql|\.log$|Dockerfile|docker-compose\.yml|composer\.(json|lock)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
 # Explicit REST API Endpoint Routing
 RewriteRule ^api/?$ api.php [NC,L]
 RewriteRule ^api/v1/?$ api.php [NC,L]

@@ -21,10 +21,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'verify_otp') {
         $enteredOtp = trim($_POST['otp_code'] ?? '');
+        $enteredHash = hash('sha256', $enteredOtp);
 
-        if ($user['otp_code'] && $user['otp_code'] === $enteredOtp && strtotime($user['otp_expires_at']) >= time()) {
-            // Clear OTP after successful verification
+        // Attempt counter tracking
+        $_SESSION['2fa_attempts'] = ($_SESSION['2fa_attempts'] ?? 0) + 1;
+
+        if ($_SESSION['2fa_attempts'] > 5) {
+            unset($_SESSION['2fa_pending_user_id'], $_SESSION['2fa_attempts']);
+            log_audit($pdo, '2fa_lockout', 'users', $user['id'], "User {$user['email']} exceeded maximum 2FA verification attempts.");
+            flash('error', 'Too many failed 2FA verification attempts. Account verification reset for security. Please sign in again.');
+            redirect('login');
+        }
+
+        // Support both hashed OTP and legacy plaintext fallback
+        $isValidOtp = $user['otp_code'] && (
+            hash_equals($user['otp_code'], $enteredHash) ||
+            hash_equals($user['otp_code'], $enteredOtp)
+        );
+
+        if ($isValidOtp && strtotime($user['otp_expires_at']) >= time()) {
+            // Clear OTP and attempt counters after successful verification
             $pdo->prepare("UPDATE users SET otp_code = NULL, otp_expires_at = NULL WHERE id = ?")->execute([$user['id']]);
+            unset($_SESSION['2fa_attempts'], $_SESSION['2fa_last_resend']);
 
             // Resolve workspace role
             $tId = (int)($user['tenant_id'] ?? 1);
@@ -47,16 +65,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', 'Two-Factor Security Verification Complete! Welcome back.');
             redirect('index');
         } else {
-            $error = 'Invalid or expired 6-digit security code. Please try again or request a new code.';
+            $attemptsLeft = max(0, 5 - $_SESSION['2fa_attempts']);
+            $error = "Invalid or expired 6-digit security code. {$attemptsLeft} attempt(s) remaining before challenge reset.";
         }
     }
 
     if ($action === 'resend_otp') {
+        $lastResend = (int)($_SESSION['2fa_last_resend'] ?? 0);
+        if (time() - $lastResend < 60) {
+            $waitSecs = 60 - (time() - $lastResend);
+            flash('error', "Please wait {$waitSecs} second(s) before requesting another OTP code.");
+            redirect('2fa_verify');
+        }
+
+        $_SESSION['2fa_last_resend'] = time();
         $otpCode = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otpHash = hash('sha256', $otpCode);
         $otpExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
 
         $stOtp = $pdo->prepare("UPDATE users SET otp_code = ?, otp_expires_at = ? WHERE id = ?");
-        $stOtp->execute([$otpCode, $otpExpires, $pendingUserId]);
+        $stOtp->execute([$otpHash, $otpExpires, $pendingUserId]);
 
         $tenantId = (int)($user['tenant_id'] ?: 1);
         $subject = "Resent: Your 6-Digit Security Code (OTP) - OneSol";

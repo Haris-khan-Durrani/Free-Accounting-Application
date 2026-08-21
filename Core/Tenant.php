@@ -54,10 +54,19 @@ class Tenant {
     }
 
     public static function setActiveId(int $tenantId, PDO $pdo, int $userId): bool {
-        // Verify user has access to this tenant
+        // Verify user has explicit workspace access or is Master Super-Admin (Tenant #1 Owner)
         $st = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE user_id = ? AND tenant_id = ?");
         $st->execute([$userId, $tenantId]);
-        if ($st->fetchColumn() > 0 || ($_SESSION['user_role'] ?? '') === 'owner') {
+        $hasMembership = ((int)$st->fetchColumn() > 0);
+
+        $isSuperAdmin = false;
+        try {
+            $stMaster = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE user_id = ? AND tenant_id = 1 AND role = 'owner'");
+            $stMaster->execute([$userId]);
+            $isSuperAdmin = ((int)$stMaster->fetchColumn() > 0);
+        } catch (\Throwable $e) {}
+
+        if ($hasMembership || $isSuperAdmin) {
             $_SESSION['active_tenant_id'] = $tenantId;
             $_SESSION['tenant_id'] = $tenantId;
             return true;

@@ -61,25 +61,39 @@ try {
     exit('Database connection failed. Check config.php.');
 }
 
-// Auto-migrate legacy tables silently
-try { $pdo->exec("ALTER TABLE invoices ADD COLUMN paid_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER tax_amount"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE invoices MODIFY COLUMN status ENUM('draft','sent','partially_paid','paid','overdue','void','cancelled') NOT NULL DEFAULT 'draft'"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE settings ADD COLUMN tenant_id INT UNSIGNED NOT NULL DEFAULT 1"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE settings DROP PRIMARY KEY, ADD PRIMARY KEY (tenant_id, setting_key)"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE tenants ADD COLUMN require_2fa TINYINT(1) NOT NULL DEFAULT 0"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE tenants ADD COLUMN smtp_host VARCHAR(255) NULL"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE tenants ADD COLUMN smtp_port INT NOT NULL DEFAULT 587"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE tenants ADD COLUMN smtp_encryption VARCHAR(10) NOT NULL DEFAULT 'tls'"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE tenants ADD COLUMN smtp_username VARCHAR(255) NULL"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE tenants ADD COLUMN smtp_password TEXT NULL"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE tenants ADD COLUMN from_email VARCHAR(255) NULL"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE tenants ADD COLUMN from_name VARCHAR(255) NULL"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE users ADD COLUMN two_factor_enabled TINYINT(1) NOT NULL DEFAULT 0"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE users ADD COLUMN otp_code VARCHAR(10) NULL"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE users ADD COLUMN otp_expires_at DATETIME NULL"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE users ADD COLUMN reset_token VARCHAR(64) NULL"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE users ADD COLUMN reset_token_expires_at DATETIME NULL"); } catch (Throwable $t) {}
-try { $pdo->exec("ALTER TABLE users MODIFY COLUMN role VARCHAR(50) NOT NULL DEFAULT 'owner'"); } catch (Throwable $t) {}
+// Security Headers
+if (!headers_sent()) {
+    header("X-Content-Type-Options: nosniff");
+    header("X-Frame-Options: SAMEORIGIN");
+    header("Referrer-Policy: strict-origin-when-cross-origin");
+    header("Permissions-Policy: geolocation=(), camera=(), microphone=()");
+    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+        header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
+    }
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self' https:;");
+}
+
+// Auto-migrate legacy tables (Gated for CLI or explicit migration trigger to prevent per-request DDL lock overhead)
+if (php_sapi_name() === 'cli' || getenv('RUN_MIGRATIONS') === 'true') {
+    try { $pdo->exec("ALTER TABLE invoices ADD COLUMN paid_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER tax_amount"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE invoices MODIFY COLUMN status ENUM('draft','sent','partially_paid','paid','overdue','void','cancelled') NOT NULL DEFAULT 'draft'"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE settings ADD COLUMN tenant_id INT UNSIGNED NOT NULL DEFAULT 1"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE settings DROP PRIMARY KEY, ADD PRIMARY KEY (tenant_id, setting_key)"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE tenants ADD COLUMN require_2fa TINYINT(1) NOT NULL DEFAULT 0"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE tenants ADD COLUMN smtp_host VARCHAR(255) NULL"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE tenants ADD COLUMN smtp_port INT NOT NULL DEFAULT 587"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE tenants ADD COLUMN smtp_encryption VARCHAR(10) NOT NULL DEFAULT 'tls'"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE tenants ADD COLUMN smtp_username VARCHAR(255) NULL"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE tenants ADD COLUMN smtp_password TEXT NULL"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE tenants ADD COLUMN from_email VARCHAR(255) NULL"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE tenants ADD COLUMN from_name VARCHAR(255) NULL"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN two_factor_enabled TINYINT(1) NOT NULL DEFAULT 0"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN otp_code VARCHAR(10) NULL"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN otp_expires_at DATETIME NULL"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN reset_token VARCHAR(64) NULL"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN reset_token_expires_at DATETIME NULL"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE users MODIFY COLUMN role VARCHAR(50) NOT NULL DEFAULT 'owner'"); } catch (Throwable $t) {}
+}
 
 
 // Helpers
@@ -205,7 +219,7 @@ function get_invoice_token(array|object $inv): string {
     $num = is_array($inv) ? ($inv['invoice_number'] ?? '') : ($inv->invoice_number ?? '');
     $tid = is_array($inv) ? ($inv['tenant_id'] ?? 1) : ($inv->tenant_id ?? 1);
     global $config;
-    $secret = $config['db_pass'] ?? 'onesol_invoice_secret_key_2026';
+    $secret = $config['invoice_link_key'] ?? $config['app_key'] ?? (getenv('APP_KEY') ?: 'onesol_invoice_token_secret_v1_key');
     return substr(hash_hmac('sha256', "inv_{$id}_{$num}_{$tid}", $secret), 0, 32);
 }
 

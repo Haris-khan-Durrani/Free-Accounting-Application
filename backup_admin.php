@@ -5,21 +5,30 @@ require_login();
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 $user = $_SESSION['user_name'] ?? 'User';
+$uid = (int)($_SESSION['user_id'] ?? 0);
 
-// SQL backup is owner-only — exposes full DB
 if (!has_role(['owner'])) {
     flash('error', 'Access denied. Database backup is restricted to the account owner.');
     redirect('index');
 }
 
-if (isset($_GET['action']) && $_GET['action'] === 'download') {
+// Check if Master Super-Admin (Tenant #1 Owner)
+$isSuperAdmin = false;
+try {
+    $stMaster = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE user_id = ? AND tenant_id = 1 AND role = 'owner'");
+    $stMaster->execute([$uid]);
+    $isSuperAdmin = ($tid === 1 && (int)$stMaster->fetchColumn() > 0);
+} catch (\Throwable $e) {}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'download') {
     verify_csrf();
 
     $tables = ['tenants', 'users', 'clients', 'invoices', 'invoice_items', 'payments', 'expenses', 'expense_categories', 'quotes', 'quote_items', 'journal_entries', 'audit_logs', 'api_keys'];
     
     $sqlDump = "-- OneSol Invoice Manager - Database Backup Dump\n";
     $sqlDump .= "-- Exported on: " . date('Y-m-d H:i:s') . "\n";
-    $sqlDump .= "-- Workspace Tenant ID: $tid (" . tenant()['name'] . ")\n\n";
+    $sqlDump .= "-- Workspace Tenant ID: $tid (" . tenant()['name'] . ")\n";
+    $sqlDump .= "-- Scope Mode: " . ($isSuperAdmin ? "Full Platform Snapshot (Super-Admin)" : "Tenant Isolated Export") . "\n\n";
 
     foreach ($tables as $table) {
         try {
@@ -35,8 +44,32 @@ if (isset($_GET['action']) && $_GET['action'] === 'download') {
             $sqlDump .= "DROP TABLE IF EXISTS `$table`;\n";
             $sqlDump .= $stCreate['Create Table'] . ";\n\n";
 
-            // Export rows
-            $stRows = $pdo->query("SELECT * FROM `$table`");
+            // Export rows (Tenant isolated if not super-admin)
+            if ($isSuperAdmin) {
+                $stRows = $pdo->query("SELECT * FROM `$table`");
+            } else {
+                if ($table === 'tenants') {
+                    $stRows = $pdo->prepare("SELECT * FROM tenants WHERE id = ?");
+                    $stRows->execute([$tid]);
+                } elseif ($table === 'invoice_items') {
+                    $stRows = $pdo->prepare("SELECT ii.* FROM invoice_items ii JOIN invoices i ON i.id = ii.invoice_id WHERE i.tenant_id = ?");
+                    $stRows->execute([$tid]);
+                } elseif ($table === 'quote_items') {
+                    $stRows = $pdo->prepare("SELECT qi.* FROM quote_items qi JOIN quotes q ON q.id = qi.quote_id WHERE q.tenant_id = ?");
+                    $stRows->execute([$tid]);
+                } else {
+                    // Filter by tenant_id column
+                    $stCheckCol = $pdo->query("SHOW COLUMNS FROM `$table` LIKE 'tenant_id'");
+                    if ($stCheckCol->fetch()) {
+                        $stRows = $pdo->prepare("SELECT * FROM `$table` WHERE tenant_id = ?");
+                        $stRows->execute([$tid]);
+                    } else {
+                        // Skip un-scoped global reference table for non-superadmin
+                        continue;
+                    }
+                }
+            }
+
             $rows = $stRows->fetchAll();
 
             if (!empty($rows)) {
@@ -50,13 +83,13 @@ if (isset($_GET['action']) && $_GET['action'] === 'download') {
                 $sqlDump .= "\n";
             }
         } catch (\Throwable $e) {
-            // Skip unreadable table
+            // Skip table errors cleanly
         }
     }
 
-    log_audit($pdo, 'backup_database', 'tenants', $tid, "Downloaded SQL database backup dump");
+    log_audit($pdo, 'backup_database', 'tenants', $tid, "Downloaded SQL database backup dump (Isolated Mode)");
 
-    $fileName = 'onesol_backup_' . date('Ymd_His') . '.sql';
+    $fileName = 'onesol_backup_tenant_' . $tid . '_' . date('Ymd_His') . '.sql';
     header('Content-Type: application/sql');
     header('Content-Disposition: attachment; filename="' . $fileName . '"');
     header('Content-Length: ' . strlen($sqlDump));
@@ -82,23 +115,27 @@ page_start('Database Backup & Export');
         </div>
         <div>
             <h2 class="text-base font-extrabold text-slate-900">One-Click SQL Backup</h2>
-            <p class="text-xs text-slate-500">Exports all workspace tables, clients, invoices, ledgers, and configuration settings.</p>
+            <p class="text-xs text-slate-500">Exports all workspace clients, invoices, ledgers, and workspace settings.</p>
         </div>
     </div>
 
     <div class="bg-amber-50 border border-amber-200/80 rounded-xl p-4 text-xs font-semibold text-amber-900 flex items-start space-x-3">
         <i class="fa-solid fa-shield-halved text-amber-600 text-base mt-0.5"></i>
         <div>
-            <strong>Backup Recommendation:</strong>
-            <p class="mt-1 text-amber-800">Store your downloaded <code>.sql</code> backup files in a secure location. You can restore this backup at any time using phpMyAdmin or standard MySQL CLI.</p>
+            <strong>Backup Scope & Data Isolation:</strong>
+            <p class="mt-1 text-amber-800">Your SQL dump contains strictly isolated records belonging to workspace <strong><?=e(tenant()['name'])?> (ID #<?=$tid?>)</strong>. Store your downloaded <code>.sql</code> backup files in a secure location.</p>
         </div>
     </div>
 
     <div class="pt-4 border-t border-slate-100 flex justify-end">
-        <a href="backup_admin?action=download&csrf=<?=e(csrf_token())?>" class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-extrabold text-xs shadow-md transition-all flex items-center space-x-2">
-            <i class="fa-solid fa-download"></i>
-            <span>Download SQL Backup Dump (.sql)</span>
-        </a>
+        <form method="post" action="backup_admin">
+            <?=csrf_field()?>
+            <input type="hidden" name="action" value="download">
+            <button type="submit" class="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-extrabold text-xs shadow-md transition-all flex items-center space-x-2">
+                <i class="fa-solid fa-download"></i>
+                <span>Download Tenant SQL Backup Dump (.sql)</span>
+            </button>
+        </form>
     </div>
 </div>
 

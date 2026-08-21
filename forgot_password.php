@@ -21,17 +21,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $u = $st->fetch();
 
         if ($u) {
-            $token = bin2hex(random_bytes(32));
+            $rawToken = bin2hex(random_bytes(32));
+            $tokenHash = hash('sha256', $rawToken);
             $expiresAt = date('Y-m-d H:i:s', strtotime('+1 hour'));
 
             $stUpd = $pdo->prepare("UPDATE users SET reset_token = ?, reset_token_expires_at = ? WHERE id = ?");
-            $stUpd->execute([$token, $expiresAt, $u['id']]);
+            $stUpd->execute([$tokenHash, $expiresAt, $u['id']]);
 
             $tenantId = (int)($u['tenant_id'] ?: 1);
             $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http');
-            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $rawHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $host = preg_replace('/[^a-zA-Z0-9\.\:\-]/', '', $rawHost);
             $dir = rtrim(dirname($_SERVER['PHP_SELF'] ?? ''), '/\\');
-            $resetUrl = "{$scheme}://{$host}{$dir}/reset_password.php?token={$token}";
+            
+            $appUrl = getenv('APP_URL') ?: "{$scheme}://{$host}{$dir}";
+            $resetUrl = rtrim($appUrl, '/') . "/reset_password.php?token={$rawToken}";
 
             $subject = "Password Reset Request - OneSol";
             $htmlBody = "

@@ -33,13 +33,16 @@ if ($invId > 0 && $tenantId === 0) {
 // Fetch webhook secret (Tenant setting -> Superadmin setting -> Environment variable fallback)
 $webhookSecret = \Services\PaymentGatewayService::getSetting($pdo, 'stripe_webhook_secret', getenv('STRIPE_WEBHOOK_SECRET') ?: '', $tenantId ?: null);
 
-// Cryptographically verify signature if webhook secret is configured
-if (!empty($webhookSecret)) {
-    $isValid = \Services\PaymentGatewayService::verifyStripeSignature($payload, $sigHeader, $webhookSecret);
-    if (!$isValid) {
-        http_response_code(401);
-        exit(json_encode(['error' => 'Invalid Stripe webhook signature']));
-    }
+// Cryptographically verify signature (fail closed)
+if (empty($webhookSecret)) {
+    http_response_code(503);
+    exit(json_encode(['error' => 'Stripe webhook is not configured']));
+}
+
+$isValid = \Services\PaymentGatewayService::verifyStripeSignature($payload, $sigHeader, $webhookSecret);
+if (!$isValid) {
+    http_response_code(401);
+    exit(json_encode(['error' => 'Invalid Stripe webhook signature']));
 }
 
 // Idempotency check: verify if event was already processed

@@ -6,9 +6,43 @@ $pdo = $GLOBALS['pdo'];
 $tenantId = (int)($_GET['tenant_id'] ?? 1);
 
 $payload = file_get_contents('php://input');
+
+if (empty($payload)) {
+    http_response_code(400);
+    echo json_encode(['status' => 'ignored', 'reason' => 'Empty payload']);
+    exit;
+}
+
+// Cryptographic Signature Verification
+$headers = getallheaders();
+$wcSig = $_SERVER['HTTP_X_WC_WEBHOOK_SIGNATURE'] ?? $headers['X-WC-Webhook-Signature'] ?? $headers['x-wc-webhook-signature'] ?? '';
+
+$wcSecret = \Services\PaymentGatewayService::getSetting($pdo, 'woocommerce_webhook_secret', getenv('WOOCOMMERCE_WEBHOOK_SECRET') ?: '', $tenantId);
+
+if (empty($wcSecret)) {
+    http_response_code(503);
+    echo json_encode(['error' => 'WooCommerce webhook secret is not configured for this tenant']);
+    exit;
+}
+
+if (empty($wcSig)) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Missing X-WC-Webhook-Signature header']);
+    exit;
+}
+
+$calculatedSig = base64_encode(hash_hmac('sha256', $payload, $wcSecret, true));
+
+if (!hash_equals($calculatedSig, $wcSig)) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Invalid WooCommerce webhook signature']);
+    exit;
+}
+
 $data = json_decode($payload, true);
 
 if (!$data) {
+    http_response_code(400);
     echo json_encode(['status' => 'ignored', 'reason' => 'Empty or invalid JSON payload']);
     exit;
 }

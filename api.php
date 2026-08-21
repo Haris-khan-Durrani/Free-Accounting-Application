@@ -23,72 +23,9 @@ function api_response(bool $success, string $message, array $data = [], int $htt
     exit;
 }
 
-// Authenticate API Key — supports scoped api_keys table + legacy tenant api_key fallback
+// Authenticate API Key — delegated to unified Core\ApiAuthenticator
 function authenticate_api_key(PDO $pdo, string $requiredScope = ''): array {
-    $headers   = getallheaders();
-    $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? '';
-    $apiKey    = $headers['X-API-Key'] ?? $headers['x-api-key'] ?? $_GET['api_key'] ?? $_POST['api_key'] ?? '';
-
-    if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-        $apiKey = trim($matches[1]);
-    }
-
-    if (!$apiKey) {
-        api_response(false, 'Unauthorized. Provide your API key via X-API-Key header, Authorization: Bearer header, or ?api_key= query param.', [], 401);
-    }
-
-    // ── 1. Try scoped api_keys table (new system) ──────────────────
-    if (str_starts_with($apiKey, 'os_live_')) {
-        $keyHash = hash('sha256', $apiKey);
-        $st = $pdo->prepare("SELECT ak.*, t.id as tenant_id, t.name as tenant_name, t.status as tenant_status
-            FROM api_keys ak
-            JOIN tenants t ON t.id = ak.tenant_id
-            WHERE ak.key_hash = ?");
-        $st->execute([$keyHash]);
-        $keyRow = $st->fetch();
-
-        if (!$keyRow) {
-            api_response(false, 'Forbidden. Invalid API key.', [], 403);
-        }
-        if (!$keyRow['is_active']) {
-            api_response(false, 'Forbidden. This API key has been revoked.', [], 403);
-        }
-        if ($keyRow['expires_at'] && strtotime($keyRow['expires_at']) < time()) {
-            api_response(false, 'Forbidden. This API key expired on ' . $keyRow['expires_at'] . '.', [], 403);
-        }
-        if ($keyRow['tenant_status'] !== 'active' && $keyRow['tenant_status'] !== 'lifetime') {
-            api_response(false, 'Forbidden. The workspace for this API key is suspended.', [], 403);
-        }
-        if ($requiredScope) {
-            $scopes = json_decode($keyRow['scopes'], true) ?: [];
-            if (!in_array($requiredScope, $scopes)) {
-                api_response(false, "Forbidden. This API key does not have the required scope: '{$requiredScope}'.", [
-                    'key_scopes'     => $scopes,
-                    'required_scope' => $requiredScope,
-                ], 403);
-            }
-        }
-        // Stamp last used
-        $pdo->prepare("UPDATE api_keys SET last_used_at = NOW() WHERE id = ?")->execute([$keyRow['id']]);
-
-        // Return tenant-like structure
-        $st2 = $pdo->prepare("SELECT * FROM tenants WHERE id = ?");
-        $st2->execute([$keyRow['tenant_id']]);
-        $tenant = $st2->fetch();
-        $tenant['_api_key_name']   = $keyRow['name'];
-        $tenant['_api_key_scopes'] = json_decode($keyRow['scopes'], true) ?: [];
-        return $tenant;
-    }
-
-    // ── 2. Legacy fallback: tenants.api_key (read-all, no scope) ──
-    $st = $pdo->prepare("SELECT * FROM tenants WHERE api_key = ? AND status = 'active'");
-    $st->execute([$apiKey]);
-    $tenant = $st->fetch();
-
-    if (!$tenant) {
-        api_response(false, 'Forbidden. Invalid or suspended API key. Generate a new scoped key at /api_keys.', [], 403);
-    }
-    return $tenant;
+    return \Core\ApiAuthenticator::authenticate($pdo, $requiredScope);
 }
 
 
@@ -170,7 +107,7 @@ switch ($action) {
 
     // 2. Get Tenant Subscription & Trial Status
     case 'get_tenant_status':
-        $tenant = authenticate_api_key($pdo);
+        $tenant = authenticate_api_key($pdo, 'reports:read');
         
         $trialEnds = $tenant['trial_ends_at'] ?: date('Y-m-d');
         $daysRemaining = max(0, (int)floor((strtotime($trialEnds) - time()) / 86400));
@@ -193,7 +130,7 @@ switch ($action) {
 
     // 3. List Tenant Invoices
     case 'list_invoices':
-        $tenant = authenticate_api_key($pdo);
+        $tenant = authenticate_api_key($pdo, 'invoices:read');
         $st = $pdo->prepare("SELECT i.id, i.invoice_number, i.invoice_date, i.valid_until, i.status, i.currency, i.subtotal, i.tax_amount, i.total, i.paid_amount, c.company_name client_name FROM invoices i JOIN clients c ON c.id = i.client_id WHERE i.tenant_id = ? ORDER BY i.id DESC LIMIT 50");
         $st->execute([$tenant['id']]);
         $invoices = $st->fetchAll();
@@ -202,7 +139,7 @@ switch ($action) {
 
     // 4. Create New Invoice
     case 'create_invoice':
-        $tenant = authenticate_api_key($pdo);
+        $tenant = authenticate_api_key($pdo, 'invoices:write');
         $clientId = (int)($input['client_id'] ?? 0);
         $items = $input['items'] ?? [];
         $invDate = $input['invoice_date'] ?? date('Y-m-d');
@@ -211,6 +148,13 @@ switch ($action) {
 
         if (!$clientId || empty($items)) {
             api_response(false, 'Missing required parameters: client_id and items array are required.', [], 400);
+        }
+
+        // Verify client belongs to current API key's tenant
+        $stClientCheck = $pdo->prepare("SELECT id FROM clients WHERE id = ? AND tenant_id = ?");
+        $stClientCheck->execute([$clientId, $tenant['id']]);
+        if (!$stClientCheck->fetchColumn()) {
+            api_response(false, 'Forbidden. The specified client_id does not belong to your tenant workspace.', [], 403);
         }
 
         $invNum = 'OS-INV-' . date('Ymd') . '-' . rand(100, 999);
@@ -251,7 +195,7 @@ switch ($action) {
 
     // 5. List Clients
     case 'list_clients':
-        $tenant = authenticate_api_key($pdo);
+        $tenant = authenticate_api_key($pdo, 'clients:read');
         $st = $pdo->prepare("SELECT id, company_name, contact_name, email, phone, address, tax_number FROM clients WHERE tenant_id = ? ORDER BY company_name ASC");
         $st->execute([$tenant['id']]);
         $clients = $st->fetchAll();
@@ -260,7 +204,7 @@ switch ($action) {
 
     // 6. Create Client
     case 'create_client':
-        $tenant = authenticate_api_key($pdo);
+        $tenant = authenticate_api_key($pdo, 'clients:write');
         $companyName = trim($input['company_name'] ?? '');
         $contactName = trim($input['contact_name'] ?? '');
         $email = trim($input['email'] ?? '');
@@ -279,7 +223,7 @@ switch ($action) {
 
     // 7. Record Payment
     case 'record_payment':
-        $tenant = authenticate_api_key($pdo);
+        $tenant = authenticate_api_key($pdo, 'payments:write');
         $invId = (int)($input['invoice_id'] ?? 0);
         $amount = (float)($input['amount'] ?? 0);
         $payMethod = $input['payment_method'] ?? 'Bank Transfer';

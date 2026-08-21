@@ -20,8 +20,6 @@ if (!function_exists('e')) {
 |--------------------------------------------------------------------------
 */
 
-const FORCE_REINSTALL_KEY = '321harry';
-
 $error = '';
 $dbErrorDetails = '';
 
@@ -30,26 +28,6 @@ $sqlFile    = __DIR__ . '/database.sql';
 
 $configExists = file_exists($configFile);
 $installed    = false;
-
-/*
-|--------------------------------------------------------------------------
-| Force Reinstall Verification
-|--------------------------------------------------------------------------
-|
-| ONLY this exact URL enables reinstall mode:
-|
-| /install?force=321harry
-|
-*/
-
-$forceValue = isset($_GET['force'])
-    ? (string) $_GET['force']
-    : '';
-
-$forceReinstall = hash_equals(
-    FORCE_REINSTALL_KEY,
-    $forceValue
-);
 
 /*
 |--------------------------------------------------------------------------
@@ -129,6 +107,17 @@ if ($configExists) {
 
 /*
 |--------------------------------------------------------------------------
+| Prevent HTTP Reinstallation
+|--------------------------------------------------------------------------
+*/
+if ($installed) {
+    http_response_code(403);
+    echo '<!doctype html><html><head><title>Installer Locked</title><style>body{font-family:sans-serif;padding:40px;background:#0f172a;color:#f8fafc;text-align:center;}.card{max-width:500px;margin:0 auto;background:#1e293b;padding:32px;border-radius:16px;border:1px solid #334155;}h1{color:#ef4444;font-size:24px;}</style></head><body><div class="card"><h1>Installation Locked</h1><p>OneSol Invoice Manager is already installed. For security reasons, HTTP reinstallation is disabled.</p><p style="color:#94a3b8;font-size:13px;">If you need to reinstall, please remove config.php via SSH or run the system CLI installer.</p><a href="login.php" style="display:inline-block;margin-top:16px;padding:10px 20px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">Return to Login</a></div></body></html>';
+    exit;
+}
+
+/*
+|--------------------------------------------------------------------------
 | CSRF Protection
 |--------------------------------------------------------------------------
 */
@@ -144,42 +133,21 @@ if (
 
 /*
 |--------------------------------------------------------------------------
-| Installation / Reinstallation
+| Installation Request Handler
 |--------------------------------------------------------------------------
-|
-| Installation is allowed when:
-|
-| 1. Application is not currently installed
-| OR
-| 2. Exact force key is supplied:
-|    ?force=321harry
-|
 */
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /*
     |--------------------------------------------------------------------------
-    | Block POST Against Installed Application
+    | CSRF Validation
     |--------------------------------------------------------------------------
     */
 
-    if ($installed && !$forceReinstall) {
-        http_response_code(403);
-
-        $error =
-            'Application is already installed. Reinstallation is not authorized.';
-    } else {
-
-        /*
-        |--------------------------------------------------------------------------
-        | CSRF Validation
-        |--------------------------------------------------------------------------
-        */
-
-        $submittedCsrf = (string) (
-            $_POST['csrf_token'] ?? ''
-        );
+    $submittedCsrf = (string) (
+        $_POST['csrf_token'] ?? ''
+    );
 
         if (
             $submittedCsrf === '' ||
@@ -679,7 +647,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-}
 
 ?>
 <!doctype html>

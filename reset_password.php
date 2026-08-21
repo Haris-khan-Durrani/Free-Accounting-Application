@@ -10,8 +10,9 @@ $error = '';
 $user = null;
 
 if (!empty($token)) {
-    $st = $pdo->prepare("SELECT * FROM users WHERE reset_token = ? AND reset_token_expires_at >= CURRENT_TIMESTAMP() LIMIT 1");
-    $st->execute([$token]);
+    $tokenHash = hash('sha256', $token);
+    $st = $pdo->prepare("SELECT * FROM users WHERE (reset_token = ? OR reset_token = ?) AND reset_token_expires_at >= CURRENT_TIMESTAMP() LIMIT 1");
+    $st->execute([$tokenHash, $token]);
     $user = $st->fetch();
 }
 
@@ -28,19 +29,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newPassword = $_POST['new_password'] ?? '';
         $confirmPassword = $_POST['confirm_password'] ?? '';
 
-        if (strlen($newPassword) < 8) {
-            $error = 'New password must be at least 8 characters long.';
+        if (strlen($newPassword) < 12) {
+            $error = 'New password must be at least 12 characters long for financial SaaS security.';
+        } elseif (strlen($newPassword) > 128) {
+            $error = 'New password cannot exceed 128 characters.';
         } elseif ($newPassword !== $confirmPassword) {
             $error = 'Password confirmation does not match.';
         } else {
             $passwordHash = password_hash($newPassword, PASSWORD_BCRYPT);
             
-            $stUpd = $pdo->prepare("UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires_at = NULL WHERE id = ?");
+            // Auto-migrate session_version column if missing
+            try { $pdo->exec("ALTER TABLE users ADD COLUMN session_version INT UNSIGNED NOT NULL DEFAULT 1"); } catch (Throwable $t) {}
+
+            $stUpd = $pdo->prepare("UPDATE users SET password_hash = ?, reset_token = NULL, reset_token_expires_at = NULL, session_version = COALESCE(session_version, 1) + 1 WHERE id = ?");
             $stUpd->execute([$passwordHash, $user['id']]);
 
-            log_audit($pdo, 'password_reset_success', 'users', $user['id'], "Password reset completed successfully via email token for {$user['email']}");
+            log_audit($pdo, 'password_reset_success', 'users', $user['id'], "Password reset completed successfully. Invalidated all existing active sessions for {$user['email']}");
 
-            flash('success', 'Your password has been reset successfully! Please sign in with your new password.');
+            flash('success', 'Your password has been reset successfully! All existing active sessions have been revoked. Please sign in with your new password.');
             redirect('login');
         }
     }
@@ -91,12 +97,12 @@ $brand = branding();
                 <input type="hidden" name="token" value="<?=e($token)?>">
 
                 <div>
-                    <label class="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">New Password (Min 8 chars)</label>
+                    <label class="block text-xs font-extrabold text-slate-700 uppercase tracking-wider mb-2">New Password (Min 12 chars)</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                             <i class="fa-solid fa-lock text-sm"></i>
                         </div>
-                        <input type="password" name="new_password" required minlength="8" placeholder="••••••••" class="w-full rounded-xl border border-slate-300 bg-slate-50 pl-10 pr-3.5 py-3 text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all">
+                        <input type="password" name="new_password" required minlength="12" placeholder="••••••••••••" class="w-full rounded-xl border border-slate-300 bg-slate-50 pl-10 pr-3.5 py-3 text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all">
                     </div>
                 </div>
 

@@ -7,13 +7,9 @@ $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 $t = tenant();
 
-// Handle Payment Callback Redirects (Stripe / Network International)
-if (isset($_GET['action']) && in_array($_GET['action'], ['stripe_success', 'network_success'])) {
-    $planSlug = $_GET['plan'] ?? 'professional';
-    $gateway = $_GET['action'] === 'stripe_success' ? 'Stripe Checkout' : 'Network International NGenius';
-    
-    \Services\PaymentGatewayService::activateSubscription($pdo, $tid, $planSlug, $gateway, 'TXN_' . strtoupper(substr(md5(uniqid()), 0, 10)));
-    flash('success', "Congratulations! Your subscription has been successfully upgraded to the " . ucfirst($planSlug) . " Plan via $gateway.");
+// Handle Payment Callback Redirects (Informational only — plan activation happens via verified webhooks)
+if (isset($_GET['action']) && in_array($_GET['action'], ['stripe_success', 'network_success', 'stripe_return'])) {
+    flash('info', "Payment submitted! Your workspace plan will be upgraded automatically as soon as payment confirmation is received from the gateway.");
     redirect('billing.php');
 }
 
