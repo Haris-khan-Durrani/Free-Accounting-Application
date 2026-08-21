@@ -87,19 +87,28 @@ function page_start(string $title): void {
             echo '<i class="fa-solid fa-chevron-down text-[9px] text-slate-500"></i>';
             echo '</button>';
             echo '<div class="absolute left-0 top-full pt-1 w-56 hidden group-hover:block z-50">';
-            echo '<div class="bg-white rounded-xl shadow-2xl border border-slate-200 py-1 text-left text-xs font-semibold overflow-hidden">';
-            echo '<div class="px-3 py-1.5 text-[10px] font-black uppercase text-slate-400 border-b border-slate-100">Switch Workspace</div>';
+            echo '<div class="bg-white rounded-xl shadow-2xl border border-slate-200 py-1 text-left text-xs font-semibold overflow-hidden w-60">';
+            echo '<div class="px-3 py-1.5 text-[10px] font-black uppercase text-slate-400 border-b border-slate-100 flex items-center justify-between"><span>Switch Workspace</span></div>';
+            echo '<div class="p-1.5 border-b border-slate-100 bg-slate-50/50">';
+            echo '<div class="relative">';
+            echo '<i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-3xs"></i>';
+            echo '<input type="text" onkeyup="filterTopbarWorkspaces(this)" placeholder="Filter workspaces..." class="w-full pl-7 pr-2 py-1 text-xs bg-white border border-slate-200 rounded-lg text-slate-900 font-semibold focus:outline-none focus:border-amber-500">';
+            echo '</div>';
+            echo '</div>';
+            echo '<div class="max-h-48 overflow-y-auto">';
             foreach ($myTenants as $mt) {
                 $isCurr = ($mt['id'] == $activeTenant['id']);
-                echo '<a href="subaccounts?switch=' . $mt['id'] . '" class="flex items-center justify-between px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-amber-600 transition-colors ' . ($isCurr ? 'font-black text-amber-600 bg-amber-50/50' : '') . '">';
+                echo '<a href="subaccounts?switch=' . $mt['id'] . '" data-name="' . e(strtolower($mt['name'])) . '" class="topbar-workspace-item flex items-center justify-between px-3 py-2 text-slate-700 hover:bg-slate-50 hover:text-amber-600 transition-colors ' . ($isCurr ? 'font-black text-amber-600 bg-amber-50/50' : '') . '">';
                 echo '<span class="truncate">' . e($mt['name']) . '</span>';
                 if ($isCurr) {
                     echo '<i class="fa-solid fa-check text-amber-500 text-2xs"></i>';
                 }
                 echo '</a>';
             }
+            echo '</div>';
             echo '<a href="subaccounts" class="flex items-center space-x-1 px-3 py-2 text-slate-500 hover:text-slate-900 border-t border-slate-100 text-[11px] font-bold bg-slate-50/80"><i class="fa-solid fa-sitemap mr-1"></i>Manage Workspaces</a>';
             echo '</div>';
+            echo '<script>function filterTopbarWorkspaces(inEl){const q=inEl.value.toLowerCase().trim();document.querySelectorAll(".topbar-workspace-item").forEach(el=>{const n=el.getAttribute("data-name")||"";el.style.display=(!q||n.includes(q))?"flex":"none";});}</script>';
             echo '</div>';
             echo '</div>';
         } else {

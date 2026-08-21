@@ -130,10 +130,18 @@ page_start('Multi-Tenant Workspaces & Sub-Accounts');
     </div>
 <?php endif; ?>
 
+<!-- Real-Time Workspace Search Bar -->
+<div class="bg-white rounded-2xl border border-slate-200 shadow-xs p-4 mb-6">
+    <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <input type="text" id="workspace-search-input" onkeyup="filterSubaccountsPage(this)" placeholder="Search workspace by entity name or code (e.g. Headquarters, 360Biz)..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all">
+    </div>
+</div>
+
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     <?php foreach ($tenants as $t): ?>
         <?php $isActive = ($t['id'] == $currentTid); ?>
-        <div class="bg-white rounded-2xl p-6 border <?=$isActive ? 'border-amber-500 ring-2 ring-amber-500/20 shadow-md' : 'border-slate-200 shadow-sm'?> flex flex-col justify-between">
+        <div class="subaccount-card bg-white rounded-2xl p-6 border <?=$isActive ? 'border-amber-500 ring-2 ring-amber-500/20 shadow-md' : 'border-slate-200 shadow-sm'?> flex flex-col justify-between" data-name="<?=e(strtolower($t['name']))?>" data-code="<?=e(strtolower($t['code']))?>">
             <div>
                 <div class="flex items-center justify-between mb-4">
                     <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold <?= $isActive ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600' ?>">
@@ -162,6 +170,21 @@ page_start('Multi-Tenant Workspaces & Sub-Accounts');
         </div>
     <?php endforeach; ?>
 </div>
+
+<script>
+function filterSubaccountsPage(inputEl) {
+    const query = inputEl.value.toLowerCase().trim();
+    document.querySelectorAll('.subaccount-card').forEach(card => {
+        const name = card.getAttribute('data-name') || '';
+        const code = card.getAttribute('data-code') || '';
+        if (!query || name.includes(query) || code.includes(query)) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+</script>
 
 <!-- Modal: Create Sub-account Workspace -->
 <div id="new-tenant-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-[100] hidden p-4">
