@@ -28,12 +28,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'save_whatsapp') {
+        $brandCur = \Core\Branding::get($pdo, $tid);
         $provider  = trim($_POST['whatsapp_provider'] ?? 'meta');
         $phoneId   = trim($_POST['whatsapp_phone_number_id'] ?? '');
-        $token     = trim($_POST['whatsapp_access_token'] ?? '');
+        $tokenRaw  = trim($_POST['whatsapp_access_token'] ?? '');
         $twilioSid = trim($_POST['twilio_account_sid'] ?? '');
-        $twilioAuth= trim($_POST['twilio_auth_token'] ?? '');
+        $twilioAuthRaw = trim($_POST['twilio_auth_token'] ?? '');
         $twilioFrom= trim($_POST['twilio_from_number'] ?? '');
+
+        $tokenToSave = ($tokenRaw !== '' && !str_starts_with($tokenRaw, '••••••••')) ? \Core\Crypto::encrypt($tokenRaw) : ($brandCur['whatsapp_access_token'] ?? '');
+        $twilioAuthToSave = ($twilioAuthRaw !== '' && !str_starts_with($twilioAuthRaw, '••••••••')) ? \Core\Crypto::encrypt($twilioAuthRaw) : ($brandCur['twilio_auth_token'] ?? '');
 
         $st = $pdo->prepare("
             UPDATE branding_settings 
@@ -41,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 twilio_account_sid = ?, twilio_auth_token = ?, twilio_from_number = ?
             WHERE tenant_id = ?
         ");
-        $st->execute([$provider, $phoneId, $token, $twilioSid, $twilioAuth, $twilioFrom, $tid]);
+        $st->execute([$provider, $phoneId, $tokenToSave, $twilioSid, $twilioAuthToSave, $twilioFrom, $tid]);
 
         log_audit($pdo, 'update_whatsapp_settings', 'branding_settings', $tid, "Updated Messaging Provider settings ($provider)");
         $message = 'WhatsApp & Twilio SMS provider settings saved successfully.';
@@ -138,7 +142,7 @@ page_start('WhatsApp & Twilio Gateway Settings');
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Permanent Access Token / Bearer Token</label>
-                        <textarea name="whatsapp_access_token" rows="2" placeholder="EAAG..." class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-xs font-mono text-slate-900 focus:ring-2 focus:ring-emerald-500"><?=e($token)?></textarea>
+                        <input type="password" name="whatsapp_access_token" value="" placeholder="<?=!empty($token) ? '•••••••••••• (Configured - leave blank to keep)' : 'EAAG...'?>" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-xs font-mono text-slate-900 focus:ring-2 focus:ring-emerald-500">
                     </div>
                 </div>
 
@@ -156,7 +160,7 @@ page_start('WhatsApp & Twilio Gateway Settings');
 
                         <div>
                             <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Twilio Auth Token</label>
-                            <input type="password" name="twilio_auth_token" value="<?=e($twilioAuth)?>" placeholder="Your Twilio Auth Token" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-xs font-mono text-slate-900 focus:ring-2 focus:ring-red-500">
+                            <input type="password" name="twilio_auth_token" value="" placeholder="<?=!empty($twilioAuth) ? '•••••••••••• (Configured - leave blank to keep)' : 'Your Twilio Auth Token'?>" class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-xs font-mono text-slate-900 focus:ring-2 focus:ring-red-500">
                         </div>
                     </div>
 

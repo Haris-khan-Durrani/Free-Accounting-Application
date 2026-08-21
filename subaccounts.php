@@ -51,14 +51,22 @@ if (isset($_GET['switch'])) {
     redirect('subaccounts.php');
 }
 
-// Count total sub-accounts
-$stSubCount = $pdo->query("SELECT COUNT(*) FROM tenants");
+// Count total sub-accounts owned by this user's account
+$stSubCount = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE user_id = ? AND role = 'owner'");
+$stSubCount->execute([$userId]);
 $currentSubAccountCount = (int)$stSubCount->fetchColumn();
 $isQuotaExceeded = ($currentSubAccountCount >= $maxAllowedSubAccounts);
 
 // Handle Create New Tenant / Sub-account
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create_tenant') {
     verify_csrf();
+
+    if (!has_role(['owner', 'admin'])) {
+        http_response_code(403);
+        flash('error', 'Access denied. Only workspace owners or administrators can create new sub-accounts.');
+        redirect('subaccounts.php');
+    }
+
     $name = trim($_POST['name'] ?? '');
     $code = strtolower(trim($_POST['code'] ?? ''));
     $currency = $_POST['currency'] ?? 'AED';

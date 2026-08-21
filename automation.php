@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/bootstrap.php';
-require_login();
+require_role(['owner', 'admin']);
 require __DIR__ . '/layout.php';
 
 $pdo = $GLOBALS['pdo'];
@@ -13,6 +13,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $trigger = $_POST['trigger_event'] ?? 'invoice_created';
     $targetWebhookUrl = trim($_POST['webhook_url'] ?? '');
     $emailRecipient = trim($_POST['email_recipient'] ?? '');
+
+    if ($targetWebhookUrl !== '' && !\Core\Security::isPublicUrl($targetWebhookUrl)) {
+        flash('error', 'Invalid webhook URL. Webhook targets must resolve to public HTTP/HTTPS endpoints.');
+        redirect('automation.php');
+    }
 
     $conditions = [];
     if (!empty($_POST['condition_field']) && !empty($_POST['condition_value'])) {

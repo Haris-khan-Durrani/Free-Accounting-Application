@@ -7,12 +7,12 @@ require __DIR__ . '/bootstrap.php';
 $pdo = $GLOBALS['pdo'];
 
 // CLI or Cron Key Authentication
-$cronKey = $_GET['key'] ?? '';
 $cliMode = (php_sapi_name() === 'cli');
+$providedKey = (string)($_GET['key'] ?? '');
+$expectedSecret = (string)($config['cron_secret'] ?? getenv('CRON_SECRET') ?? '');
 
-if (!$cliMode && $cronKey !== 'onesol_cron_secret_2026') {
-    // Allow if logged in as admin
-    if (!isset($_SESSION['user_id'])) {
+if (!$cliMode) {
+    if (empty($expectedSecret) || empty($providedKey) || !hash_equals($expectedSecret, $providedKey)) {
         http_response_code(403);
         exit(json_encode(['error' => 'Unauthorized cron invocation']));
     }

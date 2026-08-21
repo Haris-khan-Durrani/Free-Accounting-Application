@@ -2,13 +2,16 @@
 // cron_exchange_rates.php - Automatic Central Bank of UAE Exchange Rates Sync
 require __DIR__ . '/bootstrap.php';
 
-$cronKey = $_GET['key'] ?? '';
 $cliMode = (php_sapi_name() === 'cli');
+$providedKey = (string)($_GET['key'] ?? '');
+$expectedSecret = (string)($config['cron_secret'] ?? getenv('CRON_SECRET') ?? '');
 
-if (!$cliMode && $cronKey !== 'onesol_cron_secret_2026') {
-    if (empty($_SESSION['user_id']) || !has_role(['owner', 'admin'])) {
-        http_response_code(403);
-        exit(json_encode(['success' => false, 'message' => 'Unauthorized cron invocation']));
+if (!$cliMode) {
+    if (empty($expectedSecret) || empty($providedKey) || !hash_equals($expectedSecret, $providedKey)) {
+        if (empty($_SESSION['user_id']) || !has_role(['owner', 'admin'])) {
+            http_response_code(403);
+            exit(json_encode(['success' => false, 'message' => 'Unauthorized cron invocation']));
+        }
     }
 }
 

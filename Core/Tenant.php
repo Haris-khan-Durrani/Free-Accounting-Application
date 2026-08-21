@@ -50,7 +50,8 @@ class Tenant {
         if (php_sapi_name() === 'cli') {
             return 1;
         }
-        return 1;
+
+        throw new TenantContextException('No authenticated workspace or tenant context resolved.');
     }
 
     public static function setActiveId(int $tenantId, PDO $pdo, int $userId): bool {

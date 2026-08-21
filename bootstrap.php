@@ -179,13 +179,57 @@ function require_login(): void {
                 session_destroy();
                 redirect('login');
             }
-        } catch (\Throwable $t) {}
+        } catch (\Throwable $t) {
+            session_unset();
+            session_destroy();
+            http_response_code(503);
+            exit('Service unavailable. Database session verification failed.');
+        }
     }
 }
 
 function has_role(array $allowedRoles): bool {
     $userRole = $_SESSION['user_role'] ?? 'viewer'; // Default to least-privilege on missing session key
     return in_array($userRole, $allowedRoles, true);
+}
+
+function require_role(array $allowedRoles): void {
+    require_login();
+    if (!has_role($allowedRoles)) {
+        http_response_code(403);
+        flash('error', 'Access denied. You do not have permission to access this resource.');
+        redirect('index');
+    }
+}
+
+function require_platform_admin(): void {
+    require_login();
+
+    $tid = tenant_id();
+    $userId = (int)($_SESSION['user_id'] ?? 0);
+    $userRole = $_SESSION['user_role'] ?? '';
+
+    if ($tid !== 1 || $userRole !== 'owner') {
+        http_response_code(403);
+        flash('error', 'Access denied. Restricted to SaaS Master Platform Administrator.');
+        redirect('index');
+    }
+
+    global $pdo;
+    if ($pdo) {
+        try {
+            $stMaster = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE user_id = ? AND tenant_id = 1 AND role = 'owner'");
+            $stMaster->execute([$userId]);
+            if ((int)$stMaster->fetchColumn() === 0) {
+                http_response_code(403);
+                flash('error', 'Access denied. Restricted to SaaS Master Platform Administrator.');
+                redirect('index');
+            }
+        } catch (\Throwable $t) {
+            http_response_code(503);
+            exit('Service unavailable. Platform administration verification failed.');
+        }
+    }
 }
 
 function flash(string $type, string $message): void { 

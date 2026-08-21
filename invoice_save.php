@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/bootstrap.php';
-require_login();
+require_role(['owner', 'admin', 'accountant', 'sales']);
 
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
@@ -70,9 +70,19 @@ try {
     $pdo->beginTransaction();
     
     if ($id > 0) {
+        // Lock and verify parent invoice belongs to active tenant before executing mutations
+        $stLock = $pdo->prepare('SELECT id FROM invoices WHERE id = ? AND tenant_id = ? FOR UPDATE');
+        $stLock->execute([$id, $tid]);
+        if (!$stLock->fetch()) {
+            throw new RuntimeException('Invoice not found in your workspace.');
+        }
+
         $st = $pdo->prepare('UPDATE invoices SET invoice_number=?, client_id=?, invoice_date=?, valid_until=?, status=?, currency=?, subtotal=?, discount_type=?, discount_value=?, discount_amount=?, tax_rate_id=?, tax_amount=?, total=?, notes=?, template_id=? WHERE id=? AND tenant_id=?');
         $st->execute([$number, $client, $date, $valid, $status, $currency, $subtotal, $type, $dv, $da, $taxRateId ?: null, $taxAmount, $total, $notes, $templateId, $id, $tid]);
-        $pdo->prepare('DELETE FROM invoice_items WHERE invoice_id=?')->execute([$id]);
+
+        // Delete line items using tenant-bound JOIN
+        $stDelItems = $pdo->prepare('DELETE ii FROM invoice_items ii JOIN invoices i ON i.id = ii.invoice_id WHERE ii.invoice_id = ? AND i.tenant_id = ?');
+        $stDelItems->execute([$id, $tid]);
     } else {
         $st = $pdo->prepare('INSERT INTO invoices (tenant_id, invoice_number, client_id, invoice_date, valid_until, status, currency, subtotal, discount_type, discount_value, discount_amount, tax_rate_id, tax_amount, total, notes, template_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
         $st->execute([$tid, $number, $client, $date, $valid, $status, $currency, $subtotal, $type, $dv, $da, $taxRateId ?: null, $taxAmount, $total, $notes, $templateId]);

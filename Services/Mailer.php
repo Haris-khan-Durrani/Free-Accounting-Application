@@ -75,6 +75,10 @@ class Mailer {
      * Native Socket SMTP Mailer with TLS / SSL / STARTTLS support
      */
     private static function sendViaSmtp(string $host, int $port, string $encryption, string $username, string $password, string $fromEmail, string $fromName, string $toEmail, string $subject, string $htmlBody): bool {
+        if (!\Core\Security::isPublicHost($host, $port)) {
+            throw new Exception("Blocked SMTP connection to non-public/internal host $host (SSRF Guard)");
+        }
+
         $prefix = ($encryption === 'ssl') ? 'ssl://' : '';
         $socketHost = $prefix . $host;
         $timeout = 3; // Fast 3s connection timeout

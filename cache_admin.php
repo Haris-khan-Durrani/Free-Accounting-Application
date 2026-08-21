@@ -6,6 +6,9 @@ require __DIR__ . '/layout.php';
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 
+// Cache administration — owner or admin required
+require_role(['owner', 'admin']);
+
 // Handle Flush Actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
@@ -18,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'flush_all') {
+        require_platform_admin();
         \Core\Cache::flushAll();
         flash('success', 'System-wide cache flushed successfully across all tenants!');
         redirect('cache_admin');

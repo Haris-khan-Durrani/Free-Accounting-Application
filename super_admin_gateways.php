@@ -1,16 +1,10 @@
 <?php
 require __DIR__ . '/bootstrap.php';
-require_login();
+require_platform_admin();
 require __DIR__ . '/layout.php';
 
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
-
-// Super Admin Gateways — owner only
-if (!has_role(['owner'])) {
-    flash('error', 'Access denied. This page is restricted to the account owner.');
-    redirect('index');
-}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_gateways') {
     verify_csrf();

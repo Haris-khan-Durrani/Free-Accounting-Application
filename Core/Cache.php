@@ -128,7 +128,7 @@ class Cache {
             try {
                 $raw = $redis->get($formattedKey);
                 if ($raw !== false && $raw !== null) {
-                    $val = unserialize($raw);
+                    $val = unserialize($raw, ['allowed_classes' => false]);
                     self::$hits++;
                     self::$memoryCache[$formattedKey] = ['val' => $val, 'exp' => time() + 60];
                     return $val;

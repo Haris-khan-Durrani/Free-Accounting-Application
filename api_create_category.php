@@ -1,6 +1,9 @@
 <?php
 require __DIR__ . '/bootstrap.php';
-require_login();
+if (!has_role(['owner', 'admin', 'accountant'])) {
+    echo json_encode(['success' => false, 'error' => 'Access denied.']);
+    exit;
+}
 
 header('Content-Type: application/json');
 
@@ -8,6 +11,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'error' => 'Invalid request method']);
     exit;
 }
+
+verify_csrf();
 
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();

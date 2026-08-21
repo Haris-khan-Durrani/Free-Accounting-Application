@@ -50,6 +50,10 @@ class AutomationService {
                     if ($actionType === 'webhook') {
                         $targetUrl = $act['url'] ?? '';
                         if ($targetUrl) {
+                            if (!\Core\Security::isPublicUrl($targetUrl)) {
+                                $actionDetails[] = "Blocked HTTP Webhook to internal/unrestricted target $targetUrl (SSRF Guard)";
+                                continue;
+                            }
                             $ch = curl_init($targetUrl);
                             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                             curl_setopt($ch, CURLOPT_POST, true);

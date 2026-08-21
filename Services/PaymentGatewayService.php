@@ -6,11 +6,29 @@ use Exception;
 
 class PaymentGatewayService {
 
+    private static array $sensitiveKeys = [
+        'stripe_secret_key',
+        'stripe_webhook_secret',
+        'paypal_secret_key',
+        'network_api_key',
+        'smtp_password',
+        'meta_whatsapp_token',
+        'twilio_auth_token',
+        'woocommerce_webhook_secret',
+        'shopify_webhook_secret'
+    ];
+
     /**
      * Fetch payment gateway setting value for specific tenant (or fallback to tenant 1 / superadmin if allowed)
      */
     public static function getSetting(PDO $pdo, string $key, string $default = '', ?int $tenantId = null, bool $allowFallback = true): string {
         $tid = $tenantId ?: (function_exists('tenant_id') ? tenant_id() : 1);
+        
+        // Never allow tenant 1 fallback for secret credentials
+        if (in_array($key, self::$sensitiveKeys, true)) {
+            $allowFallback = false;
+        }
+
         try {
             // First check for specific tenant
             $st = $pdo->prepare("SELECT setting_value FROM settings WHERE tenant_id = ? AND setting_key = ?");
@@ -18,7 +36,12 @@ class PaymentGatewayService {
             $val = $st->fetchColumn();
 
             if ($val !== false && $val !== null && $val !== '') {
-                return (string)$val;
+                $strVal = (string)$val;
+                if (in_array($key, self::$sensitiveKeys, true)) {
+                    $decrypted = \Core\Crypto::decrypt($strVal);
+                    return (!empty($decrypted) && ctype_print($decrypted)) ? $decrypted : $strVal;
+                }
+                return $strVal;
             }
 
             // Fallback to Super Admin tenant 1 if tenant-specific setting is empty AND fallback is explicitly allowed
@@ -43,9 +66,18 @@ class PaymentGatewayService {
     public static function getTenantIdByWebhookKey(PDO $pdo, string $keySettingName, string $webhookKey): int {
         if (empty($webhookKey)) return 0;
         try {
-            $st = $pdo->prepare("SELECT tenant_id FROM settings WHERE setting_key = ? AND setting_value = ? LIMIT 1");
-            $st->execute([$keySettingName, $webhookKey]);
-            return (int)($st->fetchColumn() ?: 0);
+            $st = $pdo->prepare("SELECT tenant_id, setting_value FROM settings WHERE setting_key = ?");
+            $st->execute([$keySettingName]);
+            $rows = $st->fetchAll();
+
+            foreach ($rows as $row) {
+                $val = (string)$row['setting_value'];
+                $decrypted = \Core\Crypto::decrypt($val) ?: $val;
+                if (hash_equals($decrypted, $webhookKey) || hash_equals($val, $webhookKey)) {
+                    return (int)$row['tenant_id'];
+                }
+            }
+            return 0;
         } catch (Exception $e) {
             return 0;
         }
@@ -57,12 +89,18 @@ class PaymentGatewayService {
     public static function setSetting(PDO $pdo, string $key, string $value, ?int $tenantId = null): void {
         $tid = $tenantId ?: (function_exists('tenant_id') ? tenant_id() : 1);
         try {
+            $valueToStore = $value;
+            if (in_array($key, self::$sensitiveKeys, true) && $value !== '') {
+                // Encrypt secret setting at rest
+                $valueToStore = \Core\Crypto::encrypt($value);
+            }
+
             $st = $pdo->prepare("
                 INSERT INTO settings (tenant_id, setting_key, setting_value) 
                 VALUES (?, ?, ?) 
                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
             ");
-            $st->execute([$tid, $key, $value]);
+            $st->execute([$tid, $key, $valueToStore]);
         } catch (Exception $e){}
     }
 

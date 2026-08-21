@@ -75,8 +75,9 @@ if ($eventType === 'checkout.session.completed' || $eventType === 'payment_inten
         try {
             $pdo->beginTransaction();
 
-            $stInv = $pdo->prepare("SELECT * FROM invoices WHERE id = ? FOR UPDATE");
-            $stInv->execute([$invId]);
+            // Enforce tenant boundary: invoice MUST belong to the verified tenant associated with the webhook key
+            $stInv = $pdo->prepare("SELECT * FROM invoices WHERE id = ? AND tenant_id = ? FOR UPDATE");
+            $stInv->execute([$invId, $tenantId]);
             $inv = $stInv->fetch();
 
             if ($inv) {
@@ -84,8 +85,8 @@ if ($eventType === 'checkout.session.completed' || $eventType === 'payment_inten
                 $today = date('Y-m-d');
 
                 // Check for duplicate payment record
-                $stPayCheck = $pdo->prepare("SELECT id FROM payments WHERE invoice_id = ? AND (gateway_transaction_id = ? OR reference = ?)");
-                $stPayCheck->execute([$invId, $sessionId, $externalEventId]);
+                $stPayCheck = $pdo->prepare("SELECT id FROM payments WHERE invoice_id = ? AND tenant_id = ? AND (gateway_transaction_id = ? OR reference = ?)");
+                $stPayCheck->execute([$invId, $tid, $sessionId, $externalEventId]);
                 $existingPayId = (int)$stPayCheck->fetchColumn();
 
                 if (!$existingPayId) {
@@ -98,14 +99,14 @@ if ($eventType === 'checkout.session.completed' || $eventType === 'payment_inten
                     $paymentId = (int)$pdo->lastInsertId();
 
                     // Calculate cumulative payment total
-                    $stSum = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ?");
-                    $stSum->execute([$invId]);
+                    $stSum = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ? AND tenant_id = ?");
+                    $stSum->execute([$invId, $tid]);
                     $newPaid = (float)$stSum->fetchColumn();
 
                     $newStatus = ($newPaid >= (float)$inv['total'] - 0.01) ? 'paid' : 'partially_paid';
 
-                    $stUpd = $pdo->prepare("UPDATE invoices SET paid_amount = ?, status = ? WHERE id = ?");
-                    $stUpd->execute([$newPaid, $newStatus, $invId]);
+                    $stUpd = $pdo->prepare("UPDATE invoices SET paid_amount = ?, status = ? WHERE id = ? AND tenant_id = ?");
+                    $stUpd->execute([$newPaid, $newStatus, $invId, $tid]);
 
                     // Post to General Ledger using AccountingService
                     $acctService = new \Services\AccountingService($pdo, $tid);

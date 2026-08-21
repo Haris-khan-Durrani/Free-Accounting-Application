@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/bootstrap.php';
-require_login();
+require_role(['owner', 'admin', 'accountant']);
 require __DIR__ . '/layout.php';
 
 $pdo = $GLOBALS['pdo'];

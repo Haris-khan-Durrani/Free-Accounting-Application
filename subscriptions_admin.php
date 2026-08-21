@@ -1,15 +1,9 @@
 <?php
 require __DIR__ . '/bootstrap.php';
-require_login();
+require_platform_admin();
 require __DIR__ . '/layout.php';
 
 $pdo = $GLOBALS['pdo'];
-
-// SaaS Plan administration — Master Super-Admin only (tenant_id = 1)
-if (!has_role(['owner']) || tenant_id() !== 1) {
-    flash('error', 'Access denied. SaaS Plan Tier Administration is restricted to the Master Super-Admin.');
-    redirect('index');
-}
 
 // Process SaaS Plan Tier CRUD, Lifetime Internal Status, and Trial Extensions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

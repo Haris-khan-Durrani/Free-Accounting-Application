@@ -42,7 +42,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         'bank_instructions' => trim($_POST['bank_instructions'] ?? '')
     ];
 
+    $secretFields = ['stripe_secret_key', 'stripe_webhook_secret', 'network_api_key', 'paypal_secret_key'];
+
     foreach ($settingsToSave as $k => $v) {
+        if (in_array($k, $secretFields, true)) {
+            // Do not overwrite existing secret if submitted value is empty or masked placeholder
+            if ($v === '' || str_starts_with($v, '••••••••')) {
+                continue;
+            }
+        }
         \Services\PaymentGatewayService::setSetting($pdo, $k, $v, $tid);
     }
 
@@ -118,11 +126,11 @@ page_start('Workspace Payment Gateways');
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Stripe Secret Key *</label>
-                <input type="password" name="stripe_secret_key" value="<?=e($stripeSecKey)?>" placeholder="sk_live_..." class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
+                <input type="password" name="stripe_secret_key" value="" placeholder="<?=!empty($stripeSecKey) ? '•••••••••••• (Configured - leave blank to keep)' : 'sk_live_...'?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Webhook Signing Secret</label>
-                <input type="password" name="stripe_webhook_secret" value="<?=e($stripeWebhookSec)?>" placeholder="whsec_..." class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
+                <input type="password" name="stripe_webhook_secret" value="" placeholder="<?=!empty($stripeWebhookSec) ? '•••••••••••• (Configured - leave blank to keep)' : 'whsec_...'?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Settlement Currency</label>
@@ -170,7 +178,7 @@ page_start('Workspace Payment Gateways');
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">PayPal Secret Key</label>
-                <input type="password" name="paypal_secret_key" value="<?=e($paypalSecKey)?>" placeholder="E..." class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
+                <input type="password" name="paypal_secret_key" value="" placeholder="<?=!empty($paypalSecKey) ? '•••••••••••• (Configured - leave blank to keep)' : 'E...'?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
             </div>
         </div>
     </div>

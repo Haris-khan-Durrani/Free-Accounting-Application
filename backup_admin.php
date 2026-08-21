@@ -1,24 +1,12 @@
 <?php
 require __DIR__ . '/bootstrap.php';
-require_login();
+require_platform_admin();
 
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 $user = $_SESSION['user_name'] ?? 'User';
 $uid = (int)($_SESSION['user_id'] ?? 0);
-
-if (!has_role(['owner'])) {
-    flash('error', 'Access denied. Database backup is restricted to the account owner.');
-    redirect('index');
-}
-
-// Check if Master Super-Admin (Tenant #1 Owner)
-$isSuperAdmin = false;
-try {
-    $stMaster = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE user_id = ? AND tenant_id = 1 AND role = 'owner'");
-    $stMaster->execute([$uid]);
-    $isSuperAdmin = ($tid === 1 && (int)$stMaster->fetchColumn() > 0);
-} catch (\Throwable $e) {}
+$isSuperAdmin = true;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'download') {
     verify_csrf();

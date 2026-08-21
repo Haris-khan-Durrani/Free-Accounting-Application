@@ -27,19 +27,44 @@ if (empty($domain)) {
     exit;
 }
 
+// Check if domain is already claimed by another tenant
+$stOther = $pdo->prepare("SELECT tenant_id FROM branding_settings WHERE custom_domain = ? AND tenant_id != ? AND domain_verified = 1");
+$stOther->execute([$domain, $tid]);
+if ($stOther->fetchColumn()) {
+    echo json_encode([
+        'success' => false,
+        'status' => 'claimed',
+        'message' => "Domain '$domain' is already claimed and verified by another workspace."
+    ]);
+    exit;
+}
+
 // Server host target
-$serverHost = $_SERVER['HTTP_HOST'] ?? 'app.onesol.ae';
+$serverHost = preg_replace('#:\d+$#', '', strtolower(trim($_SERVER['HTTP_HOST'] ?? 'app.onesol.ae')));
 $serverIp   = gethostbyname($serverHost);
 $targetIp   = gethostbyname($domain);
 
-$isResolved = ($targetIp !== $domain && !empty($targetIp));
-
 // Perform DNS CNAME inspection
 $cnameRecords = @dns_get_record($domain, DNS_CNAME);
-$hasCname = !empty($cnameRecords);
-$cnameTarget = $hasCname ? ($cnameRecords[0]['target'] ?? '') : '';
+$cnameTarget = !empty($cnameRecords) ? strtolower(rtrim($cnameRecords[0]['target'] ?? '', '.')) : '';
 
-if ($isResolved) {
+// Perform DNS TXT inspection for verification token
+$txtRecords = @dns_get_record("_onesol-challenge." . $domain, DNS_TXT);
+$expectedTxtToken = substr(hash('sha256', "onesol_verify_{$tid}_" . ($config['app_key'] ?? 'secret')), 0, 32);
+$hasMatchingTxt = false;
+if (!empty($txtRecords) && is_array($txtRecords)) {
+    foreach ($txtRecords as $tr) {
+        if (($tr['txt'] ?? '') === $expectedTxtToken) {
+            $hasMatchingTxt = true;
+            break;
+        }
+    }
+}
+
+// Domain is verified ONLY if CNAME matches server host or TXT challenge token matches
+$isVerified = ($cnameTarget !== '' && $cnameTarget === $serverHost) || $hasMatchingTxt || ($targetIp === $serverIp && $serverIp !== '127.0.0.1' && !empty($serverIp));
+
+if ($isVerified) {
     // Update verification status in database
     try {
         $st = $pdo->prepare("UPDATE branding_settings SET custom_domain = ?, domain_verified = 1 WHERE tenant_id = ?");
@@ -52,7 +77,7 @@ if ($isResolved) {
         'domain' => $domain,
         'resolved_ip' => $targetIp,
         'cname_target' => $cnameTarget ?: $serverHost,
-        'message' => "DNS Verified! Domain '$domain' successfully resolves to $targetIp. Your whitelabel portal is active."
+        'message' => "DNS Ownership Verified! Domain '$domain' successfully validated. Your whitelabel portal is active."
     ]);
 } else {
     echo json_encode([
@@ -60,7 +85,9 @@ if ($isResolved) {
         'status' => 'failed',
         'domain' => $domain,
         'server_ip' => $serverIp,
-        'message' => "DNS Pending. Could not resolve '$domain'. Please ensure your DNS CNAME record points to '$serverHost' and allow up to 24 hours for DNS propagation."
+        'expected_cname' => $serverHost,
+        'expected_txt' => "_onesol-challenge.{$domain} TXT={$expectedTxtToken}",
+        'message' => "DNS Verification Failed. Point CNAME record of '$domain' to '$serverHost' or create TXT record '_onesol-challenge.$domain' with value '$expectedTxtToken'."
     ]);
 }
 exit;

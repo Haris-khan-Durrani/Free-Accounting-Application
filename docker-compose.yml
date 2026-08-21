@@ -47,7 +47,7 @@ services:
       MYSQL_USER: ${DB_USER:-onesol}
       MYSQL_PASSWORD: ${DB_PASS:-onesol_secret}
     ports:
-      - "${DB_EXTERNAL_PORT:-3307}:3306"
+      - "127.0.0.1:${DB_EXTERNAL_PORT:-3307}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -67,7 +67,7 @@ services:
     restart: always
     command: redis-server --appendonly yes
     ports:
-      - "${REDIS_EXTERNAL_PORT:-6380}:6379"
+      - "127.0.0.1:${REDIS_EXTERNAL_PORT:-6380}:6379"
     volumes:
       - redis_data:/data
     healthcheck:

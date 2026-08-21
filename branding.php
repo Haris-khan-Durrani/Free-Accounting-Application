@@ -36,6 +36,11 @@ $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
+    if (!has_role(['owner', 'admin'])) {
+        http_response_code(403);
+        flash('error', 'Access denied. Workspace branding and remittance configuration requires owner or admin permissions.');
+        redirect('branding.php');
+    }
 
     $companyName = trim($_POST['company_name'] ?? '');
     $companyTagline = trim($_POST['company_tagline'] ?? '');
