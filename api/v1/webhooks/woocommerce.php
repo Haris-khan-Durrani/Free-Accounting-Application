@@ -3,7 +3,20 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../../../bootstrap.php';
 
 $pdo = $GLOBALS['pdo'];
-$tenantId = (int)($_GET['tenant_id'] ?? 1);
+
+// Resolve tenant_id server-side from unique integration route key if provided
+$webhookKey = trim($_GET['key'] ?? ($_GET['integration_key'] ?? ''));
+if (!empty($webhookKey)) {
+    $tenantId = \Services\PaymentGatewayService::getTenantIdByWebhookKey($pdo, 'woocommerce_webhook_key', $webhookKey);
+} else {
+    $tenantId = (int)($_GET['tenant_id'] ?? 0);
+}
+
+if ($tenantId <= 0) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Unauthorized. Missing or invalid integration webhook key']);
+    exit;
+}
 
 $payload = file_get_contents('php://input');
 

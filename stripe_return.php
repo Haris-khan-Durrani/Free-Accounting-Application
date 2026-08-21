@@ -29,6 +29,17 @@ if (!$inv) {
 
 $tid = (int)$inv['tenant_id'];
 
+// Token & Session Authorization Guard: Require valid public invoice token OR authenticated tenant user
+$token = trim($_GET['token'] ?? '');
+$expectedToken = get_invoice_token($inv);
+$isAuthorizedUser = !empty($_SESSION['user_id']) && (int)($_SESSION['active_tenant_id'] ?? $_SESSION['tenant_id'] ?? 0) === $tid;
+$isValidToken = !empty($token) && hash_equals($expectedToken, $token);
+
+if (!$isAuthorizedUser && !$isValidToken) {
+    http_response_code(403);
+    exit('Access denied. Invalid or missing invoice access token.');
+}
+
 // Render-Only Status: Check invoice payment status in database (mutations happen strictly via signed webhooks)
 $isPaid = ($inv['status'] === 'paid');
 $isPartiallyPaid = ($inv['status'] === 'partially_paid');

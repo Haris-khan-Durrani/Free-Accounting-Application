@@ -29,12 +29,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stUpd->execute([$tokenHash, $expiresAt, $u['id']]);
 
             $tenantId = (int)($u['tenant_id'] ?: 1);
-            $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http');
-            $rawHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
-            $host = preg_replace('/[^a-zA-Z0-9\.\:\-]/', '', $rawHost);
-            $dir = rtrim(dirname($_SERVER['PHP_SELF'] ?? ''), '/\\');
+            $globalConfig = file_exists(__DIR__ . '/config.php') ? require(__DIR__ . '/config.php') : [];
+            $appUrl = $globalConfig['app_url'] ?? getenv('APP_URL') ?? '';
             
-            $appUrl = getenv('APP_URL') ?: "{$scheme}://{$host}{$dir}";
+            if (empty($appUrl)) {
+                $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http');
+                $rawHost = $_SERVER['SERVER_NAME'] ?? ($_SERVER['HTTP_HOST'] ?? 'localhost');
+                $host = preg_replace('/[^a-zA-Z0-9\.\:\-]/', '', $rawHost);
+                $dir = rtrim(dirname($_SERVER['PHP_SELF'] ?? ''), '/\\');
+                $appUrl = "{$scheme}://{$host}{$dir}";
+            }
+            
             $resetUrl = rtrim($appUrl, '/') . "/reset_password.php?token={$rawToken}";
 
             $subject = "Password Reset Request - OneSol";

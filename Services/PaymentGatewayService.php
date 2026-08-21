@@ -38,6 +38,20 @@ class PaymentGatewayService {
     }
 
     /**
+     * Resolve tenant_id server-side from unique integration webhook key
+     */
+    public static function getTenantIdByWebhookKey(PDO $pdo, string $keySettingName, string $webhookKey): int {
+        if (empty($webhookKey)) return 0;
+        try {
+            $st = $pdo->prepare("SELECT tenant_id FROM settings WHERE setting_key = ? AND setting_value = ? LIMIT 1");
+            $st->execute([$keySettingName, $webhookKey]);
+            return (int)($st->fetchColumn() ?: 0);
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    /**
      * Save payment gateway setting value for specific tenant / subaccount
      */
     public static function setSetting(PDO $pdo, string $key, string $value, ?int $tenantId = null): void {

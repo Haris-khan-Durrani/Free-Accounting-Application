@@ -160,21 +160,25 @@ function require_login(): void {
         redirect('login'); 
     }
 
-    // Runtime Session Revocation Check
-    if (isset($_SESSION['session_version'])) {
-        global $pdo;
-        if ($pdo) {
-            try {
-                $stV = $pdo->prepare("SELECT session_version FROM users WHERE id = ?");
-                $stV->execute([(int)$_SESSION['user_id']]);
-                $dbVer = $stV->fetchColumn();
-                if ($dbVer !== false && (int)$_SESSION['session_version'] !== (int)$dbVer) {
-                    session_unset();
-                    session_destroy();
-                    redirect('login');
-                }
-            } catch (\Throwable $t) {}
-        }
+    // Fail-Closed Runtime Session Revocation Check
+    if (!isset($_SESSION['session_version'])) {
+        session_unset();
+        session_destroy();
+        redirect('login');
+    }
+
+    global $pdo;
+    if ($pdo) {
+        try {
+            $stV = $pdo->prepare("SELECT session_version FROM users WHERE id = ?");
+            $stV->execute([(int)$_SESSION['user_id']]);
+            $dbVer = $stV->fetchColumn();
+            if ($dbVer === false || (int)$_SESSION['session_version'] !== (int)$dbVer) {
+                session_unset();
+                session_destroy();
+                redirect('login');
+            }
+        } catch (\Throwable $t) {}
     }
 }
 

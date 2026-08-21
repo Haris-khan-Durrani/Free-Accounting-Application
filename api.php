@@ -73,17 +73,20 @@ switch ($action) {
         $stPlan->execute([$planSlug]);
         $planId = $stPlan->fetchColumn() ?: 2;
 
-        // Generate Code & API Key
+        // Generate Code & Hashed API Key
         $tenantCode = strtolower(preg_replace('/[^a-z0-9]/i', '', $companyName)) . '_' . rand(100, 999);
-        $newApiKey = 'os_' . bin2hex(random_bytes(16));
+        $rawApiKey = 'os_live_' . bin2hex(random_bytes(20));
+        $keyHash = hash('sha256', $rawApiKey);
+        $keyPrefix = substr($rawApiKey, 0, 12);
+        $scopesJson = json_encode(['invoices:read', 'invoices:write', 'clients:read', 'clients:write', 'payments:write', 'reports:read']);
         $trialEndsAt = date('Y-m-d', strtotime("+$trialMonths months"));
 
         try {
             $pdo->beginTransaction();
 
-            // Insert Tenant
-            $stT = $pdo->prepare("INSERT INTO tenants (name, code, currency, status, plan_id, subscription_status, trial_ends_at, api_key, custom_trial_months) VALUES (?, ?, ?, 'active', ?, 'trial', ?, ?, ?)");
-            $stT->execute([$companyName, $tenantCode, $currency, $planId, $trialEndsAt, $newApiKey, $trialMonths]);
+            // Insert Tenant (api_key legacy column set to empty)
+            $stT = $pdo->prepare("INSERT INTO tenants (name, code, currency, status, plan_id, subscription_status, trial_ends_at, api_key, custom_trial_months) VALUES (?, ?, ?, 'active', ?, 'trial', ?, '', ?)");
+            $stT->execute([$companyName, $tenantCode, $currency, $planId, $trialEndsAt, $trialMonths]);
             $tenantId = (int)$pdo->lastInsertId();
 
             // Insert Owner User
@@ -91,6 +94,10 @@ switch ($action) {
             $stU = $pdo->prepare("INSERT INTO users (tenant_id, email, password_hash, role) VALUES (?, ?, ?, 'owner')");
             $stU->execute([$tenantId, $email, $passwordHash]);
             $userId = (int)$pdo->lastInsertId();
+
+            // Insert Hashed API Key in api_keys table
+            $stAk = $pdo->prepare("INSERT INTO api_keys (tenant_id, name, key_hash, key_prefix, scopes, is_active) VALUES (?, 'Primary Provisioned Key', ?, ?, ?, 1)");
+            $stAk->execute([$tenantId, $keyHash, $keyPrefix, $scopesJson]);
 
             // Seed default Chart of Accounts for new tenant
             \Core\Tenant::seedAccounts($pdo, $tenantId);
@@ -101,10 +108,11 @@ switch ($action) {
                 'tenant_id' => $tenantId,
                 'company_name' => $companyName,
                 'owner_email' => $email,
+                'initial_password' => $password,
                 'subscription_status' => 'trial',
                 'trial_months' => $trialMonths,
                 'trial_ends_at' => $trialEndsAt,
-                'tenant_api_key' => $newApiKey
+                'tenant_api_key' => $rawApiKey
             ], 201);
 
         } catch (Exception $e) {

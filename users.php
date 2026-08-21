@@ -168,17 +168,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $role = 'accountant';
         }
 
+        // Check if target user belongs to external workspaces outside caller's accessible tenant set
+        $stExtCheck = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE user_id = ? AND tenant_id NOT IN ($inClause)");
+        $stExtCheck->execute(array_merge([$editUserId], $accessibleTenantIds));
+        $isSharedExternalUser = ((int)$stExtCheck->fetchColumn() > 0);
+
+        // Fetch target user's existing email & primary tenant
+        $stExistingUser = $pdo->prepare("SELECT email, tenant_id FROM users WHERE id = ?");
+        $stExistingUser->execute([$editUserId]);
+        $existingUser = $stExistingUser->fetch();
+
         if (!$editUserId || !$name || !$email) {
             $error = 'User ID, name, and email are required for updating.';
+        } elseif ($isSharedExternalUser && (!empty($password) || strtolower($email) !== strtolower($existingUser['email'] ?? ''))) {
+            $error = 'Security Protection: This user account is shared across external workspaces. Local administrators can update workspace role assignments, but cannot modify global login credentials (email/password). The user must manage their credentials directly.';
         } else {
             try {
-                if (!empty($password) && strlen($password) >= 12) {
-                    $hash = password_hash($password, PASSWORD_DEFAULT);
-                    $stU = $pdo->prepare("UPDATE users SET name = ?, email = ?, role = ?, tenant_id = ?, password_hash = ? WHERE id = ?");
-                    $stU->execute([$name, $email, $role, $primaryTenantId, $hash, $editUserId]);
+                if (!$isSharedExternalUser) {
+                    if (!empty($password) && strlen($password) >= 12) {
+                        $hash = password_hash($password, PASSWORD_DEFAULT);
+                        $stU = $pdo->prepare("UPDATE users SET name = ?, email = ?, role = ?, tenant_id = ?, password_hash = ? WHERE id = ?");
+                        $stU->execute([$name, $email, $role, $primaryTenantId, $hash, $editUserId]);
+                    } else {
+                        $stU = $pdo->prepare("UPDATE users SET name = ?, email = ?, role = ?, tenant_id = ? WHERE id = ?");
+                        $stU->execute([$name, $email, $role, $primaryTenantId, $editUserId]);
+                    }
                 } else {
-                    $stU = $pdo->prepare("UPDATE users SET name = ?, email = ?, role = ?, tenant_id = ? WHERE id = ?");
-                    $stU->execute([$name, $email, $role, $primaryTenantId, $editUserId]);
+                    // Update only local display name if updated
+                    $stU = $pdo->prepare("UPDATE users SET name = ? WHERE id = ?");
+                    $stU->execute([$name, $editUserId]);
                 }
 
                 // Re-sync all assigned workspace locations for this user strictly within accessible tenants
