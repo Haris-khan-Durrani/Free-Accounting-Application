@@ -66,26 +66,33 @@ if ($type === 'vat201') {
 
     foreach ($emiratesList as $em => $box) {
         if ($method === 'cash') {
-            $stEm = $pdo->prepare("
-                SELECT 
-                    COALESCE(SUM(p.amount * (i.subtotal / NULLIF(i.total, 0))), 0) as subtotal,
-                    COALESCE(SUM(p.amount * (i.tax_amount / NULLIF(i.total, 0))), 0) as tax_amount
-                FROM payments p
-                JOIN invoices i ON i.id = p.invoice_id
-                JOIN clients c ON c.id = i.client_id
-                WHERE p.tenant_id = ? AND (c.city LIKE ? OR c.address LIKE ?) AND p.payment_date BETWEEN ? AND ?
-            ");
+            $sqlEm = "SELECT 
+                        COALESCE(SUM(p.amount * (i.subtotal / NULLIF(i.total, 0))), 0) as subtotal,
+                        COALESCE(SUM(p.amount * (i.tax_amount / NULLIF(i.total, 0))), 0) as tax_amount
+                    FROM payments p
+                    JOIN invoices i ON i.id = p.invoice_id
+                    JOIN clients c ON c.id = i.client_id
+                    WHERE p.tenant_id = ? AND (c.city LIKE ? OR c.address LIKE ?) AND p.payment_date BETWEEN ? AND ?";
+            $paramsEm = [$tid, "%$em%", "%$em%", $startDate, $endDate];
+            if ($clientId > 0) {
+                $sqlEm .= " AND i.client_id = ?";
+                $paramsEm[] = $clientId;
+            }
         } else {
-            $stEm = $pdo->prepare("
-                SELECT 
-                    COALESCE(SUM(i.subtotal), 0) as subtotal,
-                    COALESCE(SUM(i.tax_amount), 0) as tax_amount
-                FROM invoices i
-                JOIN clients c ON c.id = i.client_id
-                WHERE i.tenant_id = ? AND i.status != 'cancelled' AND (c.city LIKE ? OR c.address LIKE ?) AND i.invoice_date BETWEEN ? AND ?
-            ");
+            $sqlEm = "SELECT 
+                        COALESCE(SUM(i.subtotal), 0) as subtotal,
+                        COALESCE(SUM(i.tax_amount), 0) as tax_amount
+                    FROM invoices i
+                    JOIN clients c ON c.id = i.client_id
+                    WHERE i.tenant_id = ? AND i.status != 'cancelled' AND (c.city LIKE ? OR c.address LIKE ?) AND i.invoice_date BETWEEN ? AND ?";
+            $paramsEm = [$tid, "%$em%", "%$em%", $startDate, $endDate];
+            if ($clientId > 0) {
+                $sqlEm .= " AND i.client_id = ?";
+                $paramsEm[] = $clientId;
+            }
         }
-        $stEm->execute([$tid, "%$em%", "%$em%", $startDate, $endDate]);
+        $stEm = $pdo->prepare($sqlEm);
+        $stEm->execute($paramsEm);
         $r = $stEm->fetch();
         $sub = (float)$r['subtotal'];
         $vat = (float)$r['tax_amount'];
@@ -95,8 +102,18 @@ if ($type === 'vat201') {
     }
 
     // Recoverable Expense VAT (Box 9)
-    $stExp = $pdo->prepare("SELECT COALESCE(SUM(subtotal), 0) subtotal, COALESCE(SUM(tax_amount), 0) tax FROM expenses WHERE tenant_id = ? AND expense_date BETWEEN ? AND ?");
-    $stExp->execute([$tid, $startDate, $endDate]);
+    $sqlExp = "SELECT COALESCE(SUM(subtotal), 0) subtotal, COALESCE(SUM(tax_amount), 0) tax FROM expenses WHERE tenant_id = ? AND expense_date BETWEEN ? AND ?";
+    $paramsExp = [$tid, $startDate, $endDate];
+    if ($clientId > 0) {
+        $sqlExp .= " AND client_id = ?";
+        $paramsExp[] = $clientId;
+    }
+    if ($categoryId > 0) {
+        $sqlExp .= " AND category_id = ?";
+        $paramsExp[] = $categoryId;
+    }
+    $stExp = $pdo->prepare($sqlExp);
+    $stExp->execute($paramsExp);
     $expRow = $stExp->fetch();
     $expSubtotal = (float)$expRow['subtotal'];
     $expVat = (float)$expRow['tax'];
@@ -188,18 +205,40 @@ if ($type === 'vat201') {
     $subtitle = 'Income Statement Period: ' . date('d M Y', strtotime($startDate)) . ' to ' . date('d M Y', strtotime($endDate));
 
     // Revenue
-    $stRev = $pdo->prepare("SELECT SUM(total) total FROM invoices WHERE tenant_id = ? AND status != 'cancelled' AND invoice_date BETWEEN ? AND ?");
-    $stRev->execute([$tid, $startDate, $endDate]);
+    $sqlRev = "SELECT SUM(total) total FROM invoices WHERE tenant_id = ? AND status != 'cancelled' AND invoice_date BETWEEN ? AND ?";
+    $paramsRev = [$tid, $startDate, $endDate];
+    if ($clientId > 0) {
+        $sqlRev .= " AND client_id = ?";
+        $paramsRev[] = $clientId;
+    }
+    $stRev = $pdo->prepare($sqlRev);
+    $stRev->execute($paramsRev);
     $grossRev = (float)($stRev->fetchColumn() ?? 0);
 
     // Cash Collected
-    $stPay = $pdo->prepare("SELECT SUM(amount) total FROM payments WHERE tenant_id = ? AND payment_date BETWEEN ? AND ?");
-    $stPay->execute([$tid, $startDate, $endDate]);
+    $sqlPay = "SELECT SUM(p.amount) total FROM payments p JOIN invoices i ON i.id = p.invoice_id WHERE p.tenant_id = ? AND p.payment_date BETWEEN ? AND ?";
+    $paramsPay = [$tid, $startDate, $endDate];
+    if ($clientId > 0) {
+        $sqlPay .= " AND i.client_id = ?";
+        $paramsPay[] = $clientId;
+    }
+    $stPay = $pdo->prepare($sqlPay);
+    $stPay->execute($paramsPay);
     $cashCollected = (float)($stPay->fetchColumn() ?? 0);
 
     // Expenses
-    $stExp = $pdo->prepare("SELECT SUM(total) total FROM expenses WHERE tenant_id = ? AND expense_date BETWEEN ? AND ?");
-    $stExp->execute([$tid, $startDate, $endDate]);
+    $sqlExp = "SELECT SUM(total) total FROM expenses WHERE tenant_id = ? AND expense_date BETWEEN ? AND ?";
+    $paramsExp = [$tid, $startDate, $endDate];
+    if ($clientId > 0) {
+        $sqlExp .= " AND client_id = ?";
+        $paramsExp[] = $clientId;
+    }
+    if ($categoryId > 0) {
+        $sqlExp .= " AND category_id = ?";
+        $paramsExp[] = $categoryId;
+    }
+    $stExp = $pdo->prepare($sqlExp);
+    $stExp->execute($paramsExp);
     $totalExp = (float)($stExp->fetchColumn() ?? 0);
 
     $netProfit = $grossRev - $totalExp;
