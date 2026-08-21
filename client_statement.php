@@ -97,9 +97,9 @@ page_start('Statement of Account');
     </div>
     <?php if ($client): ?>
         <div class="mt-4 sm:mt-0 flex space-x-3">
-            <button onclick="window.print()" class="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 shadow-sm transition-all flex items-center gap-2">
-                <i class="fa-solid fa-print"></i> Print Statement
-            </button>
+            <a href="report_pdf.php?type=client_statement&client_id=<?=$clientId?>&start_date=<?=urlencode($startDate)?>&end_date=<?=urlencode($endDate)?>" target="_blank" class="px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 shadow-sm transition-all flex items-center gap-2">
+                <i class="fa-solid fa-file-pdf text-amber-400"></i> Print Statement (PDF)
+            </a>
         </div>
     <?php endif; ?>
 </div>

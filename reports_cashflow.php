@@ -105,10 +105,10 @@ page_start('Cash Flow Statement');
             <i class="fa-solid fa-file-csv text-emerald-600 text-sm"></i>
             <span>Export CSV</span>
         </a>
-        <button onclick="window.print()" class="inline-flex items-center px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-md transition-all space-x-2 border border-slate-800">
-            <i class="fa-solid fa-print text-amber-400 text-sm"></i>
+        <a href="report_pdf.php?type=pnl&start_date=<?=urlencode($startDate)?>&end_date=<?=urlencode($endDate)?><?=$clientId?'&client_id='.$clientId:''?>" target="_blank" class="inline-flex items-center px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-md transition-all space-x-2 border border-slate-800">
+            <i class="fa-solid fa-file-pdf text-amber-400 text-sm"></i>
             <span>Print / Export PDF</span>
-        </button>
+        </a>
     </div>
 </div>
 

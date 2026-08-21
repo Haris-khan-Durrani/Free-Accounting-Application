@@ -67,10 +67,10 @@ page_start('UAE Corporate Tax Estimator');
         </p>
     </div>
     <div class="flex flex-wrap items-center gap-3 shrink-0">
-        <button onclick="window.print()" class="inline-flex items-center px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-md transition-all space-x-2 border border-slate-800">
-            <i class="fa-solid fa-print text-amber-400 text-sm"></i>
+        <a href="report_pdf.php?type=pnl&start_date=<?=$taxYear?>-01-01&end_date=<?=$taxYear?>-12-31" target="_blank" class="inline-flex items-center px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-md transition-all space-x-2 border border-slate-800">
+            <i class="fa-solid fa-file-pdf text-amber-400 text-sm"></i>
             <span>Print Tax Assessment PDF</span>
-        </button>
+        </a>
     </div>
 </div>
 
