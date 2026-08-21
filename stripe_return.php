@@ -72,8 +72,12 @@ function record_instant_payment(PDO $pdo, array &$inv, string $gateway, string $
             $stUpd = $pdo->prepare("UPDATE invoices SET paid_amount = ?, status = ? WHERE id = ? AND tenant_id = ?");
             $stUpd->execute([$newPaid, $newStatus, $invId, $tid]);
 
-            $acctService = new \Services\AccountingService($pdo, $tid);
-            $acctService->postPaymentReceived($paymentId);
+            try {
+                $acctService = new \Services\AccountingService($pdo, $tid);
+                $acctService->postPaymentReceived($paymentId);
+            } catch (Throwable $acctEx) {
+                error_log("Ledger post notice: " . $acctEx->getMessage());
+            }
 
             log_audit($pdo, "{$gateway}_return_payment", 'payments', $paymentId, "Instant Return verified payment {$inv['currency']} $amount via $gateway for Invoice #{$inv['invoice_number']}");
         }

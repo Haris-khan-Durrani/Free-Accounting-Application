@@ -109,8 +109,12 @@ if ($eventType === 'checkout.session.completed' || $eventType === 'payment_inten
                     $stUpd->execute([$newPaid, $newStatus, $invId, $tid]);
 
                     // Post to General Ledger using AccountingService
-                    $acctService = new \Services\AccountingService($pdo, $tid);
-                    $acctService->postPaymentReceived($paymentId);
+                    try {
+                        $acctService = new \Services\AccountingService($pdo, $tid);
+                        $acctService->postPaymentReceived($paymentId);
+                    } catch (\Throwable $acctEx) {
+                        error_log("Stripe Webhook ledger post notice: " . $acctEx->getMessage());
+                    }
 
                     log_audit($pdo, 'stripe_webhook_payment', 'payments', $paymentId, "Stripe Webhook synced payment {$inv['currency']} $amount for Invoice #{$inv['invoice_number']}");
                 }

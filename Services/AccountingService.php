@@ -83,8 +83,12 @@ class AccountingService {
         $entryNumber = 'JE-INV-' . $inv['invoice_number'];
         $reference = 'INV-' . $inv['id'];
 
+        $ownsTx = false;
         try {
-            $this->pdo->beginTransaction();
+            if (!$this->pdo->inTransaction()) {
+                $this->pdo->beginTransaction();
+                $ownsTx = true;
+            }
 
             $this->reverseExistingJournal($reference, 'Invoice updated');
 
@@ -112,9 +116,11 @@ class AccountingService {
                 $stItem->execute([$jeId, $taxAccount['id'], 0, $inv['tax_amount'], 'Output VAT / Tax Collected']);
             }
 
-            $this->pdo->commit();
+            if ($ownsTx && $this->pdo->inTransaction()) {
+                $this->pdo->commit();
+            }
         } catch (Throwable $e) {
-            if ($this->pdo->inTransaction()) {
+            if ($ownsTx && $this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
             throw $e;
@@ -135,8 +141,12 @@ class AccountingService {
         $entryNumber = 'JE-PAY-' . $pay['id'];
         $reference = 'PAY-' . $pay['id'];
 
+        $ownsTx = false;
         try {
-            $this->pdo->beginTransaction();
+            if (!$this->pdo->inTransaction()) {
+                $this->pdo->beginTransaction();
+                $ownsTx = true;
+            }
 
             $this->reverseExistingJournal($reference, 'Payment adjustment');
 
@@ -156,9 +166,11 @@ class AccountingService {
             // Credit Accounts Receivable for payment amount
             $stItem->execute([$jeId, $arAccount['id'], 0, $pay['amount'], 'Clearing AR for ' . $pay['invoice_number']]);
 
-            $this->pdo->commit();
+            if ($ownsTx && $this->pdo->inTransaction()) {
+                $this->pdo->commit();
+            }
         } catch (Throwable $e) {
-            if ($this->pdo->inTransaction()) {
+            if ($ownsTx && $this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
             throw $e;
@@ -179,8 +191,12 @@ class AccountingService {
         $entryNumber = 'JE-EXP-' . $exp['id'];
         $reference = 'EXP-' . $exp['id'];
 
+        $ownsTx = false;
         try {
-            $this->pdo->beginTransaction();
+            if (!$this->pdo->inTransaction()) {
+                $this->pdo->beginTransaction();
+                $ownsTx = true;
+            }
 
             $this->reverseExistingJournal($reference, 'Expense updated');
 
@@ -200,9 +216,11 @@ class AccountingService {
             // Credit Bank / Cash
             $stItem->execute([$jeId, $bankAccount['id'], 0, $exp['total'], 'Cash Outflow']);
 
-            $this->pdo->commit();
+            if ($ownsTx && $this->pdo->inTransaction()) {
+                $this->pdo->commit();
+            }
         } catch (Throwable $e) {
-            if ($this->pdo->inTransaction()) {
+            if ($ownsTx && $this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
             }
             throw $e;
