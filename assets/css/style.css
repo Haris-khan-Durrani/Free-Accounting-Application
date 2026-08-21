@@ -19,6 +19,10 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Hide Scrollbar Track Utility */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 body {
   background: var(--bg-app);
   color: var(--text-main);

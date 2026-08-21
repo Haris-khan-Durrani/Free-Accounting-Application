@@ -58,8 +58,8 @@ function page_start(string $title): void {
         ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30 font-black' 
         : 'text-slate-300 hover:text-white hover:bg-slate-800/70 font-semibold';
 
-    echo '<header class="no-print bg-slate-950/95 backdrop-blur-xl text-white sticky top-0 z-40 border-b border-slate-800/80 shadow-2xl overflow-x-clip">';
-    echo '<div class="w-full max-w-[1700px] mx-auto px-3 sm:px-6 flex items-center justify-between h-16">';
+    echo '<header class="no-print bg-slate-950/95 backdrop-blur-xl text-white sticky top-0 z-40 border-b border-slate-800/80 shadow-2xl">';
+    echo '<div class="w-full max-w-full mx-auto px-3 sm:px-5 flex items-center justify-between h-16 space-x-2">';
     
     // Left: Brand Logo & Workspace Switcher
     echo '<div class="flex items-center space-x-2.5 sm:space-x-3 flex-shrink-0 mr-2 lg:mr-4">';
@@ -131,7 +131,7 @@ function page_start(string $title): void {
 
     // Right: Desktop Navigation Links
     if (!empty($_SESSION['user_id'])) {
-        echo '<nav class="hidden lg:flex items-center space-x-1 sm:space-x-1.5 whitespace-nowrap flex-shrink-0">';
+        echo '<nav class="hidden lg:flex items-center space-x-1 sm:space-x-1.5 whitespace-nowrap overflow-x-auto no-scrollbar flex-shrink max-w-full py-1">';
         echo '<a href="index" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['index.php', 'index']) . '"><i class="fa-solid fa-chart-pie text-blue-400 text-2xs"></i><span>Dashboard</span></a>';
         echo '<a href="invoices" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['invoices.php', 'invoices', 'invoice_view.php']) . '"><i class="fa-solid fa-file-invoice text-amber-400 text-2xs"></i><span>Invoices</span></a>';
         echo '<a href="clients" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['clients.php', 'clients', 'client_import.php']) . '"><i class="fa-solid fa-users text-emerald-400 text-2xs"></i><span>Clients</span></a>';
