@@ -88,7 +88,8 @@ if (php_sapi_name() === 'cli' || getenv('RUN_MIGRATIONS') === 'true') {
     try { $pdo->exec("ALTER TABLE tenants ADD COLUMN from_email VARCHAR(255) NULL"); } catch (Throwable $t) {}
     try { $pdo->exec("ALTER TABLE tenants ADD COLUMN from_name VARCHAR(255) NULL"); } catch (Throwable $t) {}
     try { $pdo->exec("ALTER TABLE users ADD COLUMN two_factor_enabled TINYINT(1) NOT NULL DEFAULT 0"); } catch (Throwable $t) {}
-    try { $pdo->exec("ALTER TABLE users ADD COLUMN otp_code VARCHAR(10) NULL"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN otp_code VARCHAR(64) NULL"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE users MODIFY COLUMN otp_code VARCHAR(64) NULL"); } catch (Throwable $t) {}
     try { $pdo->exec("ALTER TABLE users ADD COLUMN otp_expires_at DATETIME NULL"); } catch (Throwable $t) {}
     try { $pdo->exec("ALTER TABLE users ADD COLUMN reset_token VARCHAR(64) NULL"); } catch (Throwable $t) {}
     try { $pdo->exec("ALTER TABLE users ADD COLUMN reset_token_expires_at DATETIME NULL"); } catch (Throwable $t) {}

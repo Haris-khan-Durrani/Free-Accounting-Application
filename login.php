@@ -43,6 +43,9 @@ if (\Core\SecurityThrottle::isLockedOut()) {
             $otpHash = hash('sha256', $otpCode);
             $otpExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
 
+            // Auto-expand otp_code column to VARCHAR(64) if existing live database column is VARCHAR(10)
+            try { $pdo->exec("ALTER TABLE users MODIFY COLUMN otp_code VARCHAR(64) NULL"); } catch (Throwable $t) {}
+
             $stOtp = $pdo->prepare("UPDATE users SET otp_code = ?, otp_expires_at = ? WHERE id = ?");
             $stOtp->execute([$otpHash, $otpExpires, $u['id']]);
 

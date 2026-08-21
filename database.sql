@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS users (
   role VARCHAR(50) NOT NULL DEFAULT 'owner',
   phone VARCHAR(60) NULL,
   two_factor_enabled TINYINT(1) NOT NULL DEFAULT 0,
-  otp_code VARCHAR(10) NULL,
+  otp_code VARCHAR(64) NULL,
   otp_expires_at DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_users_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE SET NULL

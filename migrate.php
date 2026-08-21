@@ -23,11 +23,11 @@ function run_migrations(PDO $pdo): string {
 
     // 2FA Security Columns on Users Table
     ensure_column($pdo, 'users', 'two_factor_enabled', 'TINYINT(1) NOT NULL DEFAULT 0 AFTER phone');
-    ensure_column($pdo, 'users', 'otp_code', 'VARCHAR(10) NULL AFTER two_factor_enabled');
+    ensure_column($pdo, 'users', 'otp_code', 'VARCHAR(64) NULL AFTER two_factor_enabled');
     ensure_column($pdo, 'users', 'otp_expires_at', 'DATETIME NULL AFTER otp_code');
 
     ensure_column($pdo, 'clients', 'tenant_id', 'INT UNSIGNED NOT NULL DEFAULT 1 AFTER id');
-    ensure_column($pdo, 'clients', 'otp_code', 'VARCHAR(10) NULL AFTER currency');
+    ensure_column($pdo, 'clients', 'otp_code', 'VARCHAR(64) NULL AFTER currency');
     ensure_column($pdo, 'clients', 'otp_expires_at', 'DATETIME NULL AFTER otp_code');
     ensure_column($pdo, 'invoices', 'tenant_id', 'INT UNSIGNED NOT NULL DEFAULT 1 AFTER id');
     ensure_column($pdo, 'invoices', 'paid_amount', 'DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER tax_amount');

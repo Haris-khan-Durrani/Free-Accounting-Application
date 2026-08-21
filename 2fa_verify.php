@@ -84,6 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $otpHash = hash('sha256', $otpCode);
         $otpExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
 
+        try { $pdo->exec("ALTER TABLE users MODIFY COLUMN otp_code VARCHAR(64) NULL"); } catch (Throwable $t) {}
+
         $stOtp = $pdo->prepare("UPDATE users SET otp_code = ?, otp_expires_at = ? WHERE id = ?");
         $stOtp->execute([$otpHash, $otpExpires, $pendingUserId]);
 
