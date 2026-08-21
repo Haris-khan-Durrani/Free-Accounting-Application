@@ -707,7 +707,10 @@ page_start('Team & Permissions');
                 <div>
                     <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Permission Role *</label>
                     <select name="role" class="w-full rounded-xl border border-slate-300 bg-slate-50/80 px-3.5 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
-                        <option value="admin">Admin (Full Access)</option>
+                        <?php if ($isMasterSuperAdmin): ?>
+                            <option value="owner">Owner (Full System Access)</option>
+                        <?php endif; ?>
+                        <option value="admin">Admin (Workspace Admin)</option>
                         <option value="accountant" selected>Accountant (Invoices & Reports)</option>
                         <option value="sales">Sales (Proposals & Invoices)</option>
                         <option value="viewer">Viewer (Read Only)</option>
@@ -822,7 +825,10 @@ page_start('Team & Permissions');
                 <div>
                     <label class="block text-2xs font-extrabold text-slate-700 uppercase tracking-wider mb-1.5">Permission Role *</label>
                     <select name="role" id="edit-user-role" class="w-full rounded-xl border border-slate-300 bg-slate-50/80 px-3.5 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none">
-                        <option value="admin">Admin (Full Access)</option>
+                        <?php if ($isMasterSuperAdmin): ?>
+                            <option value="owner">Owner (Full System Access)</option>
+                        <?php endif; ?>
+                        <option value="admin">Admin (Workspace Admin)</option>
                         <option value="accountant">Accountant (Invoices & Reports)</option>
                         <option value="sales">Sales (Proposals & Invoices)</option>
                         <option value="viewer">Viewer (Read Only)</option>
