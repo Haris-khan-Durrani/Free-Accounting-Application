@@ -52,7 +52,7 @@ class Mailer {
                     self::$lastError = $eSmtp->getMessage();
                 }
 
-                error_log("Custom SMTP dispatch failed for tenant #{$tenantId}: " . self::$lastError . " - Attempting native PHP mail()");
+                error_log("Custom SMTP dispatch failed for tenant #{$tenantId} - Attempting native PHP mail()");
             }
         }
 

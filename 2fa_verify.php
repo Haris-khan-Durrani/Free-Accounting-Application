@@ -23,10 +23,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $enteredOtp = trim($_POST['otp_code'] ?? '');
         $enteredHash = hash('sha256', $enteredOtp);
 
-        // Attempt counter tracking
-        $_SESSION['2fa_attempts'] = ($_SESSION['2fa_attempts'] ?? 0) + 1;
+        // Attempt counter tracking stored in DB (resists session reset)
+        try { $pdo->exec("ALTER TABLE users ADD COLUMN otp_attempts INT UNSIGNED NOT NULL DEFAULT 0"); } catch (\Throwable $t) {}
 
-        if ($_SESSION['2fa_attempts'] > 5) {
+        $stInc = $pdo->prepare("UPDATE users SET otp_attempts = COALESCE(otp_attempts, 0) + 1 WHERE id = ?");
+        $stInc->execute([$user['id']]);
+
+        $stCheck = $pdo->prepare("SELECT otp_attempts FROM users WHERE id = ?");
+        $stCheck->execute([$user['id']]);
+        $currentAttempts = (int)$stCheck->fetchColumn();
+
+        if ($currentAttempts > 5) {
+            $pdo->prepare("UPDATE users SET otp_code = NULL, otp_expires_at = NULL, otp_attempts = 0 WHERE id = ?")->execute([$user['id']]);
             unset($_SESSION['2fa_pending_user_id'], $_SESSION['2fa_attempts']);
             log_audit($pdo, '2fa_lockout', 'users', $user['id'], "User {$user['email']} exceeded maximum 2FA verification attempts.");
             flash('error', 'Too many failed 2FA verification attempts. Account verification reset for security. Please sign in again.');
@@ -41,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($isValidOtp && strtotime($user['otp_expires_at']) >= time()) {
             // Clear OTP and attempt counters after successful verification
-            $pdo->prepare("UPDATE users SET otp_code = NULL, otp_expires_at = NULL WHERE id = ?")->execute([$user['id']]);
+            $pdo->prepare("UPDATE users SET otp_code = NULL, otp_expires_at = NULL, otp_attempts = 0 WHERE id = ?")->execute([$user['id']]);
             unset($_SESSION['2fa_attempts'], $_SESSION['2fa_last_resend']);
 
             // Resolve workspace role
@@ -66,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', 'Two-Factor Security Verification Complete! Welcome back.');
             redirect('index');
         } else {
-            $attemptsLeft = max(0, 5 - $_SESSION['2fa_attempts']);
+            $attemptsLeft = max(0, 5 - $currentAttempts);
             $error = "Invalid or expired 6-digit security code. {$attemptsLeft} attempt(s) remaining before challenge reset.";
         }
     }

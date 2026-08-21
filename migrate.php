@@ -2,6 +2,10 @@
 // Automatic Schema Migrator and Seeder
 require_once __DIR__ . '/bootstrap.php';
 
+if (php_sapi_name() !== 'cli') {
+    require_platform_admin();
+}
+
 function ensure_column(PDO $pdo, string $table, string $column, string $definition): void {
     try {
         $st = $pdo->query("SHOW COLUMNS FROM `{$table}` LIKE '{$column}'");
@@ -25,6 +29,7 @@ function run_migrations(PDO $pdo): string {
     ensure_column($pdo, 'users', 'two_factor_enabled', 'TINYINT(1) NOT NULL DEFAULT 0 AFTER phone');
     ensure_column($pdo, 'users', 'otp_code', 'VARCHAR(64) NULL AFTER two_factor_enabled');
     ensure_column($pdo, 'users', 'otp_expires_at', 'DATETIME NULL AFTER otp_code');
+    ensure_column($pdo, 'users', 'otp_attempts', 'INT UNSIGNED NOT NULL DEFAULT 0 AFTER otp_expires_at');
 
     ensure_column($pdo, 'clients', 'tenant_id', 'INT UNSIGNED NOT NULL DEFAULT 1 AFTER id');
     ensure_column($pdo, 'clients', 'otp_code', 'VARCHAR(64) NULL AFTER currency');

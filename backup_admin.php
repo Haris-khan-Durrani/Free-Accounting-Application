@@ -11,7 +11,8 @@ $isSuperAdmin = true;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'download') {
     verify_csrf();
 
-    $tables = ['tenants', 'users', 'clients', 'invoices', 'invoice_items', 'payments', 'expenses', 'expense_categories', 'quotes', 'quote_items', 'journal_entries', 'audit_logs', 'api_keys'];
+    $allowedTables = ['tenants', 'users', 'clients', 'invoices', 'invoice_items', 'payments', 'expenses', 'expense_categories', 'quotes', 'quote_items', 'journal_entries', 'audit_logs', 'api_keys'];
+    $tables = array_values(array_intersect($tables, $allowedTables));
     
     $sqlDump = "-- OneSol Invoice Manager - Database Backup Dump\n";
     $sqlDump .= "-- Exported on: " . date('Y-m-d H:i:s') . "\n";

@@ -9,68 +9,74 @@ $message = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    verify_csrf();
-    $email = trim($_POST['email'] ?? '');
-
-    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = 'Please provide a valid email address.';
+    if (\Core\SecurityThrottle::isLockedOut('forgot_pw')) {
+        $remainingMins = ceil(\Core\SecurityThrottle::getRemainingLockoutTime('forgot_pw') / 60);
+        $error = "Too many password reset requests. Please try again in {$remainingMins} minute(s).";
     } else {
-        // Find user by email
-        $st = $pdo->prepare("SELECT id, name, email, tenant_id FROM users WHERE email = ? LIMIT 1");
-        $st->execute([$email]);
-        $u = $st->fetch();
+        verify_csrf();
+        $email = trim($_POST['email'] ?? '');
+        \Core\SecurityThrottle::recordFailedAttempt('forgot_pw');
 
-        if ($u) {
-            $rawToken = bin2hex(random_bytes(32));
-            $tokenHash = hash('sha256', $rawToken);
-            $expiresAt = date('Y-m-d H:i:s', strtotime('+1 hour'));
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error = 'Please provide a valid email address.';
+        } else {
+            // Find user by email
+            $st = $pdo->prepare("SELECT id, name, email, tenant_id FROM users WHERE email = ? LIMIT 1");
+            $st->execute([$email]);
+            $u = $st->fetch();
 
-            $stUpd = $pdo->prepare("UPDATE users SET reset_token = ?, reset_token_expires_at = ? WHERE id = ?");
-            $stUpd->execute([$tokenHash, $expiresAt, $u['id']]);
+            if ($u) {
+                $rawToken = bin2hex(random_bytes(32));
+                $tokenHash = hash('sha256', $rawToken);
+                $expiresAt = date('Y-m-d H:i:s', strtotime('+1 hour'));
 
-            $tenantId = (int)($u['tenant_id'] ?: 1);
-            $globalConfig = file_exists(__DIR__ . '/config.php') ? require(__DIR__ . '/config.php') : [];
-            $appUrl = $globalConfig['app_url'] ?? getenv('APP_URL') ?? '';
-            
-            if (empty($appUrl)) {
-                $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http');
-                $rawHost = $_SERVER['SERVER_NAME'] ?? ($_SERVER['HTTP_HOST'] ?? 'localhost');
-                $host = preg_replace('/[^a-zA-Z0-9\.\:\-]/', '', $rawHost);
-                $dir = rtrim(dirname($_SERVER['PHP_SELF'] ?? ''), '/\\');
-                $appUrl = "{$scheme}://{$host}{$dir}";
+                $stUpd = $pdo->prepare("UPDATE users SET reset_token = ?, reset_token_expires_at = ? WHERE id = ?");
+                $stUpd->execute([$tokenHash, $expiresAt, $u['id']]);
+
+                $tenantId = (int)($u['tenant_id'] ?: 1);
+                $globalConfig = file_exists(__DIR__ . '/config.php') ? require(__DIR__ . '/config.php') : [];
+                $appUrl = $globalConfig['app_url'] ?? getenv('APP_URL') ?? '';
+                
+                if (empty($appUrl)) {
+                    $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http');
+                    $rawHost = $_SERVER['SERVER_NAME'] ?? ($_SERVER['HTTP_HOST'] ?? 'localhost');
+                    $host = preg_replace('/[^a-zA-Z0-9\.\:\-]/', '', $rawHost);
+                    $dir = rtrim(dirname($_SERVER['PHP_SELF'] ?? ''), '/\\');
+                    $appUrl = "{$scheme}://{$host}{$dir}";
+                }
+                
+                $resetUrl = rtrim($appUrl, '/') . "/reset_password.php?token={$rawToken}";
+
+                $subject = "Password Reset Request - OneSol";
+                $htmlBody = "
+                    <div style='font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;'>
+                        <div style='text-align: center; margin-bottom: 24px;'>
+                            <h2 style='color: #0f172a; margin: 0 0 8px 0; font-size: 22px; font-weight: 800;'>Reset Your Password</h2>
+                            <p style='color: #64748b; font-size: 13px; margin: 0;'>OneSol Invoice Manager Security System</p>
+                        </div>
+                        <p style='color: #334155; font-size: 14px; line-height: 1.5;'>Hello <strong>" . e($u['name']) . "</strong>,</p>
+                        <p style='color: #475569; font-size: 14px; line-height: 1.5;'>We received a request to reset the password for your account (<strong>" . e($u['email']) . "</strong>). Click the button below to set a new password:</p>
+                        
+                        <div style='text-align: center; margin: 28px 0;'>
+                            <a href='" . e($resetUrl) . "' style='display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; font-weight: 800; font-size: 14px; padding: 12px 28px; border-radius: 12px; shadow: 0 4px 6px -1px rgba(0,0,0,0.1);'>Reset Password Now</a>
+                        </div>
+                        
+                        <p style='color: #64748b; font-size: 12px; line-height: 1.5;'>If the button above does not work, copy and paste the following link into your browser:</p>
+                        <p style='word-break: break-all; font-size: 11px; color: #2563eb; background: #f8fafc; padding: 10px; border-radius: 8px; font-family: monospace;'>" . e($resetUrl) . "</p>
+                        
+                        <hr style='border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;' />
+                        <p style='color: #94a3b8; font-size: 11px; margin: 0;'>This link is valid for <strong>1 hour</strong>. If you did not request a password reset, you can safely ignore this email.</p>
+                    </div>
+                ";
+
+                \Services\Mailer::send($pdo, $tenantId, $u['email'], $subject, $htmlBody);
+                log_audit($pdo, 'password_reset_request', 'users', $u['id'], "Password reset link requested for email {$u['email']}");
             }
-            
-            $resetUrl = rtrim($appUrl, '/') . "/reset_password.php?token={$rawToken}";
 
-            $subject = "Password Reset Request - OneSol";
-            $htmlBody = "
-                <div style='font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;'>
-                    <div style='text-align: center; margin-bottom: 24px;'>
-                        <h2 style='color: #0f172a; margin: 0 0 8px 0; font-size: 22px; font-weight: 800;'>Reset Your Password</h2>
-                        <p style='color: #64748b; font-size: 13px; margin: 0;'>OneSol Invoice Manager Security System</p>
-                    </div>
-                    <p style='color: #334155; font-size: 14px; line-height: 1.5;'>Hello <strong>" . e($u['name']) . "</strong>,</p>
-                    <p style='color: #475569; font-size: 14px; line-height: 1.5;'>We received a request to reset the password for your account (<strong>" . e($u['email']) . "</strong>). Click the button below to set a new password:</p>
-                    
-                    <div style='text-align: center; margin: 28px 0;'>
-                        <a href='" . e($resetUrl) . "' style='display: inline-block; background: #d97706; color: #ffffff; text-decoration: none; font-weight: 800; font-size: 14px; padding: 12px 28px; border-radius: 12px; shadow: 0 4px 6px -1px rgba(0,0,0,0.1);'>Reset Password Now</a>
-                    </div>
-                    
-                    <p style='color: #64748b; font-size: 12px; line-height: 1.5;'>If the button above does not work, copy and paste the following link into your browser:</p>
-                    <p style='word-break: break-all; font-size: 11px; color: #2563eb; background: #f8fafc; padding: 10px; border-radius: 8px; font-family: monospace;'>" . e($resetUrl) . "</p>
-                    
-                    <hr style='border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;' />
-                    <p style='color: #94a3b8; font-size: 11px; margin: 0;'>This link is valid for <strong>1 hour</strong>. If you did not request a password reset, you can safely ignore this email.</p>
-                </div>
-            ";
-
-            \Services\Mailer::send($pdo, $tenantId, $u['email'], $subject, $htmlBody);
-            log_audit($pdo, 'password_reset_request', 'users', $u['id'], "Password reset link requested for email {$u['email']}");
+            // Generic response to prevent email enumeration
+            flash('success', 'If an account with that email exists, a password reset link has been sent to your inbox.');
+            redirect('login');
         }
-
-        // Generic response to prevent email enumeration
-        flash('success', 'If an account with that email exists, a password reset link has been sent to your inbox.');
-        redirect('login');
     }
 }
 

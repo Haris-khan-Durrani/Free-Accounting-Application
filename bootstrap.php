@@ -4,7 +4,9 @@ if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.use_only_cookies', '1');
     ini_set('session.use_strict_mode', '1');
     ini_set('session.cookie_samesite', 'Lax');
-    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+               (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https');
+    if ($isHttps || getenv('APP_ENV') === 'production') {
         ini_set('session.cookie_secure', '1');
     }
     session_start();
@@ -154,6 +156,8 @@ function verify_csrf(): void {
         http_response_code(419); 
         exit('Invalid CSRF token.');
     }
+    // Rotate token after successful validation to prevent token replay
+    $_SESSION['csrf'] = bin2hex(random_bytes(24));
 }
 
 function require_login(): void { 

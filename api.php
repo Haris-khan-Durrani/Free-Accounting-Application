@@ -108,7 +108,6 @@ switch ($action) {
                 'tenant_id' => $tenantId,
                 'company_name' => $companyName,
                 'owner_email' => $email,
-                'initial_password' => $password,
                 'subscription_status' => 'trial',
                 'trial_months' => $trialMonths,
                 'trial_ends_at' => $trialEndsAt,
@@ -117,7 +116,8 @@ switch ($action) {
 
         } catch (Exception $e) {
             $pdo->rollBack();
-            api_response(false, 'Failed to onboard tenant: ' . $e->getMessage(), [], 500);
+            error_log("API create_tenant error: " . $e->getMessage());
+            api_response(false, 'Failed to onboard tenant due to an internal error.', [], 500);
         }
         break;
 
@@ -205,7 +205,8 @@ switch ($action) {
             ], 201);
         } catch (Exception $e) {
             $pdo->rollBack();
-            api_response(false, 'Failed to create invoice: ' . $e->getMessage(), [], 500);
+            error_log("API create_invoice error: " . $e->getMessage());
+            api_response(false, 'Failed to create invoice due to an internal error.', [], 500);
         }
         break;
 

@@ -16,7 +16,7 @@ class SecurityThrottle {
     private static function getIpKey(?string $identifier = null): string {
         $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
         $userIdentifier = strtolower(trim($_POST['email'] ?? $_POST['username'] ?? $identifier ?? ''));
-        return md5('login_throttle_' . $ip . '_' . $userIdentifier);
+        return hash('sha256', 'login_throttle_' . $ip . '_' . $userIdentifier);
     }
 
     public static function isLockedOut(?string $identifier = null): bool {
@@ -69,7 +69,7 @@ class SecurityThrottle {
      * General purpose sliding window rate-limiter for APIs and webhooks.
      */
     public static function checkRateLimit(string $key, int $maxAttempts = 120, int $decaySeconds = 60): bool {
-        $file = self::getStorageDir() . '/' . md5('ratelimit_' . $key) . '.json';
+        $file = self::getStorageDir() . '/' . hash('sha256', 'ratelimit_' . $key) . '.json';
         $now = time();
 
         $data = file_exists($file) ? json_decode(@file_get_contents($file), true) : ['requests' => [], 'reset_at' => $now + $decaySeconds];

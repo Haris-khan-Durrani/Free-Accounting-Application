@@ -11,8 +11,8 @@ $user = null;
 
 if (!empty($token)) {
     $tokenHash = hash('sha256', $token);
-    $st = $pdo->prepare("SELECT * FROM users WHERE (reset_token = ? OR reset_token = ?) AND reset_token_expires_at >= CURRENT_TIMESTAMP() LIMIT 1");
-    $st->execute([$tokenHash, $token]);
+    $st = $pdo->prepare("SELECT * FROM users WHERE reset_token = ? AND reset_token_expires_at >= CURRENT_TIMESTAMP() LIMIT 1");
+    $st->execute([$tokenHash]);
     $user = $st->fetch();
 }
 
