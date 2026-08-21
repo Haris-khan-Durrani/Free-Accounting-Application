@@ -118,6 +118,13 @@ function page_start(string $title): void {
             echo '<i class="fa-solid fa-chevron-down text-[9px] text-slate-500"></i>';
             echo '</a>';
         }
+
+        // Global Search Spotlight Button (Ctrl + K)
+        echo '<button type="button" onclick="openGlobalSearchModal()" class="ml-2 inline-flex items-center space-x-2 px-2.5 py-1 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800/90 text-slate-300 hover:text-white text-xs font-semibold transition-all shadow-xs group cursor-pointer" title="Global Search (Ctrl + K)">';
+        echo '<i class="fa-solid fa-magnifying-glass text-amber-400 text-2xs group-hover:scale-110 transition-transform"></i>';
+        echo '<span class="hidden md:inline text-xs font-bold text-slate-300">Search...</span>';
+        echo '<kbd class="hidden md:inline-block px-1.5 py-0.5 text-[9px] font-mono font-bold bg-slate-800 text-slate-400 rounded-md border border-slate-700">Ctrl K</kbd>';
+        echo '</button>';
         echo '</div>';
     }
     echo '</div>';
@@ -423,7 +430,148 @@ function page_end(): void {
     echo '</div>';
     echo '</footer>';
 
+    // Global Spotlight Search Modal HTML
+    echo '
+    <div id="global-search-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-start justify-center z-[200] hidden p-4 pt-16 sm:pt-24" onclick="if(event.target===this) closeGlobalSearchModal()">
+        <div class="bg-white rounded-3xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden transform transition-all">
+            <div class="relative flex items-center border-b border-slate-100 px-5 py-4 bg-slate-50/80">
+                <i class="fa-solid fa-magnifying-glass text-amber-500 text-lg mr-3"></i>
+                <input type="text" id="global-search-input" onkeyup="handleGlobalSearchKeyup(event)" placeholder="Search invoices, clients, phone #, expenses, reports, settings..." class="w-full bg-transparent text-base font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none" autocomplete="off">
+                <button onclick="closeGlobalSearchModal()" class="px-2.5 py-1 text-2xs font-extrabold text-slate-400 hover:text-slate-700 bg-slate-200/60 rounded-lg">ESC</button>
+            </div>
+            <div id="global-search-results" class="max-h-[60vh] overflow-y-auto p-3 space-y-1">
+                <div class="text-center py-8 text-slate-400">
+                    <i class="fa-solid fa-bolt text-3xl mb-2 text-amber-400"></i>
+                    <p class="text-xs font-bold text-slate-600">Lightning-Fast Global Search</p>
+                    <p class="text-3xs text-slate-400 mt-1">Type invoice #, client name, phone, vendor, report name, or page URL...</p>
+                </div>
+            </div>
+            <div class="px-5 py-2.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-3xs font-extrabold text-slate-400">
+                <div class="flex items-center space-x-3">
+                    <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-2xs text-slate-600">↑</kbd> <kbd class="px-1 py-0.5 bg-white border rounded shadow-2xs text-slate-600">↓</kbd> Navigate</span>
+                    <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-2xs text-slate-600">↵</kbd> Select</span>
+                    <span><kbd class="px-1 py-0.5 bg-white border rounded shadow-2xs text-slate-600">ESC</kbd> Close</span>
+                </div>
+                <div class="text-amber-600 font-extrabold flex items-center space-x-1">
+                    <i class="fa-solid fa-bolt text-2xs"></i>
+                    <span>Spotlight Search</span>
+                </div>
+            </div>
+        </div>
+    </div>';
+
     echo '<script>
+        let searchDebounceTimer = null;
+        let activeSearchIndex = -1;
+
+        function openGlobalSearchModal() {
+            const modal = document.getElementById("global-search-modal");
+            if (!modal) return;
+            modal.classList.remove("hidden");
+            const input = document.getElementById("global-search-input");
+            input.value = "";
+            input.focus();
+            fetchGlobalSearchResults("");
+        }
+
+        function closeGlobalSearchModal() {
+            const modal = document.getElementById("global-search-modal");
+            if (modal) modal.classList.add("hidden");
+        }
+
+        document.addEventListener("keydown", (e) => {
+            if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) {
+                e.preventDefault();
+                const modal = document.getElementById("global-search-modal");
+                if (modal && modal.classList.contains("hidden")) {
+                    openGlobalSearchModal();
+                } else {
+                    closeGlobalSearchModal();
+                }
+            } else if (e.key === "Escape") {
+                closeGlobalSearchModal();
+            }
+        });
+
+        function handleGlobalSearchKeyup(e) {
+            if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter") {
+                navigateSearchResults(e);
+                return;
+            }
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                fetchGlobalSearchResults(e.target.value.trim());
+            }, 120);
+        }
+
+        function fetchGlobalSearchResults(query) {
+            const container = document.getElementById("global-search-results");
+            if (!container) return;
+            activeSearchIndex = -1;
+            
+            fetch("api_global_search.php?q=" + encodeURIComponent(query))
+                .then(res => res.json())
+                .then(data => {
+                    const results = data.results || [];
+                    if (results.length === 0) {
+                        container.innerHTML = `
+                            <div class="text-center py-8 text-slate-400">
+                                <i class="fa-solid fa-magnifying-glass text-2xl mb-2 text-slate-300"></i>
+                                <p class="text-xs font-bold text-slate-500">No matching records or pages found</p>
+                                <p class="text-3xs text-slate-400 mt-1">Try searching by client name, invoice number, phone, or report name</p>
+                            </div>`;
+                        return;
+                    }
+                    let html = "";
+                    let currentType = "";
+                    results.forEach((item, idx) => {
+                        if (item.type !== currentType) {
+                            currentType = item.type;
+                            html += `<div class="px-3 pt-3 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center justify-between"><span>${currentType}</span></div>`;
+                        }
+                        html += `
+                            <a href="${item.url}" class="search-result-item flex items-center justify-between p-3 rounded-2xl hover:bg-amber-50/60 hover:border-amber-200 border border-transparent transition-all group cursor-pointer" data-index="${idx}">
+                                <div class="flex items-center space-x-3 truncate">
+                                    <div class="h-9 w-9 rounded-xl bg-slate-100 group-hover:bg-white flex items-center justify-center text-sm shadow-2xs border border-slate-200/60">
+                                        <i class="${item.icon}"></i>
+                                    </div>
+                                    <div class="truncate">
+                                        <div class="text-xs font-bold text-slate-900 group-hover:text-amber-900 truncate">${item.title}</div>
+                                        <div class="text-3xs font-semibold text-slate-500 truncate">${item.subtitle}</div>
+                                    </div>
+                                </div>
+                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 text-slate-600 group-hover:bg-amber-100 group-hover:text-amber-800 transition-colors ml-2 flex-shrink-0">${item.badge}</span>
+                            </a>`;
+                    });
+                    container.innerHTML = html;
+                })
+                .catch(() => {});
+        }
+
+        function navigateSearchResults(e) {
+            const items = document.querySelectorAll(".search-result-item");
+            if (items.length === 0) return;
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                activeSearchIndex = (activeSearchIndex + 1) % items.length;
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                activeSearchIndex = (activeSearchIndex - 1 + items.length) % items.length;
+            } else if (e.key === "Enter" && activeSearchIndex >= 0) {
+                e.preventDefault();
+                items[activeSearchIndex].click();
+                return;
+            }
+            items.forEach((it, idx) => {
+                if (idx === activeSearchIndex) {
+                    it.classList.add("bg-amber-50", "border-amber-200");
+                    it.scrollIntoView({ block: "nearest" });
+                } else {
+                    it.classList.remove("bg-amber-50", "border-amber-200");
+                }
+            });
+        }
+
         function toggleMobileAppMenu() {
             const modal = document.getElementById("mobile-app-modal");
             if (modal.classList.contains("hidden")) {
