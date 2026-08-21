@@ -24,6 +24,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         'stripe_webhook_secret' => trim($_POST['stripe_webhook_secret'] ?? ''),
         'stripe_currency' => $_POST['stripe_currency'] ?? 'AED',
 
+        'tabby_enabled' => $_POST['tabby_enabled'] ?? '0',
+        'tabby_public_key' => trim($_POST['tabby_public_key'] ?? ''),
+        'tabby_secret_key' => trim($_POST['tabby_secret_key'] ?? ''),
+        'tabby_merchant_code' => trim($_POST['tabby_merchant_code'] ?? ''),
+
+        'tamara_enabled' => $_POST['tamara_enabled'] ?? '0',
+        'tamara_api_url' => trim($_POST['tamara_api_url'] ?? 'https://api-sandbox.tamara.co'),
+        'tamara_api_token' => trim($_POST['tamara_api_token'] ?? ''),
+        'tamara_notification_token' => trim($_POST['tamara_notification_token'] ?? ''),
+
         'network_enabled' => $_POST['network_enabled'] ?? '0',
         'network_outlet_id' => trim($_POST['network_outlet_id'] ?? ''),
         'network_api_key' => trim($_POST['network_api_key'] ?? ''),
@@ -42,7 +52,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         'bank_instructions' => trim($_POST['bank_instructions'] ?? '')
     ];
 
-    $secretFields = ['stripe_secret_key', 'stripe_webhook_secret', 'network_api_key', 'paypal_secret_key'];
+    $secretFields = [
+        'stripe_secret_key', 
+        'stripe_webhook_secret', 
+        'network_api_key', 
+        'paypal_secret_key',
+        'tabby_secret_key',
+        'tamara_api_token',
+        'tamara_notification_token'
+    ];
 
     foreach ($settingsToSave as $k => $v) {
         if (in_array($k, $secretFields, true)) {
@@ -66,6 +84,16 @@ $stripeSecKey = \Services\PaymentGatewayService::getSetting($pdo, 'stripe_secret
 $stripeWebhookSec = \Services\PaymentGatewayService::getSetting($pdo, 'stripe_webhook_secret', '', $tid);
 $stripeCurrency = \Services\PaymentGatewayService::getSetting($pdo, 'stripe_currency', 'AED', $tid);
 
+$tabbyEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'tabby_enabled', '0', $tid);
+$tabbyPubKey = \Services\PaymentGatewayService::getSetting($pdo, 'tabby_public_key', '', $tid);
+$tabbySecKey = \Services\PaymentGatewayService::getSetting($pdo, 'tabby_secret_key', '', $tid);
+$tabbyMerchantCode = \Services\PaymentGatewayService::getSetting($pdo, 'tabby_merchant_code', '', $tid);
+
+$tamaraEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'tamara_enabled', '0', $tid);
+$tamaraApiUrl = \Services\PaymentGatewayService::getSetting($pdo, 'tamara_api_url', 'https://api-sandbox.tamara.co', $tid);
+$tamaraApiToken = \Services\PaymentGatewayService::getSetting($pdo, 'tamara_api_token', '', $tid);
+$tamaraNotificationToken = \Services\PaymentGatewayService::getSetting($pdo, 'tamara_notification_token', '', $tid);
+
 $networkEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'network_enabled', '0', $tid);
 $networkOutletId = \Services\PaymentGatewayService::getSetting($pdo, 'network_outlet_id', '', $tid);
 $networkApiKey = \Services\PaymentGatewayService::getSetting($pdo, 'network_api_key', '', $tid);
@@ -83,6 +111,9 @@ $bankIban = \Services\PaymentGatewayService::getSetting($pdo, 'bank_iban', '', $
 $bankSwift = \Services\PaymentGatewayService::getSetting($pdo, 'bank_swift', '', $tid);
 $bankInstructions = \Services\PaymentGatewayService::getSetting($pdo, 'bank_instructions', 'Please include invoice number in wire transfer description.', $tid);
 
+$protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http");
+$baseUrl = $protocol . "://" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+
 page_start('Workspace Payment Gateways');
 ?>
 
@@ -92,7 +123,7 @@ page_start('Workspace Payment Gateways');
             <span class="px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-black text-xs uppercase tracking-wider">Subaccount Checkout</span>
             <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Workspace Payment Gateways</h1>
         </div>
-        <p class="mt-1 text-sm text-slate-500">Configure Stripe, PayPal, Network International, and Bank Wire Transfer for <strong><?=e($activeTenant['name'])?></strong>.</p>
+        <p class="mt-1 text-sm text-slate-500">Configure Stripe, Tabby, Tamara, Network International, PayPal, and Bank Wire Transfer for <strong><?=e($activeTenant['name'])?></strong>.</p>
     </div>
 </div>
 
@@ -108,8 +139,8 @@ page_start('Workspace Payment Gateways');
                     <i class="fa-brands fa-stripe-s"></i>
                 </div>
                 <div>
-                    <h2 class="text-lg font-bold text-slate-900">Stripe Online Credit Card Checkout</h2>
-                    <p class="text-xs text-slate-500">Accept credit cards, Apple Pay, Google Pay & instant payment links for <?=e($activeTenant['name'])?></p>
+                    <h2 class="text-lg font-bold text-slate-900">Stripe Credit Card & Apple Pay</h2>
+                    <p class="text-xs text-slate-500">Accept credit cards, Apple Pay, Google Pay & instant payment links</p>
                 </div>
             </div>
             <label class="flex items-center cursor-pointer">
@@ -145,14 +176,166 @@ page_start('Workspace Payment Gateways');
         </div>
 
         <div class="mt-6 pt-4 border-t border-slate-100 bg-slate-900 text-white rounded-xl p-4 text-xs font-mono space-y-2">
-            <div class="text-amber-400 font-bold font-sans">Stripe Fallback & Real-Time Sync URL for <?=e($activeTenant['name'])?>:</div>
-            <div class="bg-slate-950 p-2 rounded-lg text-emerald-300 text-2xs border border-slate-800">
-                <code><?=(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . "://" . ($_SERVER['HTTP_HOST'] ?? 'localhost')?>/invoice/stripe_return?invoice_id={INVOICE_ID}</code>
+            <div class="text-amber-400 font-bold font-sans flex items-center justify-between">
+                <span>📘 Stripe Webhook Setup Instructions:</span>
+                <span class="text-2xs bg-purple-950 text-purple-300 px-2 py-0.5 rounded border border-purple-800">Step-by-Step</span>
+            </div>
+            <p class="text-slate-300 text-2xs font-sans">Log into Stripe Dashboard $\rightarrow$ Developers $\rightarrow$ Webhooks $\rightarrow$ Add Endpoint and enter this exact URL:</p>
+            <div class="bg-slate-950 p-2.5 rounded-lg text-emerald-300 text-2xs border border-slate-800 flex justify-between items-center">
+                <code><?=$baseUrl?>/api/v1/webhooks/stripe.php</code>
+                <button type="button" onclick="navigator.clipboard.writeText('<?=$baseUrl?>/api/v1/webhooks/stripe.php'); alert('Stripe Webhook URL copied!');" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded text-2xs font-sans font-bold">Copy URL</button>
             </div>
         </div>
     </div>
 
-    <!-- Card 2: PayPal Checkout -->
+    <!-- Card 2: Tabby BNPL Integration -->
+    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+            <div class="flex items-center space-x-3">
+                <div class="h-10 w-10 bg-emerald-100 text-emerald-800 rounded-xl flex items-center justify-center text-lg font-black">
+                    tabby
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Tabby (Pay in 4 Installments)</h2>
+                    <p class="text-xs text-slate-500">Allow customers in UAE & KSA to split payments into 4 interest-free monthly installments</p>
+                </div>
+            </div>
+            <label class="flex items-center cursor-pointer">
+                <input type="checkbox" name="tabby_enabled" value="1" <?=$tabbyEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                <span class="ml-2 text-xs font-bold text-slate-700">Enable Tabby</span>
+            </label>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Tabby Public Key *</label>
+                <input type="text" name="tabby_public_key" value="<?=e($tabbyPubKey)?>" placeholder="pk_test_... or pk_live_..." class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Tabby Secret Key *</label>
+                <input type="password" name="tabby_secret_key" value="" placeholder="<?=!empty($tabbySecKey) ? '•••••••••••• (Configured - leave blank to keep)' : 'sk_test_... or sk_live_...'?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Tabby Merchant Code</label>
+                <input type="text" name="tabby_merchant_code" value="<?=e($tabbyMerchantCode)?>" placeholder="AE or SA Merchant Code" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-900">
+            </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-100 bg-slate-900 text-white rounded-xl p-4 text-xs font-mono space-y-2">
+            <div class="text-emerald-400 font-bold font-sans flex items-center justify-between">
+                <span>📘 Tabby Webhook Integration Guide:</span>
+                <span class="text-2xs bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800">Tabby Portal Setup</span>
+            </div>
+            <p class="text-slate-300 text-2xs font-sans">In Tabby Merchant Portal $\rightarrow$ Developers $\rightarrow$ Webhook Notifications, set this Webhook URL:</p>
+            <div class="bg-slate-950 p-2.5 rounded-lg text-emerald-300 text-2xs border border-slate-800 flex justify-between items-center">
+                <code><?=$baseUrl?>/api/v1/webhooks/tabby.php</code>
+                <button type="button" onclick="navigator.clipboard.writeText('<?=$baseUrl?>/api/v1/webhooks/tabby.php'); alert('Tabby Webhook URL copied!');" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded text-2xs font-sans font-bold">Copy URL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Tamara BNPL Integration -->
+    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+            <div class="flex items-center space-x-3">
+                <div class="h-10 w-10 bg-pink-100 text-pink-700 rounded-xl flex items-center justify-center text-lg font-black">
+                    tamara
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Tamara (Pay in 3/4 Installments)</h2>
+                    <p class="text-xs text-slate-500">GCC BNPL leader in UAE, Saudi Arabia, Kuwait, Bahrain & Qatar</p>
+                </div>
+            </div>
+            <label class="flex items-center cursor-pointer">
+                <input type="checkbox" name="tamara_enabled" value="1" <?=$tamaraEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                <span class="ml-2 text-xs font-bold text-slate-700">Enable Tamara</span>
+            </label>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Tamara Environment API URL *</label>
+                <select name="tamara_api_url" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-900">
+                    <option value="https://api-sandbox.tamara.co" <?=$tamaraApiUrl === 'https://api-sandbox.tamara.co' ? 'selected' : ''?>>Sandbox (Testing Mode)</option>
+                    <option value="https://api.tamara.co" <?=$tamaraApiUrl === 'https://api.tamara.co' ? 'selected' : ''?>>Production (Live Mode)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Tamara API Token *</label>
+                <input type="password" name="tamara_api_token" value="" placeholder="<?=!empty($tamaraApiToken) ? '•••••••••••• (Configured - leave blank to keep)' : 'Tamara Bearer Token'?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Notification Webhook Token</label>
+                <input type="password" name="tamara_notification_token" value="" placeholder="<?=!empty($tamaraNotificationToken) ? '•••••••••••• (Configured - leave blank to keep)' : 'Notification Token'?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
+            </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-100 bg-slate-900 text-white rounded-xl p-4 text-xs font-mono space-y-2">
+            <div class="text-pink-400 font-bold font-sans flex items-center justify-between">
+                <span>📘 Tamara Webhook Setup Guide:</span>
+                <span class="text-2xs bg-pink-950 text-pink-300 px-2 py-0.5 rounded border border-pink-800">Tamara Partner Portal</span>
+            </div>
+            <p class="text-slate-300 text-2xs font-sans">In Tamara Partner Portal $\rightarrow$ Settings $\rightarrow$ Webhooks / Notifications, enter this URL:</p>
+            <div class="bg-slate-950 p-2.5 rounded-lg text-emerald-300 text-2xs border border-slate-800 flex justify-between items-center">
+                <code><?=$baseUrl?>/api/v1/webhooks/tamara.php</code>
+                <button type="button" onclick="navigator.clipboard.writeText('<?=$baseUrl?>/api/v1/webhooks/tamara.php'); alert('Tamara Webhook URL copied!');" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded text-2xs font-sans font-bold">Copy URL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 4: Network International Integration -->
+    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
+            <div class="flex items-center space-x-3">
+                <div class="h-10 w-10 bg-sky-100 text-sky-700 rounded-xl flex items-center justify-center text-xl font-bold">
+                    <i class="fa-solid fa-building-columns"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-slate-900">Network International (NGenius)</h2>
+                    <p class="text-xs text-slate-500">Leading payment solution provider in the Middle East & Africa</p>
+                </div>
+            </div>
+            <label class="flex items-center cursor-pointer">
+                <input type="checkbox" name="network_enabled" value="1" <?=$networkEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
+                <span class="ml-2 text-xs font-bold text-slate-700">Enable Network</span>
+            </label>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Outlet ID *</label>
+                <input type="text" name="network_outlet_id" value="<?=e($networkOutletId)?>" placeholder="Outlet Reference ID" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">NGenius API Key *</label>
+                <input type="password" name="network_api_key" value="" placeholder="<?=!empty($networkApiKey) ? '•••••••••••• (Configured - leave blank to keep)' : 'API Key'?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Environment</label>
+                <select name="network_environment" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-900">
+                    <option value="sandbox" <?=$networkEnv === 'sandbox' ? 'selected' : ''?>>Sandbox (Testing)</option>
+                    <option value="live" <?=$networkEnv === 'live' ? 'selected' : ''?>>Live / Production</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-slate-100 bg-slate-900 text-white rounded-xl p-4 text-xs font-mono space-y-2">
+            <div class="text-sky-400 font-bold font-sans flex items-center justify-between">
+                <span>📘 Network International Webhook Setup:</span>
+                <span class="text-2xs bg-sky-950 text-sky-300 px-2 py-0.5 rounded border border-sky-800">NGenius Portal</span>
+            </div>
+            <p class="text-slate-300 text-2xs font-sans">In NGenius Merchant Portal $\rightarrow$ Outlet Settings $\rightarrow$ Webhooks, configure this URL:</p>
+            <div class="bg-slate-950 p-2.5 rounded-lg text-emerald-300 text-2xs border border-slate-800 flex justify-between items-center">
+                <code><?=$baseUrl?>/api/v1/webhooks/network.php</code>
+                <button type="button" onclick="navigator.clipboard.writeText('<?=$baseUrl?>/api/v1/webhooks/network.php'); alert('Network Webhook URL copied!');" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded text-2xs font-sans font-bold">Copy URL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 5: PayPal Checkout -->
     <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
         <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
             <div class="flex items-center space-x-3">
@@ -183,7 +366,7 @@ page_start('Workspace Payment Gateways');
         </div>
     </div>
 
-    <!-- Card 3: Bank Wire Transfer Instructions -->
+    <!-- Card 6: Bank Wire Transfer Instructions -->
     <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
         <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
             <div class="flex items-center space-x-3">

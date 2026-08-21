@@ -11,6 +11,9 @@ class PaymentGatewayService {
         'stripe_webhook_secret',
         'paypal_secret_key',
         'network_api_key',
+        'tabby_secret_key',
+        'tamara_api_token',
+        'tamara_notification_token',
         'smtp_password',
         'meta_whatsapp_token',
         'twilio_auth_token',
@@ -197,4 +200,226 @@ class PaymentGatewayService {
 
         return false;
     }
+
+    /**
+     * Create Tabby Checkout Session API Call
+     */
+    public static function createInvoiceTabbyCheckout(PDO $pdo, array $inv, array $items, string $appUrl): array {
+        $tid = (int)$inv['tenant_id'];
+        $secretKey = self::getSetting($pdo, 'tabby_secret_key', '', $tid);
+        $publicKey = self::getSetting($pdo, 'tabby_public_key', '', $tid);
+        $merchantCode = self::getSetting($pdo, 'tabby_merchant_code', '', $tid);
+        $isEnabled = self::getSetting($pdo, 'tabby_enabled', '0', $tid);
+
+        if ($isEnabled === '0' || empty($secretKey)) {
+            return ['error' => 'Tabby BNPL gateway is disabled or credentials missing for this workspace.'];
+        }
+
+        $invId = (int)$inv['id'];
+        $token = function_exists('get_invoice_token') ? get_invoice_token($inv) : '';
+        $currency = strtoupper($inv['currency'] ?? 'AED');
+        $totalAmount = (float)$inv['total'];
+
+        // Format items for Tabby payload
+        $tabbyItems = [];
+        foreach ($items as $it) {
+            $qty = (int)($it['qty'] ?? $it['quantity'] ?? 1);
+            $unitPrice = (float)($it['unit_price'] ?? 0);
+            $tabbyItems[] = [
+                'title' => substr($it['description'] ?? 'Line Item', 0, 150),
+                'quantity' => max(1, $qty),
+                'unit_price' => sprintf('%.2f', $unitPrice),
+                'category' => 'General Services'
+            ];
+        }
+
+        if (empty($tabbyItems)) {
+            $tabbyItems[] = [
+                'title' => 'Invoice #' . ($inv['invoice_number'] ?? $invId),
+                'quantity' => 1,
+                'unit_price' => sprintf('%.2f', $totalAmount),
+                'category' => 'Services'
+            ];
+        }
+
+        $clientPhone = preg_replace('/[^0-9\+]/', '', $inv['phone'] ?? '');
+        if (empty($clientPhone)) {
+            $clientPhone = '+971500000000'; // Default fallback phone format required by Tabby
+        }
+
+        $payload = [
+            'payment' => [
+                'amount' => sprintf('%.2f', $totalAmount),
+                'currency' => $currency,
+                'description' => 'Tax Invoice #' . ($inv['invoice_number'] ?? $invId),
+                'buyer' => [
+                    'phone' => $clientPhone,
+                    'email' => $inv['email'] ?? 'customer@example.com',
+                    'name'  => $inv['contact_name'] ?: ($inv['company_name'] ?? 'Valued Customer')
+                ],
+                'order' => [
+                    'reference_id' => (string)($inv['invoice_number'] ?? $invId),
+                    'items' => $tabbyItems
+                ]
+            ],
+            'lang' => 'en',
+            'merchant_code' => $merchantCode,
+            'merchant_urls' => [
+                'success' => $appUrl . "/stripe_return.php?invoice_id={$invId}&token={$token}&gateway=tabby",
+                'cancel'  => $appUrl . "/public_invoice.php?id={$invId}&token={$token}&status=cancel",
+                'failure' => $appUrl . "/public_invoice.php?id={$invId}&token={$token}&status=failed"
+            ]
+        ];
+
+        $ch = curl_init('https://api.tabby.ai/api/v2/checkout');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $secretKey,
+                'Content-Type: application/json'
+            ],
+            CURLOPT_TIMEOUT => 15
+        ]);
+
+        $res = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) {
+            return ['error' => 'Tabby API Connection Error: ' . $err];
+        }
+
+        $data = json_decode($res, true);
+        if (isset($data['configuration']['available_products']['installments'][0]['web_url'])) {
+            return ['redirect_url' => $data['configuration']['available_products']['installments'][0]['web_url']];
+        }
+
+        if (isset($data['web_url'])) {
+            return ['redirect_url' => $data['web_url']];
+        }
+
+        return ['error' => 'Tabby Session Error: ' . ($data['message'] ?? 'Unable to create Tabby checkout session.')];
+    }
+
+    /**
+     * Create Tamara Checkout Session API Call
+     */
+    public static function createInvoiceTamaraCheckout(PDO $pdo, array $inv, array $items, string $appUrl): array {
+        $tid = (int)$inv['tenant_id'];
+        $apiToken = self::getSetting($pdo, 'tamara_api_token', '', $tid);
+        $apiUrl = self::getSetting($pdo, 'tamara_api_url', 'https://api-sandbox.tamara.co', $tid);
+        $isEnabled = self::getSetting($pdo, 'tamara_enabled', '0', $tid);
+
+        if ($isEnabled === '0' || empty($apiToken)) {
+            return ['error' => 'Tamara BNPL gateway is disabled or credentials missing for this workspace.'];
+        }
+
+        $invId = (int)$inv['id'];
+        $token = function_exists('get_invoice_token') ? get_invoice_token($inv) : '';
+        $currency = strtoupper($inv['currency'] ?? 'AED');
+        $totalAmount = (float)$inv['total'];
+
+        $tamaraItems = [];
+        $idx = 1;
+        foreach ($items as $it) {
+            $qty = max(1, (int)($it['qty'] ?? $it['quantity'] ?? 1));
+            $unitPrice = (float)($it['unit_price'] ?? 0);
+            $tamaraItems[] = [
+                'reference_id' => 'item_' . $idx++,
+                'type' => 'Service',
+                'name' => substr($it['description'] ?? 'Line Item', 0, 100),
+                'sku' => 'SKU-' . $idx,
+                'quantity' => $qty,
+                'unit_price' => [
+                    'amount' => $unitPrice,
+                    'currency' => $currency
+                ],
+                'total_amount' => [
+                    'amount' => $qty * $unitPrice,
+                    'currency' => $currency
+                ]
+            ];
+        }
+
+        if (empty($tamaraItems)) {
+            $tamaraItems[] = [
+                'reference_id' => 'item_1',
+                'type' => 'Service',
+                'name' => 'Invoice #' . ($inv['invoice_number'] ?? $invId),
+                'sku' => 'INV-' . $invId,
+                'quantity' => 1,
+                'unit_price' => ['amount' => $totalAmount, 'currency' => $currency],
+                'total_amount' => ['amount' => $totalAmount, 'currency' => $currency]
+            ];
+        }
+
+        $phone = preg_replace('/[^0-9]/', '', $inv['phone'] ?? '');
+        if (strlen($phone) < 8) {
+            $phone = '500000000';
+        }
+
+        $countryCode = 'AE';
+        if ($currency === 'SAR') $countryCode = 'SA';
+        elseif ($currency === 'KWD') $countryCode = 'KW';
+        elseif ($currency === 'BHD') $countryCode = 'BH';
+
+        $fullName = trim($inv['contact_name'] ?: ($inv['company_name'] ?? 'Valued Customer'));
+        $nameParts = explode(' ', $fullName, 2);
+        $firstName = $nameParts[0];
+        $lastName = $nameParts[1] ?? 'Customer';
+
+        $payload = [
+            'total_amount' => ['amount' => $totalAmount, 'currency' => $currency],
+            'shipping_amount' => ['amount' => 0.00, 'currency' => $currency],
+            'tax_amount' => ['amount' => (float)($inv['tax_amount'] ?? 0), 'currency' => $currency],
+            'order_reference_id' => (string)($inv['invoice_number'] ?? $invId),
+            'order_number' => (string)($inv['invoice_number'] ?? $invId),
+            'items' => $tamaraItems,
+            'consumer' => [
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'phone_number' => $phone,
+                'email' => $inv['email'] ?? 'customer@example.com'
+            ],
+            'country_code' => $countryCode,
+            'payment_type' => 'PAY_BY_INSTALMENTS',
+            'merchant_url' => [
+                'success' => $appUrl . "/stripe_return.php?invoice_id={$invId}&token={$token}&gateway=tamara",
+                'failure' => $appUrl . "/public_invoice.php?id={$invId}&token={$token}&status=failed",
+                'cancel' => $appUrl . "/public_invoice.php?id={$invId}&token={$token}&status=cancel",
+                'notification' => $appUrl . "/api/v1/webhooks/tamara.php"
+            ]
+        ];
+
+        $targetEndpoint = rtrim($apiUrl, '/') . '/checkout';
+        $ch = curl_init($targetEndpoint);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $apiToken,
+                'Content-Type: application/json'
+            ],
+            CURLOPT_TIMEOUT => 15
+        ]);
+
+        $res = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) {
+            return ['error' => 'Tamara API Connection Error: ' . $err];
+        }
+
+        $data = json_decode($res, true);
+        if (isset($data['checkout_url'])) {
+            return ['redirect_url' => $data['checkout_url']];
+        }
+
+        return ['error' => 'Tamara Session Error: ' . ($data['message'] ?? ($data['errors'][0]['error_code'] ?? 'Unable to create Tamara session.'))];
+    }
 }
+
