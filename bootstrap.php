@@ -93,7 +93,7 @@ if (php_sapi_name() === 'cli' || getenv('RUN_MIGRATIONS') === 'true') {
     try { $pdo->exec("ALTER TABLE users ADD COLUMN otp_expires_at DATETIME NULL"); } catch (Throwable $t) {}
     try { $pdo->exec("ALTER TABLE users ADD COLUMN reset_token VARCHAR(64) NULL"); } catch (Throwable $t) {}
     try { $pdo->exec("ALTER TABLE users ADD COLUMN reset_token_expires_at DATETIME NULL"); } catch (Throwable $t) {}
-    try { $pdo->exec("ALTER TABLE users MODIFY COLUMN role VARCHAR(50) NOT NULL DEFAULT 'owner'"); } catch (Throwable $t) {}
+    try { $pdo->exec("ALTER TABLE users ADD COLUMN session_version INT UNSIGNED NOT NULL DEFAULT 1"); } catch (Throwable $t) {}
 }
 
 
@@ -180,10 +180,22 @@ function require_login(): void {
                 redirect('login');
             }
         } catch (\Throwable $t) {
-            session_unset();
-            session_destroy();
-            http_response_code(503);
-            exit('Service unavailable. Database session verification failed.');
+            // Self-healing schema migration for missing session_version column
+            try {
+                $pdo->exec("ALTER TABLE users ADD COLUMN session_version INT UNSIGNED NOT NULL DEFAULT 1");
+                $stV = $pdo->prepare("SELECT session_version FROM users WHERE id = ?");
+                $stV->execute([(int)$_SESSION['user_id']]);
+                $dbVer = $stV->fetchColumn();
+                if ($dbVer === false || (int)$_SESSION['session_version'] !== (int)$dbVer) {
+                    session_unset();
+                    session_destroy();
+                    redirect('login');
+                }
+            } catch (\Throwable $t2) {
+                session_unset();
+                session_destroy();
+                redirect('login');
+            }
         }
     }
 }

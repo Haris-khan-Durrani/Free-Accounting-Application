@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS users (
   two_factor_enabled TINYINT(1) NOT NULL DEFAULT 0,
   otp_code VARCHAR(64) NULL,
   otp_expires_at DATETIME NULL,
+  session_version INT UNSIGNED NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_users_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
