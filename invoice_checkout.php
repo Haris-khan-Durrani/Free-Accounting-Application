@@ -59,11 +59,9 @@ if ($gateway === 'tabby') {
 } elseif ($gateway === 'tamara') {
     $result = \Services\PaymentGatewayService::createInvoiceTamaraCheckout($pdo, $inv, $items, $baseUrl);
 } elseif ($gateway === 'stripe') {
-    $checkoutUrl = \Services\PaymentGatewayService::createStripeCheckoutSession($pdo, 'invoice_payment', $tid, $inv['email'] ?? '', $baseUrl);
-    $result = ['redirect_url' => $checkoutUrl];
+    $result = \Services\PaymentGatewayService::createInvoiceStripeCheckout($pdo, $inv, $items, $baseUrl);
 } elseif ($gateway === 'network') {
-    $checkoutUrl = \Services\PaymentGatewayService::createNetworkCheckoutOrder($pdo, 'invoice_payment', $tid, (float)$inv['total'], $baseUrl);
-    $result = ['redirect_url' => $checkoutUrl];
+    $result = \Services\PaymentGatewayService::createInvoiceNetworkCheckout($pdo, $inv, $items, $baseUrl);
 } elseif ($gateway === 'ziina') {
     $result = \Services\PaymentGatewayService::createInvoiceZiinaCheckout($pdo, $inv, $items, $baseUrl);
 } elseif ($gateway === 'zbooni') {
@@ -82,5 +80,6 @@ if (!empty($result['redirect_url'])) {
     exit;
 }
 
-flash('error', $result['error'] ?? 'Unable to initialize online checkout.');
-redirect("public_invoice.php?id={$invId}&token={$token}");
+$errMsg = $result['error'] ?? 'Unable to initialize online checkout.';
+flash('error', $errMsg);
+redirect("public_invoice.php?id={$invId}&token={$token}&error=" . urlencode($errMsg));

@@ -127,6 +127,77 @@ class PaymentGatewayService {
     }
 
     /**
+     * Create Direct Invoice Stripe Checkout Session
+     */
+    public static function createInvoiceStripeCheckout(PDO $pdo, array $inv, array $items, string $appUrl): array {
+        $tid = (int)$inv['tenant_id'];
+        $secretKey = self::getSetting($pdo, 'stripe_secret_key', '', $tid);
+        $isEnabled = self::getSetting($pdo, 'stripe_enabled', '1', $tid);
+
+        if ($isEnabled === '0' || empty($secretKey)) {
+            return ['error' => 'Stripe payment gateway is disabled or API secret key is missing for this workspace.'];
+        }
+
+        $invId = (int)$inv['id'];
+        $token = function_exists('get_invoice_token') ? get_invoice_token($inv) : '';
+        $currency = strtolower($inv['currency'] ?? 'aed');
+        $totalAmount = (float)$inv['total'];
+        $amountInCents = (int)round($totalAmount * 100);
+
+        $postFields = http_build_query([
+            'payment_method_types' => ['card'],
+            'line_items' => [
+                [
+                    'price_data' => [
+                        'currency' => $currency,
+                        'product_data' => [
+                            'name' => 'Tax Invoice #' . ($inv['invoice_number'] ?? $invId),
+                        ],
+                        'unit_amount' => $amountInCents,
+                    ],
+                    'quantity' => 1,
+                ]
+            ],
+            'mode' => 'payment',
+            'customer_email' => $inv['email'] ?? '',
+            'metadata' => [
+                'invoice_id' => (string)$invId,
+                'invoice_number' => (string)($inv['invoice_number'] ?? $invId),
+                'tenant_id' => (string)$tid,
+            ],
+            'success_url' => $appUrl . "/stripe_return.php?invoice_id={$invId}&token={$token}&session_id={CHECKOUT_SESSION_ID}",
+            'cancel_url'  => $appUrl . "/public_invoice.php?id={$invId}&token={$token}&status=cancel",
+        ]);
+
+        $ch = curl_init('https://api.stripe.com/v1/checkout/sessions');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $postFields,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $secretKey,
+                'Content-Type: application/x-www-form-urlencoded'
+            ],
+            CURLOPT_TIMEOUT => 15
+        ]);
+
+        $res = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) {
+            return ['error' => 'Stripe API Connection Error: ' . $err];
+        }
+
+        $data = json_decode($res, true);
+        if (isset($data['url'])) {
+            return ['redirect_url' => $data['url']];
+        }
+
+        return ['error' => 'Stripe Session Error: ' . ($data['error']['message'] ?? 'Unable to create Stripe checkout session.')];
+    }
+
+    /**
      * Create Network International (NGenius) Payment Order URL
      */
     public static function createNetworkCheckoutOrder(PDO $pdo, string $planSlug, int $tenantId, float $amount, string $appUrl): string {
@@ -139,6 +210,85 @@ class PaymentGatewayService {
         }
 
         return $appUrl . "/billing.php?action=network_success&plan=" . urlencode($planSlug) . "&tenant_id=" . $tenantId;
+    }
+
+    /**
+     * Create Direct Invoice Network International (NGenius) Payment Order
+     */
+    public static function createInvoiceNetworkCheckout(PDO $pdo, array $inv, array $items, string $appUrl): array {
+        $tid = (int)$inv['tenant_id'];
+        $apiKey = self::getSetting($pdo, 'network_api_key', '', $tid);
+        $outletId = self::getSetting($pdo, 'network_outlet_id', '', $tid);
+        $env = self::getSetting($pdo, 'network_environment', 'sandbox', $tid);
+        $isEnabled = self::getSetting($pdo, 'network_enabled', '0', $tid);
+
+        if ($isEnabled === '0' || empty($apiKey) || empty($outletId)) {
+            return ['error' => 'Network International gateway is disabled or credentials missing for this workspace.'];
+        }
+
+        $domain = ($env === 'live') ? 'api-gateway.ngenius-payments.com' : 'api-gateway.sandbox.ngenius-payments.com';
+
+        // 1. Fetch Access Token
+        $chAuth = curl_init("https://{$domain}/identity/auth/access-token");
+        curl_setopt_array($chAuth, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode(['grant_type' => 'client_credentials']),
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Basic ' . base64_encode($apiKey),
+                'Content-Type: application/vnd.ni-identity.v1+json',
+                'Accept: application/vnd.ni-identity.v1+json'
+            ],
+            CURLOPT_TIMEOUT => 15
+        ]);
+        $authRes = curl_exec($chAuth);
+        curl_close($chAuth);
+
+        $authData = json_decode($authRes, true);
+        $accessToken = $authData['access_token'] ?? '';
+        if (empty($accessToken)) {
+            return ['error' => 'Network International Auth Error: Unable to retrieve access token.'];
+        }
+
+        // 2. Create Payment Order
+        $invId = (int)$inv['id'];
+        $token = function_exists('get_invoice_token') ? get_invoice_token($inv) : '';
+        $currency = strtoupper($inv['currency'] ?? 'AED');
+        $amountInMinorUnits = (int)round((float)$inv['total'] * 100);
+
+        $payload = [
+            'action' => 'PURCHASE',
+            'amount' => [
+                'currencyCode' => $currency,
+                'value' => $amountInMinorUnits
+            ],
+            'emailAddress' => $inv['email'] ?? 'customer@example.com',
+            'merchantAttributes' => [
+                'redirectUrl' => $appUrl . "/stripe_return.php?invoice_id={$invId}&token={$token}&gateway=network"
+            ]
+        ];
+
+        $chOrder = curl_init("https://{$domain}/transactions/outlets/{$outletId}/orders");
+        curl_setopt_array($chOrder, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $accessToken,
+                'Content-Type: application/vnd.ni-payment.v2+json',
+                'Accept: application/vnd.ni-payment.v2+json'
+            ],
+            CURLOPT_TIMEOUT => 15
+        ]);
+        $orderRes = curl_exec($chOrder);
+        curl_close($chOrder);
+
+        $orderData = json_decode($orderRes, true);
+        if (isset($orderData['_links']['payment']['href'])) {
+            return ['redirect_url' => $orderData['_links']['payment']['href']];
+        }
+
+        return ['error' => 'Network International Order Error: ' . ($orderData['message'] ?? 'Unable to create payment order.')];
     }
 
     /**

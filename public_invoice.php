@@ -98,6 +98,17 @@ $tamaraInstallment = number_format($remainingBalance / 3, 2);
         </div>
     </div>
 
+    <?php if (!empty($_GET['error'])): ?>
+        <div style="background:#7f1d1d; border:1px solid #ef4444; padding:14px 20px; border-radius:12px; margin-bottom:20px; color:#fca5a5; font-weight:bold; font-size:13px; display:flex; align-items:center; gap:10px;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size:18px;"></i>
+            <div><?=e($_GET['error'])?></div>
+        </div>
+    <?php endif; ?>
+
+    <?php if (function_exists('render_flash')): ?>
+        <?=render_flash()?>
+    <?php endif; ?>
+
     <?php if (!$isPaid && !$isVoid): ?>
         <div class="pay-card">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; margin-bottom:20px; border-b:1px solid #334155; padding-bottom:15px;">
