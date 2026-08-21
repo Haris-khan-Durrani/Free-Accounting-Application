@@ -5,10 +5,14 @@ use PDO;
 use Exception;
 
 class Mailer {
+    public static ?string $lastError = null;
+
     /**
      * Send email using Tenant's Custom SMTP configuration (or fallback PHP mail)
      */
     public static function send(PDO $pdo, int $tenantId, string $toEmail, string $subject, string $htmlBody, string $altText = ''): bool {
+        self::$lastError = null;
+
         // Fetch Tenant SMTP settings
         $st = $pdo->prepare("SELECT smtp_host, smtp_port, smtp_encryption, smtp_username, smtp_password, from_email, from_name, name FROM tenants WHERE id = ?");
         $st->execute([$tenantId]);
@@ -31,7 +35,18 @@ class Mailer {
             try {
                 return self::sendViaSmtp($smtpHost, $smtpPort, $smtpEnc, $smtpUser, $smtpPass, $fromEmail, $fromName, $toEmail, $subject, $htmlBody);
             } catch (Exception $eSmtp) {
-                error_log("Custom SMTP dispatch failed for tenant #{$tenantId}: " . $eSmtp->getMessage() . " - Falling back to native PHP mail()");
+                // If decrypted password failed and rawPass is different, retry with rawPass
+                if ($rawPass !== '' && $rawPass !== $smtpPass) {
+                    try {
+                        return self::sendViaSmtp($smtpHost, $smtpPort, $smtpEnc, $smtpUser, $rawPass, $fromEmail, $fromName, $toEmail, $subject, $htmlBody);
+                    } catch (Exception $eRaw) {
+                        self::$lastError = $eRaw->getMessage();
+                    }
+                } else {
+                    self::$lastError = $eSmtp->getMessage();
+                }
+
+                error_log("Custom SMTP dispatch failed for tenant #{$tenantId}: " . self::$lastError . " - Attempting native PHP mail()");
             }
         }
 
@@ -43,7 +58,11 @@ class Mailer {
         $headers[] = "Reply-To: " . $fromEmail;
         $headers[] = "X-Mailer: OneSol-MultiTenant-SaaS";
 
-        return @mail($toEmail, $subject, $htmlBody, implode("\r\n", $headers));
+        $mailSent = @mail($toEmail, $subject, $htmlBody, implode("\r\n", $headers));
+        if (!$mailSent && empty(self::$lastError)) {
+            self::$lastError = "Native PHP mail() delivery returned false (server sendmail unconfigured)";
+        }
+        return $mailSent;
     }
 
     /**

@@ -109,23 +109,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         ";
 
+        $mailSent = \Services\Mailer::send($pdo, $tenantId, $user['email'], $subject, $htmlBody);
+        $mailErr = \Services\Mailer::$lastError;
+
         if ($isAjax) {
             header('Content-Type: application/json');
-            $responseJson = json_encode(['success' => true, 'message' => 'A new 6-digit security code has been sent to your email!']);
-            if (function_exists('fastcgi_finish_request')) {
-                echo $responseJson;
-                fastcgi_finish_request();
-                \Services\Mailer::send($pdo, $tenantId, $user['email'], $subject, $htmlBody);
-                exit;
+            if ($mailSent) {
+                echo json_encode(['success' => true, 'message' => 'A new 6-digit security code has been sent to your email!']);
             } else {
-                \Services\Mailer::send($pdo, $tenantId, $user['email'], $subject, $htmlBody);
-                echo $responseJson;
-                exit;
+                $errDetail = $mailErr ? " Details: {$mailErr}" : "";
+                echo json_encode(['success' => false, 'message' => "Failed to deliver OTP email.{$errDetail}"]);
             }
+            exit;
         }
 
-        \Services\Mailer::send($pdo, $tenantId, $user['email'], $subject, $htmlBody);
-        flash('success', 'A new 6-digit security code has been sent to your email.');
+        if ($mailSent) {
+            flash('success', 'A new 6-digit security code has been sent to your email.');
+        } else {
+            $errDetail = $mailErr ? " ($mailErr)" : "";
+            flash('error', "Failed to send OTP email{$errDetail}. Check Email Settings.");
+        }
         redirect('2fa_verify');
     }
 }
