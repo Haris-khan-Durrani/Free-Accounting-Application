@@ -133,7 +133,7 @@ function page_start(string $title): void {
 
     // Right: Desktop Navigation Links
     if (!empty($_SESSION['user_id'])) {
-        echo '<nav class="hidden lg:flex items-center space-x-1 sm:space-x-1.5 whitespace-nowrap overflow-x-auto no-scrollbar flex-shrink max-w-full py-1">';
+        echo '<nav class="hidden 2xl:flex items-center space-x-1 sm:space-x-1.5 whitespace-nowrap flex-shrink-0">';
         echo '<a href="index" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['index.php', 'index']) . '"><i class="fa-solid fa-chart-pie text-blue-400 text-2xs"></i><span>Dashboard</span></a>';
         echo '<a href="invoices" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['invoices.php', 'invoices', 'invoice_view.php']) . '"><i class="fa-solid fa-file-invoice text-amber-400 text-2xs"></i><span>Invoices</span></a>';
         echo '<a href="clients" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['clients.php', 'clients', 'client_import.php']) . '"><i class="fa-solid fa-users text-emerald-400 text-2xs"></i><span>Clients</span></a>';
@@ -289,8 +289,8 @@ function page_start(string $title): void {
         echo '<a href="logout" class="ml-1 text-slate-400 hover:text-rose-400 p-1.5 text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0" title="Logout"><i class="fa-solid fa-right-from-bracket text-sm"></i></a>';
         echo '</nav>';
 
-        // Mobile / Tablet App Launcher Menu Button
-        echo '<button onclick="toggleMobileAppMenu()" class="lg:hidden text-amber-400 hover:text-amber-300 p-2 text-xl focus:outline-none ml-2"><i class="fa-solid fa-bars-staggered"></i></button>';
+        // Mobile / Laptop App Launcher Menu Button
+        echo '<button onclick="toggleMobileAppMenu()" class="2xl:hidden text-amber-400 hover:text-amber-300 p-2 text-xl focus:outline-none ml-2"><i class="fa-solid fa-bars-staggered"></i></button>';
     }
 
     echo '</div>';
@@ -374,27 +374,60 @@ function page_start(string $title): void {
             echo '</div>';
         }
 
-        // Grid 1: Core Apps
+        // Section 1: Core Apps & Operations
         echo '<div class="mb-6">';
-        echo '<h4 class="text-2xs font-bold text-amber-400 uppercase tracking-wider mb-3">Core Apps</h4>';
-        echo '<div class="grid grid-cols-3 gap-3">';
-        echo '<a href="index" onclick="toggleMobileAppMenu()" class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl flex flex-col items-center text-center hover:bg-slate-800 transition-all"><i class="fa-solid fa-chart-pie text-blue-400 text-xl mb-1.5"></i><span class="text-xs font-bold text-slate-200">Dashboard</span></a>';
-        echo '<a href="clients" onclick="toggleMobileAppMenu()" class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl flex flex-col items-center text-center hover:bg-slate-800 transition-all"><i class="fa-solid fa-users text-emerald-400 text-xl mb-1.5"></i><span class="text-xs font-bold text-slate-200">Clients</span></a>';
-        echo '<a href="quotes" onclick="toggleMobileAppMenu()" class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl flex flex-col items-center text-center hover:bg-slate-800 transition-all"><i class="fa-solid fa-file-signature text-amber-400 text-xl mb-1.5"></i><span class="text-xs font-bold text-slate-200">Proposals</span></a>';
-        echo '<a href="expenses" onclick="toggleMobileAppMenu()" class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl flex flex-col items-center text-center hover:bg-slate-800 transition-all"><i class="fa-solid fa-receipt text-rose-400 text-xl mb-1.5"></i><span class="text-xs font-bold text-slate-200">Expenses</span></a>';
-        echo '<a href="invoice_form" onclick="toggleMobileAppMenu()" class="bg-amber-500/20 border border-amber-500/40 p-3.5 rounded-2xl flex flex-col items-center text-center hover:bg-amber-500/30 transition-all"><i class="fa-solid fa-plus text-amber-400 text-xl mb-1.5"></i><span class="text-xs font-extrabold text-amber-300">+ Invoice</span></a>';
-        echo '<a href="subaccounts" onclick="toggleMobileAppMenu()" class="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl flex flex-col items-center text-center hover:bg-slate-800 transition-all"><i class="fa-solid fa-building text-purple-400 text-xl mb-1.5"></i><span class="text-xs font-bold text-slate-200">Workspaces</span></a>';
+        echo '<h4 class="text-2xs font-bold text-amber-400 uppercase tracking-wider mb-3 flex items-center"><i class="fa-solid fa-cube text-amber-400 mr-1.5"></i>Core Operations</h4>';
+        echo '<div class="grid grid-cols-3 sm:grid-cols-4 gap-2.5 sm:gap-3">';
+        echo '<a href="index" onclick="toggleMobileAppMenu()" class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl flex flex-col items-center text-center hover:bg-slate-800 transition-all"><i class="fa-solid fa-chart-pie text-blue-400 text-lg mb-1"></i><span class="text-xs font-bold text-slate-200">Dashboard</span></a>';
+        echo '<a href="invoices" onclick="toggleMobileAppMenu()" class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl flex flex-col items-center text-center hover:bg-slate-800 transition-all"><i class="fa-solid fa-file-invoice text-amber-400 text-lg mb-1"></i><span class="text-xs font-bold text-slate-200">Invoices</span></a>';
+        echo '<a href="clients" onclick="toggleMobileAppMenu()" class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl flex flex-col items-center text-center hover:bg-slate-800 transition-all"><i class="fa-solid fa-users text-emerald-400 text-lg mb-1"></i><span class="text-xs font-bold text-slate-200">Clients</span></a>';
+        echo '<a href="quotes" onclick="toggleMobileAppMenu()" class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl flex flex-col items-center text-center hover:bg-slate-800 transition-all"><i class="fa-solid fa-file-signature text-sky-400 text-lg mb-1"></i><span class="text-xs font-bold text-slate-200">Proposals</span></a>';
+        echo '<a href="expenses" onclick="toggleMobileAppMenu()" class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl flex flex-col items-center text-center hover:bg-slate-800 transition-all"><i class="fa-solid fa-receipt text-rose-400 text-lg mb-1"></i><span class="text-xs font-bold text-slate-200">Expenses</span></a>';
+        echo '<a href="invoice_form" onclick="toggleMobileAppMenu()" class="bg-amber-500/20 border border-amber-500/40 p-3 rounded-2xl flex flex-col items-center text-center hover:bg-amber-500/30 transition-all"><i class="fa-solid fa-plus text-amber-400 text-lg mb-1"></i><span class="text-xs font-extrabold text-amber-300">+ Invoice</span></a>';
+        echo '<a href="subaccounts" onclick="toggleMobileAppMenu()" class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl flex flex-col items-center text-center hover:bg-slate-800 transition-all"><i class="fa-solid fa-building text-purple-400 text-lg mb-1"></i><span class="text-xs font-bold text-slate-200">Workspaces</span></a>';
         echo '</div>';
         echo '</div>';
 
-        // Grid 2: Security & Email Setup
+        // Section 2: Reports & Ledger
         echo '<div class="mb-6">';
-        echo '<h4 class="text-2xs font-bold text-amber-400 uppercase tracking-wider mb-3">User Guide & Security</h4>';
-        echo '<div class="grid grid-cols-2 gap-3 text-xs font-semibold">';
-        echo '<a href="guide" onclick="toggleMobileAppMenu()" class="bg-amber-500/20 border border-amber-500/40 p-3 rounded-xl flex items-center space-x-2.5 text-amber-300 font-bold"><i class="fa-solid fa-book-open"></i><span>User Guide</span></a>';
-        echo '<a href="email_settings" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-3 rounded-xl flex items-center space-x-2.5 text-slate-200"><i class="fa-solid fa-server text-amber-400"></i><span>Custom SMTP</span></a>';
-        echo '<a href="security" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-3 rounded-xl flex items-center space-x-2.5 text-slate-200"><i class="fa-solid fa-shield-halved text-indigo-400"></i><span>2FA Security</span></a>';
-        echo '<a href="api_playground" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-3 rounded-xl flex items-center space-x-2.5 text-slate-200"><i class="fa-solid fa-code text-emerald-400"></i><span>API Portal</span></a>';
+        echo '<h4 class="text-2xs font-bold text-purple-400 uppercase tracking-wider mb-3 flex items-center"><i class="fa-solid fa-folder-open text-purple-400 mr-1.5"></i>Reports & Ledger</h4>';
+        echo '<div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-semibold">';
+        echo '<a href="accounts" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-list-check text-indigo-400"></i><span>Chart of Accounts</span></a>';
+        echo '<a href="journal" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-book text-cyan-400"></i><span>General Ledger</span></a>';
+        echo '<a href="reports_pnl" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-chart-line text-blue-400"></i><span>Profit & Loss</span></a>';
+        echo '<a href="reports_balance_sheet" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-scale-balanced text-emerald-400"></i><span>Balance Sheet</span></a>';
+        echo '<a href="reports_cashflow" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-money-bill-transfer text-amber-400"></i><span>Cash Flow</span></a>';
+        echo '<a href="reports_aging" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-clock text-purple-400"></i><span>AR Aging</span></a>';
+        echo '<a href="reports_vat201" onclick="toggleMobileAppMenu()" class="bg-emerald-500/15 border border-emerald-500/30 p-2.5 rounded-xl flex items-center space-x-2 text-emerald-300 font-bold"><i class="fa-solid fa-file-invoice-dollar"></i><span>UAE VAT 201</span></a>';
+        echo '<a href="reports_corporate_tax" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-percent text-blue-400"></i><span>Corporate Tax (9%)</span></a>';
+        echo '<a href="export_faf" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-file-export text-amber-400"></i><span>Export FTA (.faf)</span></a>';
+        echo '</div>';
+        echo '</div>';
+
+        // Section 3: Management Hub & System Admin
+        echo '<div class="mb-6">';
+        echo '<h4 class="text-2xs font-bold text-cyan-400 uppercase tracking-wider mb-3 flex items-center"><i class="fa-solid fa-sliders text-cyan-400 mr-1.5"></i>Management & System Hub</h4>';
+        echo '<div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-semibold">';
+        echo '<a href="settings" onclick="toggleMobileAppMenu()" class="bg-amber-500/20 border border-amber-500/40 p-2.5 rounded-xl flex items-center space-x-2 text-amber-300 font-bold"><i class="fa-solid fa-sliders"></i><span>Master Settings</span></a>';
+        echo '<a href="branding" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-palette text-amber-400"></i><span>Branding Setup</span></a>';
+        echo '<a href="invoice_customize" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-paint-roller text-amber-400"></i><span>Templates (11)</span></a>';
+        echo '<a href="invoice_builder" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-layer-group text-amber-400"></i><span>Builder</span></a>';
+        echo '<a href="items" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-box text-emerald-400"></i><span>Product Catalog</span></a>';
+        echo '<a href="expense_categories" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-tags text-rose-400"></i><span>Expense Categories</span></a>';
+        echo '<a href="recurring_invoices" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-rotate text-purple-400"></i><span>Auto-Billing</span></a>';
+        echo '<a href="billing" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-credit-card text-amber-400"></i><span>Subscription Plan</span></a>';
+        if (has_role(['owner', 'admin'])) {
+            echo '<a href="users" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-users-gear text-blue-400"></i><span>Team Members</span></a>';
+            echo '<a href="payment_settings" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-credit-card text-purple-400"></i><span>Payment Gateways</span></a>';
+            echo '<a href="whatsapp_settings" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-brands fa-whatsapp text-emerald-400"></i><span>WhatsApp API</span></a>';
+            echo '<a href="email_settings" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-server text-amber-400"></i><span>Custom SMTP</span></a>';
+        }
+        echo '<a href="security" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-shield-halved text-indigo-400"></i><span>2FA Security</span></a>';
+        echo '<a href="api_keys" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-key text-amber-400"></i><span>API Key Manager</span></a>';
+        echo '<a href="guide" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-book-open text-blue-400"></i><span>User Guide</span></a>';
+        if (has_role(['owner', 'admin'])) {
+            echo '<a href="audit_log" onclick="toggleMobileAppMenu()" class="bg-slate-900/80 border border-slate-800 p-2.5 rounded-xl flex items-center space-x-2 text-slate-200 hover:text-white"><i class="fa-solid fa-clock-rotate-left text-slate-400"></i><span>Audit Log</span></a>';
+        }
         echo '</div>';
         echo '</div>';
 
