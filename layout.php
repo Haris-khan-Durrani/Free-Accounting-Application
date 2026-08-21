@@ -59,10 +59,10 @@ function page_start(string $title): void {
         : 'text-slate-300 hover:text-white hover:bg-slate-800/70 font-semibold';
 
     echo '<header class="no-print bg-slate-950/95 backdrop-blur-xl text-white sticky top-0 z-40 border-b border-slate-800/80 shadow-2xl overflow-x-clip">';
-    echo '<div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">';
+    echo '<div class="w-full max-w-[1700px] mx-auto px-3 sm:px-6 flex items-center justify-between h-16">';
     
     // Left: Brand Logo & Workspace Switcher
-    echo '<div class="flex items-center space-x-3 sm:space-x-4 flex-shrink-0 mr-4 lg:mr-8">';
+    echo '<div class="flex items-center space-x-2.5 sm:space-x-3 flex-shrink-0 mr-2 lg:mr-4">';
     echo '<a href="index" class="flex items-center space-x-2.5 group flex-shrink-0">';
     if (!empty($brand['logo_url'])) {
         echo '<img src="' . e($brand['logo_url']) . '" alt="' . e($brand['company_name']) . '" class="h-8 w-auto rounded bg-white p-0.5 object-contain shadow-xs">';
@@ -131,17 +131,17 @@ function page_start(string $title): void {
 
     // Right: Desktop Navigation Links
     if (!empty($_SESSION['user_id'])) {
-        echo '<nav class="hidden xl:flex items-center space-x-1 sm:space-x-2 whitespace-nowrap flex-shrink-0">';
-        echo '<a href="index" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['index.php', 'index']) . '"><i class="fa-solid fa-chart-pie text-blue-400 text-2xs"></i><span>Dashboard</span></a>';
-        echo '<a href="invoices" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['invoices.php', 'invoices', 'invoice_view.php']) . '"><i class="fa-solid fa-file-invoice text-amber-400 text-2xs"></i><span>Invoices</span></a>';
-        echo '<a href="clients" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['clients.php', 'clients', 'client_import.php']) . '"><i class="fa-solid fa-users text-emerald-400 text-2xs"></i><span>Clients</span></a>';
-        echo '<a href="quotes" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['quotes.php', 'quotes', 'quote_view.php']) . '"><i class="fa-solid fa-file-signature text-sky-400 text-2xs"></i><span>Proposals</span></a>';
-        echo '<a href="expenses" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['expenses.php', 'expenses', 'expense_form.php']) . '"><i class="fa-solid fa-receipt text-rose-400 text-2xs"></i><span>Expenses</span></a>';
+        echo '<nav class="hidden lg:flex items-center space-x-1 sm:space-x-1.5 whitespace-nowrap flex-shrink-0">';
+        echo '<a href="index" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['index.php', 'index']) . '"><i class="fa-solid fa-chart-pie text-blue-400 text-2xs"></i><span>Dashboard</span></a>';
+        echo '<a href="invoices" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['invoices.php', 'invoices', 'invoice_view.php']) . '"><i class="fa-solid fa-file-invoice text-amber-400 text-2xs"></i><span>Invoices</span></a>';
+        echo '<a href="clients" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['clients.php', 'clients', 'client_import.php']) . '"><i class="fa-solid fa-users text-emerald-400 text-2xs"></i><span>Clients</span></a>';
+        echo '<a href="quotes" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['quotes.php', 'quotes', 'quote_view.php']) . '"><i class="fa-solid fa-file-signature text-sky-400 text-2xs"></i><span>Proposals</span></a>';
+        echo '<a href="expenses" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['expenses.php', 'expenses', 'expense_form.php']) . '"><i class="fa-solid fa-receipt text-rose-400 text-2xs"></i><span>Expenses</span></a>';
         
         // Reports Dropdown Menu
         $isReportsActive = str_contains($currScript, 'reports_') || in_array($currScript, ['export_faf.php', 'accounts.php', 'journal.php']);
         echo '<div class="relative group py-2">';
-        echo '<button class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . ($isReportsActive ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30 font-black' : 'text-slate-300 hover:text-white hover:bg-slate-800/70 font-semibold') . '"><i class="fa-solid fa-folder-open text-purple-400 text-2xs"></i><span>Reports & Ledger</span><i class="fa-solid fa-chevron-down text-[9px] ml-0.5 opacity-70"></i></button>';
+        echo '<button class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . ($isReportsActive ? 'bg-purple-500/10 text-purple-300 border border-purple-500/30 font-black' : 'text-slate-300 hover:text-white hover:bg-slate-800/70 font-semibold') . '"><i class="fa-solid fa-folder-open text-purple-400 text-2xs"></i><span>Reports & Ledger</span><i class="fa-solid fa-chevron-down text-[9px] ml-0.5 opacity-70"></i></button>';
         echo '<div class="absolute right-0 top-full pt-1 w-72 hidden group-hover:block z-50">';
         echo '<div class="bg-white rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden py-1 max-h-[85vh] overflow-y-auto">';
         
