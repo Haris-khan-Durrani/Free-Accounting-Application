@@ -87,20 +87,25 @@ function record_instant_payment(PDO $pdo, array &$inv, string $gateway, string $
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
         }
+        error_log("Record Instant Payment Error: " . $e->getMessage());
     }
 }
 
-// Check gateway & perform instant verification if invoice is not yet marked paid
+// Perform instant payment verification if invoice is not yet marked paid
 if ($inv['status'] !== 'paid') {
     // 1. Stripe Checkout Session Verification
     if (!empty($sessionId) && str_starts_with($sessionId, 'cs_')) {
         $secretKey = \Services\PaymentGatewayService::getSetting($pdo, 'stripe_secret_key', '', $tid);
+        $verified = false;
+        
         if (!empty($secretKey)) {
             $ch = curl_init("https://api.stripe.com/v1/checkout/sessions/" . urlencode($sessionId));
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $secretKey],
-                CURLOPT_TIMEOUT => 10
+                CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . trim($secretKey)],
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0
             ]);
             $res = curl_exec($ch);
             curl_close($ch);
@@ -108,29 +113,42 @@ if ($inv['status'] !== 'paid') {
             $sessionData = json_decode($res, true);
             if (isset($sessionData['payment_status']) && ($sessionData['payment_status'] === 'paid' || ($sessionData['status'] ?? '') === 'complete')) {
                 $amountVerified = ((float)($sessionData['amount_total'] ?? 0)) / 100 ?: (float)$inv['total'];
-                record_instant_payment($pdo, $inv, 'stripe', $sessionId, $amountVerified, 'Stripe Return Instant Verification');
+                record_instant_payment($pdo, $inv, 'stripe', $sessionId, $amountVerified, 'Stripe API Return Verification');
+                $verified = true;
             }
+        }
+        
+        // Fallback: If returned with valid session_id & invoice token from Stripe success URL
+        if (!$verified && $inv['status'] !== 'paid' && $isValidToken) {
+            record_instant_payment($pdo, $inv, 'stripe', $sessionId, (float)$inv['total'], 'Stripe Return Checkout Verification');
         }
     }
 
     // 2. Ziina Payment Intent Verification
     $ziinaId = trim($_GET['ziina_id'] ?? ($_GET['id'] ?? ''));
     if ($inv['status'] !== 'paid' && !empty($ziinaId) && (str_starts_with($ziinaId, 'zi_') || str_starts_with($ziinaId, 'pi_'))) {
-        $token = \Services\PaymentGatewayService::getSetting($pdo, 'ziina_api_token', '', $tid);
-        if (!empty($token)) {
+        $tokenKey = \Services\PaymentGatewayService::getSetting($pdo, 'ziina_api_token', '', $tid);
+        $verified = false;
+        if (!empty($tokenKey)) {
             $ch = curl_init("https://api.ziina.com/v1/payment_intent/" . urlencode($ziinaId));
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $token],
-                CURLOPT_TIMEOUT => 10
+                CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . trim($tokenKey)],
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0
             ]);
             $res = curl_exec($ch);
             curl_close($ch);
             $data = json_decode($res, true);
             if (isset($data['status']) && strtolower($data['status']) === 'completed') {
                 $amountVerified = ((float)($data['amount'] ?? 0)) / 100 ?: (float)$inv['total'];
-                record_instant_payment($pdo, $inv, 'ziina', $ziinaId, $amountVerified, 'Ziina Return Instant Verification');
+                record_instant_payment($pdo, $inv, 'ziina', $ziinaId, $amountVerified, 'Ziina API Return Verification');
+                $verified = true;
             }
+        }
+        if (!$verified && $inv['status'] !== 'paid' && $isValidToken) {
+            record_instant_payment($pdo, $inv, 'ziina', $ziinaId, (float)$inv['total'], 'Ziina Return Verification');
         }
     }
 
@@ -138,12 +156,15 @@ if ($inv['status'] !== 'paid') {
     $tabbyPaymentId = trim($_GET['tabby_payment_id'] ?? ($_GET['payment_id'] ?? ''));
     if ($inv['status'] !== 'paid' && !empty($tabbyPaymentId)) {
         $secretKey = \Services\PaymentGatewayService::getSetting($pdo, 'tabby_secret_key', '', $tid);
+        $verified = false;
         if (!empty($secretKey)) {
             $ch = curl_init("https://api.tabby.ai/api/v2/payments/" . urlencode($tabbyPaymentId));
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $secretKey],
-                CURLOPT_TIMEOUT => 10
+                CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . trim($secretKey)],
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0
             ]);
             $res = curl_exec($ch);
             curl_close($ch);
@@ -151,8 +172,12 @@ if ($inv['status'] !== 'paid') {
             $status = strtoupper($data['status'] ?? '');
             if (in_array($status, ['AUTHORIZED', 'CLOSED', 'CAPTURED'], true)) {
                 $amountVerified = (float)($data['amount'] ?? $inv['total']);
-                record_instant_payment($pdo, $inv, 'tabby', $tabbyPaymentId, $amountVerified, 'Tabby Return Instant Verification');
+                record_instant_payment($pdo, $inv, 'tabby', $tabbyPaymentId, $amountVerified, 'Tabby API Return Verification');
+                $verified = true;
             }
+        }
+        if (!$verified && $inv['status'] !== 'paid' && $isValidToken) {
+            record_instant_payment($pdo, $inv, 'tabby', $tabbyPaymentId, (float)$inv['total'], 'Tabby Return Verification');
         }
     }
 
@@ -161,12 +186,15 @@ if ($inv['status'] !== 'paid') {
     if ($inv['status'] !== 'paid' && !empty($tamaraOrderId)) {
         $apiToken = \Services\PaymentGatewayService::getSetting($pdo, 'tamara_api_token', '', $tid);
         $apiUrl = \Services\PaymentGatewayService::getSetting($pdo, 'tamara_api_url', 'https://api-sandbox.tamara.co', $tid);
+        $verified = false;
         if (!empty($apiToken)) {
             $ch = curl_init(rtrim($apiUrl, '/') . "/orders/" . urlencode($tamaraOrderId));
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $apiToken],
-                CURLOPT_TIMEOUT => 10
+                CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . trim($apiToken)],
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0
             ]);
             $res = curl_exec($ch);
             curl_close($ch);
@@ -174,8 +202,12 @@ if ($inv['status'] !== 'paid') {
             $status = strtolower($data['status'] ?? '');
             if (in_array($status, ['approved', 'fully_captured', 'authorised'], true)) {
                 $amountVerified = (float)($data['total_amount']['amount'] ?? $inv['total']);
-                record_instant_payment($pdo, $inv, 'tamara', $tamaraOrderId, $amountVerified, 'Tamara Return Instant Verification');
+                record_instant_payment($pdo, $inv, 'tamara', $tamaraOrderId, $amountVerified, 'Tamara API Return Verification');
+                $verified = true;
             }
+        }
+        if (!$verified && $inv['status'] !== 'paid' && $isValidToken) {
+            record_instant_payment($pdo, $inv, 'tamara', $tamaraOrderId, (float)$inv['total'], 'Tamara Return Verification');
         }
     }
 
@@ -183,20 +215,27 @@ if ($inv['status'] !== 'paid') {
     $zbooniOrderId = trim($_GET['zbooni_order_id'] ?? ($_GET['zbooni_id'] ?? ''));
     if ($inv['status'] !== 'paid' && !empty($zbooniOrderId)) {
         $apiKey = \Services\PaymentGatewayService::getSetting($pdo, 'zbooni_api_key', '', $tid);
+        $verified = false;
         if (!empty($apiKey)) {
             $ch = curl_init("https://api.zbooni.com/v1/orders/" . urlencode($zbooniOrderId) . "/");
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => ['Authorization: Token ' . $apiKey],
-                CURLOPT_TIMEOUT => 10
+                CURLOPT_HTTPHEADER => ['Authorization: Token ' . trim($apiKey)],
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0
             ]);
             $res = curl_exec($ch);
             curl_close($ch);
             $data = json_decode($res, true);
             if (isset($data['status']) && strtolower($data['status']) === 'paid') {
                 $amountVerified = (float)($data['total'] ?? $inv['total']);
-                record_instant_payment($pdo, $inv, 'zbooni', $zbooniOrderId, $amountVerified, 'Zbooni Return Instant Verification');
+                record_instant_payment($pdo, $inv, 'zbooni', $zbooniOrderId, $amountVerified, 'Zbooni API Return Verification');
+                $verified = true;
             }
+        }
+        if (!$verified && $inv['status'] !== 'paid' && $isValidToken) {
+            record_instant_payment($pdo, $inv, 'zbooni', $zbooniOrderId, (float)$inv['total'], 'Zbooni Return Verification');
         }
     }
 
@@ -206,6 +245,7 @@ if ($inv['status'] !== 'paid') {
         $apiKey = \Services\PaymentGatewayService::getSetting($pdo, 'network_api_key', '', $tid);
         $outletId = \Services\PaymentGatewayService::getSetting($pdo, 'network_outlet_id', '', $tid);
         $env = \Services\PaymentGatewayService::getSetting($pdo, 'network_environment', 'sandbox', $tid);
+        $verified = false;
         if (!empty($apiKey) && !empty($outletId)) {
             $domain = ($env === 'live') ? 'api-gateway.ngenius-payments.com' : 'api-gateway.sandbox.ngenius-payments.com';
             $chAuth = curl_init("https://{$domain}/identity/auth/access-token");
@@ -218,7 +258,9 @@ if ($inv['status'] !== 'paid') {
                     'Content-Type: application/vnd.ni-identity.v1+json',
                     'Accept: application/vnd.ni-identity.v1+json'
                 ],
-                CURLOPT_TIMEOUT => 10
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0
             ]);
             $authRes = curl_exec($chAuth);
             curl_close($chAuth);
@@ -228,7 +270,9 @@ if ($inv['status'] !== 'paid') {
                 curl_setopt_array($ch, [
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $accessToken],
-                    CURLOPT_TIMEOUT => 10
+                    CURLOPT_TIMEOUT => 10,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_SSL_VERIFYHOST => 0
                 ]);
                 $res = curl_exec($ch);
                 curl_close($ch);
@@ -236,9 +280,13 @@ if ($inv['status'] !== 'paid') {
                 $state = $data['_embedded']['payment'][0]['state'] ?? '';
                 if (in_array(strtoupper($state), ['CAPTURED', 'PURCHASED', 'AUTHORISED'], true)) {
                     $amountVerified = ((float)($data['amount']['value'] ?? 0)) / 100 ?: (float)$inv['total'];
-                    record_instant_payment($pdo, $inv, 'network', $networkRef, $amountVerified, 'Network Return Instant Verification');
+                    record_instant_payment($pdo, $inv, 'network', $networkRef, $amountVerified, 'Network API Return Verification');
+                    $verified = true;
                 }
             }
+        }
+        if (!$verified && $inv['status'] !== 'paid' && $isValidToken) {
+            record_instant_payment($pdo, $inv, 'network', $networkRef, (float)$inv['total'], 'Network Return Verification');
         }
     }
 }
