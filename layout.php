@@ -35,7 +35,7 @@ function page_start(string $title): void {
     echo '<link rel="stylesheet" href="assets/css/style.css">';
     echo '<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>';
     
-    echo '</head><body class="h-full font-sans antialiased text-slate-900 bg-slate-100 flex flex-col min-h-screen pb-28 lg:pb-0">';
+    echo '</head><body class="h-full font-sans antialiased text-slate-900 bg-slate-100 flex flex-col min-h-screen pb-28 lg:pb-0 overflow-x-hidden">';
     
     // Trial Status Banner Bar
     if (!empty($_SESSION['user_id'])) {
@@ -58,8 +58,8 @@ function page_start(string $title): void {
         ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30 font-black' 
         : 'text-slate-300 hover:text-white hover:bg-slate-800/70 font-semibold';
 
-    echo '<header class="no-print bg-slate-950/95 backdrop-blur-xl text-white sticky top-0 z-40 border-b border-slate-800/80 shadow-2xl">';
-    echo '<div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">';
+    echo '<header class="no-print bg-slate-950/95 backdrop-blur-xl text-white sticky top-0 z-40 border-b border-slate-800/80 shadow-2xl overflow-x-clip">';
+    echo '<div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">';
     
     // Left: Brand Logo & Workspace Switcher
     echo '<div class="flex items-center space-x-3 sm:space-x-4 flex-shrink-0 mr-4 lg:mr-8">';
