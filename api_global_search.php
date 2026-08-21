@@ -5,7 +5,7 @@ require_login();
 header('Content-Type: application/json');
 
 $pdo = $GLOBALS['pdo'];
-$tid = tenant_id();
+$tid = (int)tenant_id();
 $q = trim($_GET['q'] ?? '');
 
 if (strlen($q) < 1) {
@@ -60,25 +60,66 @@ foreach ($pages as $p) {
     }
 }
 
-// 2. Invoices Search (Number, Client Name, Total, Status)
+// 2. Clients Search (Company Name, Contact Name, Email, Phone, Tax #, Address) — Strict Tenant Isolation
+try {
+    $stCli = $pdo->prepare("
+        SELECT id, company_name, contact_name, email, phone, tax_number, country, currency
+        FROM clients
+        WHERE tenant_id = ? AND (
+            company_name LIKE ? OR 
+            contact_name LIKE ? OR 
+            email LIKE ? OR 
+            phone LIKE ? OR 
+            tax_number LIKE ? OR 
+            address LIKE ?
+        )
+        ORDER BY id DESC
+        LIMIT 6
+    ");
+    $stCli->execute([$tid, $like, $like, $like, $like, $like, $like]);
+    while ($r = $stCli->fetch()) {
+        $displayName = $r['company_name'] ?: ($r['contact_name'] ?: 'Client #' . $r['id']);
+        $subParts = array_filter([
+            $r['contact_name'] !== $displayName ? $r['contact_name'] : null,
+            $r['email'],
+            $r['phone'],
+            $r['tax_number'] ? 'TRN: ' . $r['tax_number'] : null
+        ]);
+        $results[] = [
+            'type' => 'Clients',
+            'title' => $displayName,
+            'subtitle' => implode(' • ', $subParts) ?: 'Client Contact',
+            'url' => 'clients.php?search=' . urlencode($displayName),
+            'icon' => 'fa-solid fa-user-tag text-emerald-500',
+            'badge' => 'Client'
+        ];
+    }
+} catch (Throwable $e) {
+    error_log("Global Search Clients Error: " . $e->getMessage());
+}
+
+// 3. Invoices Search (Number, Client Name, Total, Status, PO Number) — Strict Tenant Isolation
 try {
     $stInv = $pdo->prepare("
-        SELECT i.id, i.number, i.total, i.status, i.currency, c.name as client_name, c.company_name
+        SELECT i.id, i.number, i.total, i.status, i.currency, c.company_name, c.contact_name, c.email, c.phone
         FROM invoices i
         LEFT JOIN clients c ON c.id = i.client_id
         WHERE i.tenant_id = ? AND (
             i.number LIKE ? OR 
             i.total LIKE ? OR 
             i.status LIKE ? OR 
-            c.name LIKE ? OR 
-            c.company_name LIKE ?
+            i.po_number LIKE ? OR 
+            c.company_name LIKE ? OR 
+            c.contact_name LIKE ? OR 
+            c.email LIKE ? OR 
+            c.phone LIKE ?
         )
         ORDER BY i.id DESC
         LIMIT 6
     ");
-    $stInv->execute([$tid, $like, $like, $like, $like, $like]);
+    $stInv->execute([$tid, $like, $like, $like, $like, $like, $like, $like, $like]);
     while ($r = $stInv->fetch()) {
-        $clientLabel = $r['company_name'] ?: ($r['client_name'] ?: 'Unknown Client');
+        $clientLabel = $r['company_name'] ?: ($r['contact_name'] ?: 'General Client');
         $results[] = [
             'type' => 'Invoices',
             'title' => 'Invoice #' . $r['number'],
@@ -88,54 +129,30 @@ try {
             'badge' => strtoupper($r['status'])
         ];
     }
-} catch (Throwable $e) {}
+} catch (Throwable $e) {
+    error_log("Global Search Invoices Error: " . $e->getMessage());
+}
 
-// 3. Clients Search (Name, Company Name, Email, Phone)
-try {
-    $stCli = $pdo->prepare("
-        SELECT id, name, company_name, email, phone
-        FROM clients
-        WHERE tenant_id = ? AND (
-            name LIKE ? OR 
-            company_name LIKE ? OR 
-            email LIKE ? OR 
-            phone LIKE ?
-        )
-        ORDER BY id DESC
-        LIMIT 6
-    ");
-    $stCli->execute([$tid, $like, $like, $like, $like]);
-    while ($r = $stCli->fetch()) {
-        $subtitleParts = array_filter([$r['company_name'], $r['email'], $r['phone']]);
-        $results[] = [
-            'type' => 'Clients',
-            'title' => $r['name'] ?: $r['company_name'],
-            'subtitle' => implode(' • ', $subtitleParts) ?: 'Client Contact',
-            'url' => 'client_form.php?id=' . $r['id'],
-            'icon' => 'fa-solid fa-user-tag text-emerald-500',
-            'badge' => 'Client'
-        ];
-    }
-} catch (Throwable $e) {}
-
-// 4. Proposals / Quotes Search
+// 4. Proposals / Quotes Search — Strict Tenant Isolation
 try {
     $stQuo = $pdo->prepare("
-        SELECT q.id, q.number, q.total, q.status, c.name as client_name, c.company_name
+        SELECT q.id, q.number, q.total, q.status, c.company_name, c.contact_name
         FROM quotes q
         LEFT JOIN clients c ON c.id = q.client_id
         WHERE q.tenant_id = ? AND (
             q.number LIKE ? OR 
             q.total LIKE ? OR 
-            c.name LIKE ? OR 
-            c.company_name LIKE ?
+            c.company_name LIKE ? OR 
+            c.contact_name LIKE ? OR 
+            c.email LIKE ? OR 
+            c.phone LIKE ?
         )
         ORDER BY q.id DESC
         LIMIT 5
     ");
-    $stQuo->execute([$tid, $like, $like, $like, $like]);
+    $stQuo->execute([$tid, $like, $like, $like, $like, $like, $like]);
     while ($r = $stQuo->fetch()) {
-        $clientLabel = $r['company_name'] ?: ($r['client_name'] ?: 'Unknown Client');
+        $clientLabel = $r['company_name'] ?: ($r['contact_name'] ?: 'General Client');
         $results[] = [
             'type' => 'Proposals',
             'title' => 'Proposal #' . $r['number'],
@@ -145,9 +162,11 @@ try {
             'badge' => strtoupper($r['status'] ?? 'DRAFT')
         ];
     }
-} catch (Throwable $e) {}
+} catch (Throwable $e) {
+    error_log("Global Search Quotes Error: " . $e->getMessage());
+}
 
-// 5. Expenses Search
+// 5. Expenses Search — Strict Tenant Isolation
 try {
     $stExp = $pdo->prepare("
         SELECT id, category, vendor, amount, description
@@ -168,11 +187,13 @@ try {
             'type' => 'Expenses',
             'title' => $vendorLabel . ' (AED ' . number_format((float)$r['amount'], 2) . ')',
             'subtitle' => ($r['category'] ?? 'General Expense') . ($r['description'] ? ' • ' . $r['description'] : ''),
-            'url' => 'expense_form.php?id=' . $r['id'],
+            'url' => 'expenses.php?search=' . urlencode($vendorLabel),
             'icon' => 'fa-solid fa-receipt text-rose-500',
             'badge' => 'Expense'
         ];
     }
-} catch (Throwable $e) {}
+} catch (Throwable $e) {
+    error_log("Global Search Expenses Error: " . $e->getMessage());
+}
 
 echo json_encode(['results' => $results]);
