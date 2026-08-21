@@ -177,8 +177,6 @@ function page_start(string $title): void {
         echo '</div>';
         echo '</div>';
 
-        echo '<a href="settings" class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['settings.php', 'settings', 'branding.php', 'payment_settings.php']) . '"><i class="fa-solid fa-sliders text-amber-400 text-2xs"></i><span>Settings</span></a>';
-
         // Management Dropdown Menu (Balanced 2-Column Mega Menu)
         echo '<div class="relative group py-2">';
         echo '<button class="inline-flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs whitespace-nowrap font-semibold text-slate-300 hover:text-white hover:bg-slate-800/70 transition-all"><i class="fa-solid fa-gear text-cyan-400 text-2xs"></i><span>Management</span><i class="fa-solid fa-chevron-down text-[9px] ml-0.5 opacity-70"></i></button>';
