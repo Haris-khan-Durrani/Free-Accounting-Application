@@ -19,6 +19,19 @@ class InvoiceRenderer {
             $customLayoutJson = $stLayout->fetchColumn() ?: '';
         }
 
+        // Enforce strict server-side template allowlist to prevent LFI / path traversal
+        $allowedTemplates = [
+            'modern_minimal',
+            'corporate_executive',
+            'onesol_executive_gold',
+            'classic_traditional',
+            'compact_receipt',
+            'custom_drag_drop'
+        ];
+        if (!in_array($templateId, $allowedTemplates, true)) {
+            $templateId = 'modern_minimal';
+        }
+
         $templateFile = __DIR__ . '/../templates/invoices/' . $templateId . '.php';
         if (!file_exists($templateFile)) {
             $templateFile = __DIR__ . '/../templates/invoices/modern_minimal.php';

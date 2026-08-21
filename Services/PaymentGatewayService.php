@@ -7,9 +7,9 @@ use Exception;
 class PaymentGatewayService {
 
     /**
-     * Fetch payment gateway setting value for specific tenant (or fallback to tenant 1 / superadmin)
+     * Fetch payment gateway setting value for specific tenant (or fallback to tenant 1 / superadmin if allowed)
      */
-    public static function getSetting(PDO $pdo, string $key, string $default = '', ?int $tenantId = null): string {
+    public static function getSetting(PDO $pdo, string $key, string $default = '', ?int $tenantId = null, bool $allowFallback = true): string {
         $tid = $tenantId ?: (function_exists('tenant_id') ? tenant_id() : 1);
         try {
             // First check for specific tenant
@@ -21,8 +21,8 @@ class PaymentGatewayService {
                 return (string)$val;
             }
 
-            // Fallback to Super Admin tenant 1 if tenant-specific setting is empty
-            if ($tid !== 1) {
+            // Fallback to Super Admin tenant 1 if tenant-specific setting is empty AND fallback is explicitly allowed
+            if ($allowFallback && $tid !== 1) {
                 $st1 = $pdo->prepare("SELECT setting_value FROM settings WHERE tenant_id = 1 AND setting_key = ?");
                 $st1->execute([$key]);
                 $val1 = $st1->fetchColumn();

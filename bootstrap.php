@@ -159,6 +159,23 @@ function require_login(): void {
     if (empty($_SESSION['user_id'])) {
         redirect('login'); 
     }
+
+    // Runtime Session Revocation Check
+    if (isset($_SESSION['session_version'])) {
+        global $pdo;
+        if ($pdo) {
+            try {
+                $stV = $pdo->prepare("SELECT session_version FROM users WHERE id = ?");
+                $stV->execute([(int)$_SESSION['user_id']]);
+                $dbVer = $stV->fetchColumn();
+                if ($dbVer !== false && (int)$_SESSION['session_version'] !== (int)$dbVer) {
+                    session_unset();
+                    session_destroy();
+                    redirect('login');
+                }
+            } catch (\Throwable $t) {}
+        }
+    }
 }
 
 function has_role(array $allowedRoles): bool {
@@ -201,7 +218,7 @@ function calc_discount(float $subtotal, string $type, float $value): float {
     return min($subtotal, max(0, $value));
 }
 
-function log_audit(PDO $pdo, string $action, string $entityType, ?int $entityId = null, ?string $details = null): void {
+function log_audit(PDO $pdo, string $action, ?string $entityType = null, ?int $entityId = null, ?string $details = null): void {
     $st = $pdo->prepare("INSERT INTO audit_logs (tenant_id, user_id, action, entity_type, entity_id, details, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?)");
     $st->execute([
         tenant_id(),
@@ -219,7 +236,18 @@ function get_invoice_token(array|object $inv): string {
     $num = is_array($inv) ? ($inv['invoice_number'] ?? '') : ($inv->invoice_number ?? '');
     $tid = is_array($inv) ? ($inv['tenant_id'] ?? 1) : ($inv->tenant_id ?? 1);
     global $config;
-    $secret = $config['invoice_link_key'] ?? $config['app_key'] ?? (getenv('APP_KEY') ?: 'onesol_invoice_token_secret_v1_key');
+    $secret = $config['invoice_link_key'] ?? $config['app_key'] ?? getenv('APP_KEY') ?? '';
+
+    if (empty($secret)) {
+        $keyFile = __DIR__ . '/storage/app_key.txt';
+        if (file_exists($keyFile)) {
+            $secret = trim((string)file_get_contents($keyFile));
+        } else {
+            $secret = bin2hex(random_bytes(32));
+            @file_put_contents($keyFile, $secret, LOCK_EX);
+        }
+    }
+
     return substr(hash_hmac('sha256', "inv_{$id}_{$num}_{$tid}", $secret), 0, 32);
 }
 

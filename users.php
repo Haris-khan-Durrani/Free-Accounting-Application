@@ -45,26 +45,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
     $action = $_POST['action'] ?? 'create_user';
 
+    $accessibleTenantIds = array_map(fn($at) => (int)$at['id'], $accessibleTenants);
+    $allowedRoles = $isMasterSuperAdmin ? ['owner', 'admin', 'accountant', 'sales', 'viewer'] : ['admin', 'accountant', 'sales', 'viewer'];
+
     if ($action === 'create_user') {
         $name = trim($_POST['name'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
         $role = $_POST['role'] ?? 'accountant';
-        $targetTenantIds = array_map('intval', (array)($_POST['target_tenant_ids'] ?? [$tid]));
+        $requestedTenants = array_map('intval', (array)($_POST['target_tenant_ids'] ?? [$tid]));
+        
+        // Strict BOLA check: Filter target tenants strictly to caller's accessible tenant set
+        $targetTenantIds = array_values(array_intersect($requestedTenants, $accessibleTenantIds));
         if (empty($targetTenantIds)) {
             $targetTenantIds = [$tid];
         }
         $primaryTenantId = $targetTenantIds[0];
-        $accountScope = $_POST['account_scope'] ?? 'subaccount';
 
-        if ($accountScope === 'tenant_admin') {
-            $role = 'admin';
+        // Strict Server-Side Role Allowlist Verification
+        if (!in_array($role, $allowedRoles, true)) {
+            $role = 'accountant';
         }
 
         if (!$isLifetime && $currentUsersCount >= $maxUsersAllowed) {
             $error = "Team user limit reached ($currentUsersCount/$maxUsersAllowed allowed on your " . ($tPlan['plan_name'] ?? 'Plan') . "). Please upgrade your subscription plan to add more team members.";
-        } elseif (!$name || !$email || strlen($password) < 8) {
-            $error = 'Name, valid email, and password (min 8 chars) are required.';
+        } elseif (!$name || !$email || strlen($password) < 12) {
+            $error = 'Name, valid email, and strong password (min 12 chars) are required.';
         } else {
             try {
                 $hash = password_hash($password, PASSWORD_DEFAULT);
@@ -72,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $st->execute([$primaryTenantId, $name, $email, $hash, $role]);
                 $newUserId = (int)$pdo->lastInsertId();
 
-                // Multi-assign user to all selected workspace locations
+                // Multi-assign user strictly to authorized workspace locations
                 $stUt = $pdo->prepare("INSERT INTO user_tenants (user_id, tenant_id, role) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE role = ?");
                 foreach ($targetTenantIds as $tId) {
                     $stUt->execute([$newUserId, $tId, $role, $role]);
@@ -87,13 +93,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $assignedTenantNameStr = implode(', ', $assignedTenantNames);
 
-                // Dispatch Welcome Email to the new team member
+                // Dispatch Welcome Email (Security Best Practice: Do not email plaintext passwords)
                 $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                $rawHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                $host = preg_replace('/[^a-zA-Z0-9\.\:\-]/', '', $rawHost);
                 $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
-                $loginUrl = $protocol . '://' . $host . $scriptDir . '/login.php';
+                $appUrl = getenv('APP_URL') ?: "{$protocol}://{$host}{$scriptDir}";
+                $loginUrl = rtrim($appUrl, '/') . '/login.php';
 
-                $subject = "Welcome to " . e($assignedTenantNameStr) . " - Your Account Credentials";
+                $subject = "Welcome to " . e($assignedTenantNameStr) . " - Your Workspace Account";
                 $htmlBody = "
                     <div style='font-family: system-ui, -apple-system, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;'>
                         <div style='text-align: center; margin-bottom: 20px;'>
@@ -105,7 +113,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <tr><td style='padding: 6px 0; font-weight: bold; width: 140px;'>Assigned Workspaces:</td><td style='padding: 6px 0; font-weight: 700; color: #0f172a;'>" . e($assignedTenantNameStr) . "</td></tr>
                                 <tr><td style='padding: 6px 0; font-weight: bold;'>Permission Role:</td><td style='padding: 6px 0;'><span style='background: #fef3c7; color: #92400e; padding: 3px 10px; border-radius: 99px; font-weight: 800; font-size: 11px; text-transform: uppercase;'>" . e($role) . "</span></td></tr>
                                 <tr><td style='padding: 6px 0; font-weight: bold;'>Login Email:</td><td style='padding: 6px 0; font-weight: 600;'>" . e($email) . "</td></tr>
-                                <tr><td style='padding: 6px 0; font-weight: bold;'>Password:</td><td style='padding: 6px 0;'><code style='background: #e2e8f0; color: #0f172a; padding: 3px 8px; border-radius: 6px; font-family: monospace; font-weight: bold;'>" . e($password) . "</code></td></tr>
                             </table>
                         </div>
                         <div style='text-align: center; margin-top: 24px;'>
@@ -118,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 try {
                     $sent = \Services\Mailer::send($pdo, $primaryTenantId, $email, $subject, $htmlBody);
                     if ($sent) {
-                        $emailNotice = " & a Welcome Email with login details was sent to $email!";
+                        $emailNotice = " & a Welcome Email was sent to $email!";
                     }
                 } catch (Throwable $t) {
                     $emailNotice = " (Note: Welcome email could not be delivered. Check custom SMTP settings).";
@@ -138,18 +145,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name = trim($_POST['name'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $role = $_POST['role'] ?? 'accountant';
-        $targetTenantIds = array_map('intval', (array)($_POST['target_tenant_ids'] ?? [$tid]));
+        $requestedTenants = array_map('intval', (array)($_POST['target_tenant_ids'] ?? [$tid]));
+        
+        // Strict BOLA check: Ensure edit user target belongs to caller's accessible tenant set
+        $inClause = implode(',', array_fill(0, count($accessibleTenantIds), '?'));
+        $stCheckUser = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE user_id = ? AND tenant_id IN ($inClause)");
+        $stCheckUser->execute(array_merge([$editUserId], $accessibleTenantIds));
+        if ((int)$stCheckUser->fetchColumn() === 0) {
+            flash('error', 'Access denied. Target user does not belong to your authorized workspace locations.');
+            redirect('users');
+        }
+
+        // Filter target tenants strictly to caller's accessible tenant set
+        $targetTenantIds = array_values(array_intersect($requestedTenants, $accessibleTenantIds));
         if (empty($targetTenantIds)) {
             $targetTenantIds = [$tid];
         }
         $primaryTenantId = $targetTenantIds[0];
         $password = $_POST['password'] ?? '';
 
+        if (!in_array($role, $allowedRoles, true)) {
+            $role = 'accountant';
+        }
+
         if (!$editUserId || !$name || !$email) {
             $error = 'User ID, name, and email are required for updating.';
         } else {
             try {
-                if (!empty($password) && strlen($password) >= 8) {
+                if (!empty($password) && strlen($password) >= 12) {
                     $hash = password_hash($password, PASSWORD_DEFAULT);
                     $stU = $pdo->prepare("UPDATE users SET name = ?, email = ?, role = ?, tenant_id = ?, password_hash = ? WHERE id = ?");
                     $stU->execute([$name, $email, $role, $primaryTenantId, $hash, $editUserId]);
@@ -158,9 +181,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stU->execute([$name, $email, $role, $primaryTenantId, $editUserId]);
                 }
 
-                // Re-sync all assigned workspace locations for this user
-                $stDelUt = $pdo->prepare("DELETE FROM user_tenants WHERE user_id = ?");
-                $stDelUt->execute([$editUserId]);
+                // Re-sync all assigned workspace locations for this user strictly within accessible tenants
+                $stDelUt = $pdo->prepare("DELETE FROM user_tenants WHERE user_id = ? AND tenant_id IN ($inClause)");
+                $stDelUt->execute(array_merge([$editUserId], $accessibleTenantIds));
 
                 $stInsUt = $pdo->prepare("INSERT INTO user_tenants (user_id, tenant_id, role) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE role = ?");
                 foreach ($targetTenantIds as $tId) {
@@ -176,9 +199,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-
     if ($action === 'resend_welcome') {
         $targetUserId = (int)($_POST['user_id'] ?? 0);
+
+        // BOLA Check
+        $inClause = implode(',', array_fill(0, count($accessibleTenantIds), '?'));
+        $stCheckUser = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE user_id = ? AND tenant_id IN ($inClause)");
+        $stCheckUser->execute(array_merge([$targetUserId], $accessibleTenantIds));
+        if ((int)$stCheckUser->fetchColumn() === 0) {
+            flash('error', 'Access denied. Target user does not belong to your authorized workspace locations.');
+            redirect('users');
+        }
+
         $stU = $pdo->prepare("SELECT u.*, GROUP_CONCAT(t.name SEPARATOR ', ') as workspace_names 
                               FROM users u 
                               LEFT JOIN user_tenants ut ON ut.user_id = u.id 
@@ -192,16 +224,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $assignedTenantNameStr = $uData['workspace_names'] ?: 'Company Workspace';
             $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $rawHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $host = preg_replace('/[^a-zA-Z0-9\.\:\-]/', '', $rawHost);
             $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
-            $loginUrl = $protocol . '://' . $host . $scriptDir . '/login.php';
+            $appUrl = getenv('APP_URL') ?: "{$protocol}://{$host}{$scriptDir}";
+            $loginUrl = rtrim($appUrl, '/') . '/login.php';
 
-            $subject = "Welcome to " . e($assignedTenantNameStr) . " - Account Credentials";
+            $subject = "Welcome to " . e($assignedTenantNameStr) . " - Workspace Access";
             $htmlBody = "
                 <div style='font-family: system-ui, -apple-system, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;'>
                     <div style='text-align: center; margin-bottom: 20px;'>
                         <h2 style='color: #0f172a; margin: 0; font-size: 22px;'>Welcome to " . e($assignedTenantNameStr) . "! 🎉</h2>
-                        <p style='color: #64748b; font-size: 13px; margin-top: 6px;'>Your team member account credentials reminder.</p>
+                        <p style='color: #64748b; font-size: 13px; margin-top: 6px;'>Your team member workspace access reminder.</p>
                     </div>
                     <div style='background: #f8fafc; padding: 18px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #f1f5f9;'>
                         <table style='width: 100%; border-collapse: collapse; font-size: 13px; color: #334155;'>
@@ -233,6 +267,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'send_password_reset') {
         $targetUserId = (int)($_POST['user_id'] ?? 0);
+
+        // BOLA Check
+        $inClause = implode(',', array_fill(0, count($accessibleTenantIds), '?'));
+        $stCheckUser = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE user_id = ? AND tenant_id IN ($inClause)");
+        $stCheckUser->execute(array_merge([$targetUserId], $accessibleTenantIds));
+        if ((int)$stCheckUser->fetchColumn() === 0) {
+            flash('error', 'Access denied. Target user does not belong to your authorized workspace locations.');
+            redirect('users');
+        }
+
         $stU = $pdo->prepare("SELECT * FROM users WHERE id = ? LIMIT 1");
         $stU->execute([$targetUserId]);
         $uData = $stU->fetch();
@@ -240,16 +284,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$uData) {
             $error = 'User not found.';
         } else {
-            $token = bin2hex(random_bytes(32));
+            $rawToken = bin2hex(random_bytes(32));
+            $tokenHash = hash('sha256', $rawToken);
             $expiresAt = date('Y-m-d H:i:s', strtotime('+1 hour'));
 
             $stUpd = $pdo->prepare("UPDATE users SET reset_token = ?, reset_token_expires_at = ? WHERE id = ?");
-            $stUpd->execute([$token, $expiresAt, $targetUserId]);
+            $stUpd->execute([$tokenHash, $expiresAt, $targetUserId]);
 
-            $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http');
-            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-            $dir = rtrim(dirname($_SERVER['PHP_SELF'] ?? ''), '/\\');
-            $resetUrl = "{$scheme}://{$host}{$dir}/reset_password.php?token={$token}";
+            $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+            $rawHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $host = preg_replace('/[^a-zA-Z0-9\.\:\-]/', '', $rawHost);
+            $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+            $appUrl = getenv('APP_URL') ?: "{$protocol}://{$host}{$scriptDir}";
+            $resetUrl = rtrim($appUrl, '/') . "/reset_password.php?token={$rawToken}";
 
             $subject = "Password Reset Request - OneSol";
             $htmlBody = "
@@ -289,9 +336,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'delete_user') {
-
         $deleteUserId = (int)($_POST['user_id'] ?? 0);
         $activeUserId = (int)($_SESSION['user_id'] ?? 0);
+
+        // BOLA Check
+        $inClause = implode(',', array_fill(0, count($accessibleTenantIds), '?'));
+        $stCheckUser = $pdo->prepare("SELECT COUNT(*) FROM user_tenants WHERE user_id = ? AND tenant_id IN ($inClause)");
+        $stCheckUser->execute(array_merge([$deleteUserId], $accessibleTenantIds));
+        if ((int)$stCheckUser->fetchColumn() === 0) {
+            flash('error', 'Access denied. Target user does not belong to your authorized workspace locations.');
+            redirect('users');
+        }
 
         if ($deleteUserId === $activeUserId) {
             $error = 'Security Protection: You cannot delete your own active user account.';

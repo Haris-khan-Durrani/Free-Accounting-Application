@@ -17,7 +17,7 @@ if (empty($payload)) {
 $headers = getallheaders();
 $wcSig = $_SERVER['HTTP_X_WC_WEBHOOK_SIGNATURE'] ?? $headers['X-WC-Webhook-Signature'] ?? $headers['x-wc-webhook-signature'] ?? '';
 
-$wcSecret = \Services\PaymentGatewayService::getSetting($pdo, 'woocommerce_webhook_secret', getenv('WOOCOMMERCE_WEBHOOK_SECRET') ?: '', $tenantId);
+$wcSecret = \Services\PaymentGatewayService::getSetting($pdo, 'woocommerce_webhook_secret', '', $tenantId, false);
 
 if (empty($wcSecret)) {
     http_response_code(503);

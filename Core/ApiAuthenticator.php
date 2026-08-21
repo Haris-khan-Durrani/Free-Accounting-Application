@@ -35,14 +35,14 @@ class ApiAuthenticator {
             self::respondJson(false, 'Too Many Requests. API key rate limit exceeded (120 requests per minute).', [], 429);
         }
 
-        // 1. Query scoped api_keys table by key_hash (or fallback to legacy column if exists)
+        // 1. Query scoped api_keys table strictly by SHA-256 key_hash
         $st = $pdo->prepare("
             SELECT ak.*, t.id as tenant_id, t.name as tenant_name, t.status as tenant_status
             FROM api_keys ak
             JOIN tenants t ON t.id = ak.tenant_id
-            WHERE (ak.key_hash = ? OR ak.api_key = ?)
+            WHERE ak.key_hash = ?
         ");
-        $st->execute([$keyHash, $apiKey]);
+        $st->execute([$keyHash]);
         $keyRow = $st->fetch();
 
         if (!$keyRow) {

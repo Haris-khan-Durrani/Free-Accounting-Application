@@ -17,7 +17,7 @@ if (empty($payload)) {
 $headers = getallheaders();
 $hmacHeader = $_SERVER['HTTP_X_SHOPIFY_HMAC_SHA256'] ?? $headers['X-Shopify-Hmac-Sha256'] ?? $headers['x-shopify-hmac-sha256'] ?? '';
 
-$shopifySecret = \Services\PaymentGatewayService::getSetting($pdo, 'shopify_webhook_secret', getenv('SHOPIFY_WEBHOOK_SECRET') ?: '', $tenantId);
+$shopifySecret = \Services\PaymentGatewayService::getSetting($pdo, 'shopify_webhook_secret', '', $tenantId, false);
 
 if (empty($shopifySecret)) {
     http_response_code(503);

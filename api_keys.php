@@ -7,6 +7,12 @@ $pdo  = $GLOBALS['pdo'];
 $tid  = tenant_id();
 $uid  = (int)($_SESSION['user_id'] ?? 0);
 
+// Require owner or admin role for API key management
+if (!has_role(['owner', 'admin'])) {
+    flash('error', 'Access denied. API Key management is restricted to workspace owners and administrators.');
+    redirect('index');
+}
+
 // ── Scope Definitions ──────────────────────────────────────────────
 $SCOPE_DEFS = [
     'invoices:read'   => ['label' => 'Read Invoices',      'icon' => 'fa-file-invoice',    'color' => 'amber',   'desc' => 'List and view all invoices.'],
@@ -35,10 +41,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$name) {
             $flash_error = 'Key name is required.';
         } else {
-            // Validate scopes
-            $validScopes = array_filter($scopesRaw, fn($s) => array_key_exists($s, $SCOPE_DEFS));
+            // Validate scopes & enforce creator role limits
+            $validScopes = array_values(array_filter($scopesRaw, fn($s) => array_key_exists($s, $SCOPE_DEFS)));
+            
+            // Restrict tenants:write scope strictly to Master Super-Admins
+            $isMasterSuperAdmin = ($tid === 1 && has_role(['owner']));
+            if (!$isMasterSuperAdmin) {
+                $validScopes = array_values(array_diff($validScopes, ['tenants:write']));
+            }
+
             if (empty($validScopes)) {
-                $flash_error = 'Select at least one permission scope.';
+                $flash_error = 'Select at least one valid permission scope.';
             } else {
                 // Generate key: os_live_ + 40 hex chars
                 $rawKey    = 'os_live_' . bin2hex(random_bytes(20));

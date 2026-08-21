@@ -31,88 +31,12 @@ $installed    = false;
 
 /*
 |--------------------------------------------------------------------------
-| Check Existing Installation
+| Prevent HTTP Reinstallation (Fail-Closed Lock when config.php exists)
 |--------------------------------------------------------------------------
 */
-
 if ($configExists) {
-    try {
-        $config = require $configFile;
-
-        if (!is_array($config)) {
-            throw new RuntimeException(
-                'Invalid config.php format.'
-            );
-        }
-
-        $dbHost = $config['db_host'] ?? 'localhost';
-        $dbPort = $config['db_port'] ?? '3306';
-        $dbName = $config['db_name'] ?? '';
-        $dbUser = $config['db_user'] ?? '';
-        $dbPass = $config['db_pass'] ?? '';
-
-        if ($dbName === '' || $dbUser === '') {
-            throw new RuntimeException(
-                'Database configuration is incomplete.'
-            );
-        }
-
-        $dsn = sprintf(
-            'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
-            $dbHost,
-            $dbPort,
-            $dbName
-        );
-
-        $testPdo = new PDO(
-            $dsn,
-            $dbUser,
-            $dbPass,
-            [
-                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES   => false,
-            ]
-        );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Verify Core Table
-        |--------------------------------------------------------------------------
-        */
-
-        $tableCheck = $testPdo->query(
-            "SHOW TABLES LIKE 'users'"
-        );
-
-        if (
-            $tableCheck &&
-            $tableCheck->rowCount() > 0
-        ) {
-            $installed = true;
-        } else {
-            $dbErrorDetails =
-                'Database connection succeeded, but core database tables are missing.';
-        }
-
-    } catch (Throwable $exception) {
-
-        $installed = false;
-
-        $dbErrorDetails =
-            'Database connection failed: ' .
-            $exception->getMessage();
-    }
-}
-
-/*
-|--------------------------------------------------------------------------
-| Prevent HTTP Reinstallation
-|--------------------------------------------------------------------------
-*/
-if ($installed) {
     http_response_code(403);
-    echo '<!doctype html><html><head><title>Installer Locked</title><style>body{font-family:sans-serif;padding:40px;background:#0f172a;color:#f8fafc;text-align:center;}.card{max-width:500px;margin:0 auto;background:#1e293b;padding:32px;border-radius:16px;border:1px solid #334155;}h1{color:#ef4444;font-size:24px;}</style></head><body><div class="card"><h1>Installation Locked</h1><p>OneSol Invoice Manager is already installed. For security reasons, HTTP reinstallation is disabled.</p><p style="color:#94a3b8;font-size:13px;">If you need to reinstall, please remove config.php via SSH or run the system CLI installer.</p><a href="login.php" style="display:inline-block;margin-top:16px;padding:10px 20px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">Return to Login</a></div></body></html>';
+    echo '<!doctype html><html><head><title>Installer Locked</title><style>body{font-family:sans-serif;padding:40px;background:#0f172a;color:#f8fafc;text-align:center;}.card{max-width:500px;margin:0 auto;background:#1e293b;padding:32px;border-radius:16px;border:1px solid #334155;}h1{color:#ef4444;font-size:24px;}</style></head><body><div class="card"><h1>Installation Locked</h1><p>OneSol Invoice Manager is already configured. For security reasons, HTTP reinstallation is strictly disabled.</p><p style="color:#94a3b8;font-size:13px;">If you need to reinstall or reconfigure the application, remove <code>config.php</code> from the server filesystem via SSH or console access.</p><a href="login.php" style="display:inline-block;margin-top:16px;padding:10px 20px;background:#3b82f6;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">Return to Application Login</a></div></body></html>';
     exit;
 }
 

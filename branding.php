@@ -6,14 +6,20 @@ require __DIR__ . '/layout.php';
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 
-// Fetch all registered tenants for superadmin/owner workspace switcher
-$stAllTenants = $pdo->query("SELECT id, name, code FROM tenants ORDER BY name ASC");
-$allTenants = $stAllTenants->fetchAll();
-
-$targetTenantId = (int)($_GET['tenant_id'] ?? $_POST['target_tenant_id'] ?? $tid);
-if (!has_role(['owner', 'admin']) && $targetTenantId !== $tid) {
-    $targetTenantId = $tid;
+// Fetch accessible tenants for the logged-in user
+$activeUserId = (int)($_SESSION['user_id'] ?? 0);
+$isMasterSuperAdmin = ($tid === 1 && has_role(['owner']));
+if ($isMasterSuperAdmin) {
+    $stAllTenants = $pdo->query("SELECT id, name, code FROM tenants ORDER BY name ASC");
+    $allTenants = $stAllTenants->fetchAll();
+    $accessibleTenantIds = array_map(fn($t) => (int)$t['id'], $allTenants);
+} else {
+    $allTenants = \Core\Tenant::getUserTenants($pdo, $activeUserId);
+    $accessibleTenantIds = array_map(fn($ut) => (int)$ut['id'], $allTenants);
 }
+
+$requestedTenantId = (int)($_GET['tenant_id'] ?? $_POST['target_tenant_id'] ?? $tid);
+$targetTenantId = (in_array($requestedTenantId, $accessibleTenantIds, true) && has_role(['owner', 'admin'])) ? $requestedTenantId : $tid;
 
 $brand = branding($targetTenantId);
 $targetTenantObj = null;
@@ -58,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $watermarkEnabled = isset($_POST['watermark_enabled']) ? 1 : 0;
     $showQrCode = isset($_POST['show_qr_code']) ? 1 : 0;
 
-    // Handle File Uploads
+    // Handle File Uploads (Safe Raster Formats PNG, JPG, WEBP Only)
     $uploadDir = __DIR__ . '/assets/img/uploads/';
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0755, true);
@@ -71,12 +77,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $handleUpload = function($fileKey, $prefix) use ($uploadDir, $targetTenantId) {
         if (!empty($_FILES[$fileKey]['name']) && $_FILES[$fileKey]['error'] === UPLOAD_ERR_OK) {
+            $tmpName = $_FILES[$fileKey]['tmp_name'];
             $ext = strtolower(pathinfo($_FILES[$fileKey]['name'], PATHINFO_EXTENSION));
-            if (in_array($ext, ['png', 'jpg', 'jpeg', 'svg', 'webp'], true)) {
-                $filename = $prefix . '_' . $targetTenantId . '_' . time() . '.' . $ext;
-                $target = $uploadDir . $filename;
-                if (move_uploaded_file($_FILES[$fileKey]['tmp_name'], $target)) {
-                    return 'assets/img/uploads/' . $filename;
+            if (in_array($ext, ['png', 'jpg', 'jpeg', 'webp'], true)) {
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mime = finfo_file($finfo, $tmpName);
+                finfo_close($finfo);
+
+                $allowedMimes = ['image/png', 'image/jpeg', 'image/pjpeg', 'image/webp'];
+                if (in_array($mime, $allowedMimes, true)) {
+                    $filename = $prefix . '_' . $targetTenantId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+                    $target = $uploadDir . $filename;
+                    if (move_uploaded_file($tmpName, $target)) {
+                        return 'assets/img/uploads/' . $filename;
+                    }
                 }
             }
         }

@@ -5,14 +5,20 @@ require_login();
 $pdo = $GLOBALS['pdo'];
 $tid = tenant_id();
 
-// Fetch all registered tenants for superadmin/owner domain workspace switcher
-$stAllTenants = $pdo->query("SELECT id, name, code FROM tenants ORDER BY name ASC");
-$allTenants = $stAllTenants->fetchAll();
-
-$targetTenantId = (int)($_GET['tenant_id'] ?? $_POST['target_tenant_id'] ?? $tid);
-if (!has_role(['owner', 'admin']) && $targetTenantId !== $tid) {
-    $targetTenantId = $tid;
+// Fetch accessible tenants for the logged-in user
+$activeUserId = (int)($_SESSION['user_id'] ?? 0);
+$isMasterSuperAdmin = ($tid === 1 && has_role(['owner']));
+if ($isMasterSuperAdmin) {
+    $stAllTenants = $pdo->query("SELECT id, name, code FROM tenants ORDER BY name ASC");
+    $allTenants = $stAllTenants->fetchAll();
+    $accessibleTenantIds = array_map(fn($t) => (int)$t['id'], $allTenants);
+} else {
+    $allTenants = \Core\Tenant::getUserTenants($pdo, $activeUserId);
+    $accessibleTenantIds = array_map(fn($ut) => (int)$ut['id'], $allTenants);
 }
+
+$requestedTenantId = (int)($_GET['tenant_id'] ?? $_POST['target_tenant_id'] ?? $tid);
+$targetTenantId = (in_array($requestedTenantId, $accessibleTenantIds, true) && has_role(['owner', 'admin'])) ? $requestedTenantId : $tid;
 
 $targetTenantObj = null;
 foreach ($allTenants as $at) {

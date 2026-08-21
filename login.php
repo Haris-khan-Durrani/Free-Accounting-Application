@@ -81,6 +81,7 @@ if (\Core\SecurityThrottle::isLockedOut()) {
         $_SESSION['active_tenant_id'] = $tenantId;
         $_SESSION['user_tenant_id'] = $tenantId;
         $_SESSION['tenant_id'] = $tenantId;
+        $_SESSION['session_version'] = (int)($u['session_version'] ?? 1);
 
         log_audit($pdo, 'login', 'users', $u['id'], "User {$u['email']} logged in successfully with role '{$effectiveRole}'");
         redirect('index');

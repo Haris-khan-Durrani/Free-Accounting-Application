@@ -15,54 +15,72 @@ if (!has_role(['owner'])) {
     redirect('index');
 }
 
-// Handle Actions
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_plugin'])) {
-    if (!empty($_FILES['plugin_zip']['name'])) {
-        $res = PluginEngine::uploadPluginZip($_FILES['plugin_zip']);
-        if ($res['success']) {
-            $msg = $res['message'];
-            log_audit($pdo, 'upload_plugin', 'plugins', null, "Uploaded plugin zip: {$res['slug']}");
-        } else {
-            $error = $res['error'];
-        }
-    } else {
-        $error = 'Please select a valid .zip plugin file to upload.';
-    }
-}
+$isMasterSuperAdmin = ($tid === 1 && has_role(['owner']));
 
-if (isset($_GET['action'])) {
-    $action = $_GET['action'];
-    $slug = preg_replace('/[^a-z0-9_]/i', '', $_GET['slug'] ?? '');
+// Handle Actions (All mutations require POST with CSRF verification)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+    $action = $_POST['action'] ?? '';
 
-    if ($action === 'activate' && $slug) {
-        PluginEngine::activatePlugin($pdo, $tid, $slug);
-        $msg = "Plugin '$slug' has been activated for " . tenant()['name'] . ".";
-        log_audit($pdo, 'activate_plugin', 'plugins', null, "Activated plugin '$slug'");
-    } elseif ($action === 'deactivate' && $slug) {
-        PluginEngine::deactivatePlugin($pdo, $tid, $slug);
-        $msg = "Plugin '$slug' has been deactivated for " . tenant()['name'] . ".";
-        log_audit($pdo, 'deactivate_plugin', 'plugins', null, "Deactivated plugin '$slug'");
-    } elseif ($action === 'delete' && $slug) {
-        PluginEngine::deactivatePlugin($pdo, $tid, $slug);
-        $dir = __DIR__ . "/plugins/{$slug}";
-        if (is_dir($dir)) {
-            // Recursive directory deletion
-            $files = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
-                RecursiveIteratorIterator::CHILD_FIRST
-            );
-            foreach ($files as $fileinfo) {
-                $todo = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
-                $todo($fileinfo->getRealPath());
+    if (isset($_POST['upload_plugin']) || $action === 'upload_plugin') {
+        if (!$isMasterSuperAdmin) {
+            $error = 'Access denied. Custom PHP plugin installation is restricted exclusively to Master Super-Admins.';
+        } elseif (!empty($_FILES['plugin_zip']['name'])) {
+            $res = PluginEngine::uploadPluginZip($_FILES['plugin_zip']);
+            if ($res['success']) {
+                $msg = $res['message'];
+                log_audit($pdo, 'upload_plugin', 'plugins', null, "Uploaded plugin zip: {$res['slug']}");
+            } else {
+                $error = $res['error'];
             }
-            rmdir($dir);
+        } else {
+            $error = 'Please select a valid .zip plugin file to upload.';
         }
-        $msg = "Plugin '$slug' deleted successfully.";
-        log_audit($pdo, 'delete_plugin', 'plugins', null, "Deleted plugin '$slug'");
+    } elseif ($action === 'activate') {
+        $slug = preg_replace('/[^a-z0-9_]/i', '', $_POST['slug'] ?? '');
+        if ($slug) {
+            PluginEngine::activatePlugin($pdo, $tid, $slug);
+            $msg = "Plugin '$slug' has been activated for " . tenant()['name'] . ".";
+            log_audit($pdo, 'activate_plugin', 'plugins', null, "Activated plugin '$slug'");
+        }
+    } elseif ($action === 'deactivate') {
+        $slug = preg_replace('/[^a-z0-9_]/i', '', $_POST['slug'] ?? '');
+        if ($slug) {
+            PluginEngine::deactivatePlugin($pdo, $tid, $slug);
+            $msg = "Plugin '$slug' has been deactivated for " . tenant()['name'] . ".";
+            log_audit($pdo, 'deactivate_plugin', 'plugins', null, "Deactivated plugin '$slug'");
+        }
+    } elseif ($action === 'delete') {
+        if (!$isMasterSuperAdmin) {
+            $error = 'Access denied. Plugin deletion is restricted exclusively to Master Super-Admins.';
+        } else {
+            $slug = preg_replace('/[^a-z0-9_]/i', '', $_POST['slug'] ?? '');
+            if ($slug) {
+                PluginEngine::deactivatePlugin($pdo, $tid, $slug);
+                $dir = __DIR__ . "/plugins/{$slug}";
+                if (is_dir($dir)) {
+                    $files = new RecursiveIteratorIterator(
+                        new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS),
+                        RecursiveIteratorIterator::CHILD_FIRST
+                    );
+                    foreach ($files as $fileinfo) {
+                        $todo = ($fileinfo->isDir() ? 'rmdir' : 'unlink');
+                        $todo($fileinfo->getRealPath());
+                    }
+                    rmdir($dir);
+                }
+                $msg = "Plugin '$slug' deleted successfully.";
+                log_audit($pdo, 'delete_plugin', 'plugins', null, "Deleted plugin '$slug'");
+            }
+        }
     } elseif ($action === 'create_sample') {
-        $sampleSlug = PluginEngine::createSamplePlugin();
-        $msg = "Developer sample plugin '$sampleSlug' generated in plugins/$sampleSlug!";
-        log_audit($pdo, 'create_sample_plugin', 'plugins', null, "Generated starter sample plugin '$sampleSlug'");
+        if (!$isMasterSuperAdmin) {
+            $error = 'Access denied. Sample plugin creation is restricted to Master Super-Admins.';
+        } else {
+            $sampleSlug = PluginEngine::createSamplePlugin();
+            $msg = "Developer sample plugin '$sampleSlug' generated in plugins/$sampleSlug!";
+            log_audit($pdo, 'create_sample_plugin', 'plugins', null, "Generated starter sample plugin '$sampleSlug'");
+        }
     }
 }
 
@@ -345,6 +363,8 @@ PluginEngine::add_filter('invoice_before_save', function($invoice) {
             </p>
 
             <form method="post" enctype="multipart/form-data" class="space-y-4">
+                <?=csrf_field()?>
+                <input type="hidden" name="action" value="upload_plugin">
                 <div>
                     <label class="block text-2xs font-extrabold uppercase text-slate-400 mb-1">Select Plugin Archive (.zip)</label>
                     <input type="file" name="plugin_zip" accept=".zip" required class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 border border-slate-200 rounded-xl p-1 bg-slate-50">
@@ -404,18 +424,35 @@ PluginEngine::add_filter('invoice_before_save', function($invoice) {
 
                         <div class="flex items-center space-x-2">
                             <?php if ($isActive): ?>
-                                <a href="plugins_admin?action=deactivate&slug=<?=urlencode($slug)?>" class="px-3 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-800 font-bold text-xs rounded-xl transition-all">
-                                    Deactivate
-                                </a>
+                                <form method="post" class="inline">
+                                    <?=csrf_field()?>
+                                    <input type="hidden" name="action" value="deactivate">
+                                    <input type="hidden" name="slug" value="<?=e($slug)?>">
+                                    <button type="submit" class="px-3 py-1.5 bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-800 font-bold text-xs rounded-xl transition-all">
+                                        Deactivate
+                                    </button>
+                                </form>
                             <?php else: ?>
-                                <a href="plugins_admin?action=activate&slug=<?=urlencode($slug)?>" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all">
-                                    Activate
-                                </a>
+                                <form method="post" class="inline">
+                                    <?=csrf_field()?>
+                                    <input type="hidden" name="action" value="activate">
+                                    <input type="hidden" name="slug" value="<?=e($slug)?>">
+                                    <button type="submit" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-xs transition-all">
+                                        Activate
+                                    </button>
+                                </form>
                             <?php endif; ?>
 
-                            <a href="plugins_admin?action=delete&slug=<?=urlencode($slug)?>" onclick="return confirm('Are you sure you want to delete this plugin directory?')" class="p-1.5 text-slate-400 hover:text-rose-600 text-xs font-bold transition-all" title="Delete Plugin">
-                                <i class="fa-solid fa-trash"></i>
-                            </a>
+                            <?php if ($isMasterSuperAdmin): ?>
+                                <form method="post" class="inline" onsubmit="return confirm('Are you sure you want to delete this plugin directory?')">
+                                    <?=csrf_field()?>
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="slug" value="<?=e($slug)?>">
+                                    <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 text-xs font-bold transition-all" title="Delete Plugin">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endforeach; ?>
