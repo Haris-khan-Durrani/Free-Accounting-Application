@@ -21,11 +21,18 @@ class Mailer {
         $smtpPort = (int)($tenant['smtp_port'] ?? 587);
         $smtpEnc = strtolower(trim($tenant['smtp_encryption'] ?? 'tls'));
         $smtpUser = trim($tenant['smtp_username'] ?? '');
-        $smtpPass = \Core\Crypto::decrypt($tenant['smtp_password'] ?? '');
+        
+        $rawPass = $tenant['smtp_password'] ?? '';
+        $decryptedPass = \Core\Crypto::decrypt($rawPass);
+        $smtpPass = ($decryptedPass !== null && $decryptedPass !== '') ? $decryptedPass : $rawPass;
 
-        // If custom SMTP is configured, use Socket SMTP connection
+        // If custom SMTP is configured, use Socket SMTP connection with fallback
         if ($smtpHost && $smtpUser) {
-            return self::sendViaSmtp($smtpHost, $smtpPort, $smtpEnc, $smtpUser, $smtpPass, $fromEmail, $fromName, $toEmail, $subject, $htmlBody);
+            try {
+                return self::sendViaSmtp($smtpHost, $smtpPort, $smtpEnc, $smtpUser, $smtpPass, $fromEmail, $fromName, $toEmail, $subject, $htmlBody);
+            } catch (Exception $eSmtp) {
+                error_log("Custom SMTP dispatch failed for tenant #{$tenantId}: " . $eSmtp->getMessage() . " - Falling back to native PHP mail()");
+            }
         }
 
         // Native PHP mail() fallback

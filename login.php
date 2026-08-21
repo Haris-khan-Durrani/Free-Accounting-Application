@@ -62,7 +62,11 @@ if (\Core\SecurityThrottle::isLockedOut()) {
                 </div>
             ";
 
-            \Services\Mailer::send($pdo, $tenantId, $u['email'], $subject, $htmlBody);
+            try {
+                \Services\Mailer::send($pdo, $tenantId, $u['email'], $subject, $htmlBody);
+            } catch (\Throwable $tMail) {
+                error_log("OTP dispatch error: " . $tMail->getMessage());
+            }
 
             $_SESSION['2fa_pending_user_id'] = $u['id'];
             redirect('2fa_verify');
