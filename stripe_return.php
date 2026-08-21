@@ -40,7 +40,74 @@ if (!$isAuthorizedUser && !$isValidToken) {
     exit('Access denied. Invalid or missing invoice access token.');
 }
 
-// Render-Only Status: Check invoice payment status in database (mutations happen strictly via signed webhooks)
+// Instant Direct Verification via Stripe API
+if ($inv['status'] !== 'paid' && !empty($sessionId) && str_starts_with($sessionId, 'cs_')) {
+    $secretKey = \Services\PaymentGatewayService::getSetting($pdo, 'stripe_secret_key', '', $tid);
+    if (!empty($secretKey)) {
+        $ch = curl_init("https://api.stripe.com/v1/checkout/sessions/" . urlencode($sessionId));
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $secretKey],
+            CURLOPT_TIMEOUT => 10
+        ]);
+        $res = curl_exec($ch);
+        curl_close($ch);
+
+        $sessionData = json_decode($res, true);
+        if (isset($sessionData['payment_status']) && ($sessionData['payment_status'] === 'paid' || ($sessionData['status'] ?? '') === 'complete')) {
+            $amount = ((float)($sessionData['amount_total'] ?? 0)) / 100;
+            if ($amount <= 0) {
+                $amount = (float)$inv['total'];
+            }
+
+            try {
+                $pdo->beginTransaction();
+
+                // Check for existing payment
+                $stPayCheck = $pdo->prepare("SELECT id FROM payments WHERE invoice_id = ? AND tenant_id = ? AND (gateway_transaction_id = ? OR reference = ?)");
+                $stPayCheck->execute([$invId, $tid, $sessionId, $sessionId]);
+                $existingPayId = (int)$stPayCheck->fetchColumn();
+
+                if (!$existingPayId) {
+                    $today = date('Y-m-d');
+                    $notes = "Stripe Instant Return Verification (Session: $sessionId)";
+                    $stPay = $pdo->prepare("
+                        INSERT INTO payments (tenant_id, invoice_id, amount, currency, payment_date, payment_method, gateway, gateway_transaction_id, reference, notes)
+                        VALUES (?, ?, ?, ?, ?, 'stripe', 'stripe', ?, ?, ?)
+                    ");
+                    $stPay->execute([$tid, $invId, $amount, $inv['currency'], $today, $sessionId, $sessionId, $notes]);
+                    $paymentId = (int)$pdo->lastInsertId();
+
+                    $stSum = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ? AND tenant_id = ?");
+                    $stSum->execute([$invId, $tid]);
+                    $newPaid = (float)$stSum->fetchColumn();
+
+                    $newStatus = ($newPaid >= (float)$inv['total'] - 0.01) ? 'paid' : 'partially_paid';
+
+                    $stUpd = $pdo->prepare("UPDATE invoices SET paid_amount = ?, status = ? WHERE id = ? AND tenant_id = ?");
+                    $stUpd->execute([$newPaid, $newStatus, $invId, $tid]);
+
+                    $acctService = new \Services\AccountingService($pdo, $tid);
+                    $acctService->postPaymentReceived($paymentId);
+
+                    log_audit($pdo, 'stripe_return_payment', 'payments', $paymentId, "Stripe Return verified payment {$inv['currency']} $amount for Invoice #{$inv['invoice_number']}");
+                }
+
+                $pdo->commit();
+
+                // Refresh invoice details
+                $st->execute([$invId]);
+                $inv = $st->fetch();
+            } catch (Exception $e) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+            }
+        }
+    }
+}
+
+// Render Status
 $isPaid = ($inv['status'] === 'paid');
 $isPartiallyPaid = ($inv['status'] === 'partially_paid');
 $paidAmount = (float)$inv['paid_amount'];

@@ -240,6 +240,12 @@ page_start('Workspace Payment Gateways');
                         <span class="px-2.5 py-1 bg-white text-purple-800 rounded-lg font-bold border border-purple-200">💳 Visa, MasterCard, Amex, Apple Pay</span>
                         <span class="px-2.5 py-1 bg-white text-purple-800 rounded-lg font-bold border border-purple-200">⚡ Real-Time Webhook Sync</span>
                     </div>
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-900 text-xs font-sans flex items-start gap-2.5 mt-2">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm mt-0.5"></i>
+                        <div>
+                            <strong>Stripe Requirement:</strong> Make sure to set your company name under <a href="https://dashboard.stripe.com/account" target="_blank" class="underline font-bold text-amber-950">Stripe Dashboard &rarr; Settings &rarr; Public Details</a>. Stripe requires an active account/business name to render the Hosted Checkout page.
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Credentials Grid -->

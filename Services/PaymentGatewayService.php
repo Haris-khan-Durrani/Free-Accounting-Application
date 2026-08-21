@@ -194,7 +194,12 @@ class PaymentGatewayService {
             return ['redirect_url' => $data['url']];
         }
 
-        return ['error' => 'Stripe Session Error: ' . ($data['error']['message'] ?? 'Unable to create Stripe checkout session.')];
+        $stripeErr = $data['error']['message'] ?? 'Unable to create Stripe checkout session.';
+        if (str_contains(strtolower($stripeErr), 'account or business name')) {
+            $stripeErr = "Stripe Account Setup Required: Please log into your Stripe Dashboard at https://dashboard.stripe.com/account (Settings &rarr; Public Details) and type your Business / Account Name so Stripe can display it on the checkout page.";
+        }
+
+        return ['error' => 'Stripe Session Error: ' . $stripeErr];
     }
 
     /**
