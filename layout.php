@@ -131,7 +131,7 @@ function page_start(string $title): void {
 
     // Right: Desktop Navigation Links
     if (!empty($_SESSION['user_id'])) {
-        echo '<nav class="hidden 2xl:flex items-center space-x-1 sm:space-x-1.5 whitespace-nowrap flex-shrink-0">';
+        echo '<nav class="hidden lg:flex items-center space-x-1 sm:space-x-1.5 whitespace-nowrap flex-shrink-0">';
         echo '<a href="index" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['index.php', 'index']) . '"><i class="fa-solid fa-chart-pie text-blue-400 text-2xs"></i><span>Dashboard</span></a>';
         echo '<a href="invoices" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['invoices.php', 'invoices', 'invoice_view.php']) . '"><i class="fa-solid fa-file-invoice text-amber-400 text-2xs"></i><span>Invoices</span></a>';
         echo '<a href="clients" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['clients.php', 'clients', 'client_import.php']) . '"><i class="fa-solid fa-users text-emerald-400 text-2xs"></i><span>Clients</span></a>';
@@ -287,8 +287,8 @@ function page_start(string $title): void {
         echo '<a href="logout" class="ml-1 text-slate-400 hover:text-rose-400 p-1.5 text-xs font-bold transition-colors whitespace-nowrap flex-shrink-0" title="Logout"><i class="fa-solid fa-right-from-bracket text-sm"></i></a>';
         echo '</nav>';
 
-        // Mobile / Laptop App Launcher Menu Button
-        echo '<button onclick="toggleMobileAppMenu()" class="2xl:hidden text-amber-400 hover:text-amber-300 p-2 text-xl focus:outline-none ml-2"><i class="fa-solid fa-bars-staggered"></i></button>';
+        // Mobile / Tablet App Launcher Menu Button
+        echo '<button onclick="toggleMobileAppMenu()" class="lg:hidden text-amber-400 hover:text-amber-300 p-2 text-xl focus:outline-none ml-2"><i class="fa-solid fa-bars-staggered"></i></button>';
     }
 
     echo '</div>';
