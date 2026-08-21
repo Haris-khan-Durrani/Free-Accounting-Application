@@ -130,7 +130,7 @@ page_start('Balance Sheet Statement');
             <i class="fa-solid fa-file-csv text-emerald-600 text-sm"></i>
             <span>Export CSV</span>
         </a>
-        <a href="report_pdf.php?type=balance_sheet&as_of_date=<?=urlencode($asOfDate)?>" target="_blank" class="inline-flex items-center px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-md transition-all space-x-2 border border-slate-800">
+        <a href="report_pdf.php?type=balance_sheet&<?=http_build_query($_GET)?>" target="_blank" class="inline-flex items-center px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-md transition-all space-x-2 border border-slate-800">
             <i class="fa-solid fa-file-pdf text-amber-400 text-sm"></i>
             <span>Print Balance Sheet (PDF)</span>
         </a>
