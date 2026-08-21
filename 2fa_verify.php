@@ -72,10 +72,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'resend_otp') {
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') || isset($_POST['is_ajax']);
         $lastResend = (int)($_SESSION['2fa_last_resend'] ?? 0);
+
         if (time() - $lastResend < 60) {
             $waitSecs = 60 - (time() - $lastResend);
-            flash('error', "Please wait {$waitSecs} second(s) before requesting another OTP code.");
+            $msg = "Please wait {$waitSecs} second(s) before requesting another OTP code.";
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => $msg]);
+                exit;
+            }
+            flash('error', $msg);
             redirect('2fa_verify');
         }
 
@@ -100,6 +108,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
         ";
+
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            $responseJson = json_encode(['success' => true, 'message' => 'A new 6-digit security code has been sent to your email!']);
+            if (function_exists('fastcgi_finish_request')) {
+                echo $responseJson;
+                fastcgi_finish_request();
+                \Services\Mailer::send($pdo, $tenantId, $user['email'], $subject, $htmlBody);
+                exit;
+            } else {
+                \Services\Mailer::send($pdo, $tenantId, $user['email'], $subject, $htmlBody);
+                echo $responseJson;
+                exit;
+            }
+        }
 
         \Services\Mailer::send($pdo, $tenantId, $user['email'], $subject, $htmlBody);
         flash('success', 'A new 6-digit security code has been sent to your email.');
@@ -143,8 +166,10 @@ $brand = branding();
             </div>
         <?php endif; ?>
 
+        <div id="ajax-toast" class="hidden mb-4 rounded-xl p-3.5 text-xs font-semibold flex items-center"></div>
+
         <!-- OTP Verification Form -->
-        <form method="post" class="space-y-6">
+        <form method="post" id="verify-form" class="space-y-6">
             <?=csrf_field()?>
             <input type="hidden" name="action" value="verify_otp">
 
@@ -153,16 +178,17 @@ $brand = branding();
                 <input type="text" name="otp_code" maxlength="6" autofocus required placeholder="000000" class="w-full rounded-2xl border-2 border-slate-300 bg-slate-50 px-4 py-3.5 text-center text-3xl font-black font-mono tracking-[12px] text-slate-900 focus:bg-white focus:ring-4 focus:ring-amber-500/20 focus:border-amber-500 transition-all">
             </div>
 
-            <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-3.5 border border-transparent text-sm font-black rounded-xl text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg transition-all transform hover:-translate-y-0.5">
+            <button type="submit" id="btn-verify" class="w-full inline-flex justify-center items-center px-4 py-3.5 border border-transparent text-sm font-black rounded-xl text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg transition-all transform hover:-translate-y-0.5">
                 <i class="fa-solid fa-lock mr-2"></i>Verify & Continue
             </button>
         </form>
 
         <div class="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between text-xs">
-            <form method="post" class="inline">
+            <form method="post" id="resend-form" class="inline">
                 <?=csrf_field()?>
                 <input type="hidden" name="action" value="resend_otp">
-                <button type="submit" class="font-bold text-amber-600 hover:underline"><i class="fa-solid fa-rotate-right mr-1"></i>Resend OTP Code</button>
+                <input type="hidden" name="is_ajax" value="1">
+                <button type="submit" id="btn-resend" class="font-bold text-amber-600 hover:underline inline-flex items-center"><i class="fa-solid fa-rotate-right mr-1" id="resend-icon"></i><span id="resend-text">Resend OTP Code</span></button>
             </form>
             <a href="login" class="font-semibold text-slate-400 hover:text-slate-600">Back to Login</a>
         </div>
@@ -175,6 +201,57 @@ $brand = branding();
 document.addEventListener("DOMContentLoaded", () => {
     if (typeof gsap !== "undefined") {
         gsap.from(".relative.z-10", { opacity: 0, scale: 0.95, duration: 0.4, ease: "power2.out" });
+    }
+
+    const verifyForm = document.getElementById("verify-form");
+    const btnVerify = document.getElementById("btn-verify");
+    if (verifyForm && btnVerify) {
+        verifyForm.addEventListener("submit", () => {
+            btnVerify.disabled = true;
+            btnVerify.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Verifying Code...';
+        });
+    }
+
+    const resendForm = document.getElementById("resend-form");
+    const btnResend = document.getElementById("btn-resend");
+    const resendIcon = document.getElementById("resend-icon");
+    const resendText = document.getElementById("resend-text");
+    const toast = document.getElementById("ajax-toast");
+
+    if (resendForm && btnResend) {
+        resendForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            btnResend.disabled = true;
+            resendIcon.className = "fa-solid fa-circle-notch fa-spin mr-1";
+            resendText.textContent = "Sending New Code...";
+
+            try {
+                const formData = new FormData(resendForm);
+                const res = await fetch("2fa_verify.php", {
+                    method: "POST",
+                    body: formData,
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                });
+                const data = await res.json();
+                
+                toast.classList.remove("hidden", "bg-emerald-50", "border-emerald-200", "text-emerald-800", "bg-rose-50", "border-rose-200", "text-rose-800");
+                if (data.success) {
+                    toast.classList.add("bg-emerald-50", "border", "border-emerald-200", "text-emerald-800");
+                    toast.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500 mr-2 text-base"></i><span>' + data.message + '</span>';
+                } else {
+                    toast.classList.add("bg-rose-50", "border", "border-rose-200", "text-rose-800");
+                    toast.innerHTML = '<i class="fa-solid fa-circle-exclamation text-rose-500 mr-2 text-base"></i><span>' + data.message + '</span>';
+                }
+            } catch (err) {
+                toast.classList.remove("hidden");
+                toast.classList.add("bg-emerald-50", "border", "border-emerald-200", "text-emerald-800");
+                toast.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500 mr-2 text-base"></i><span>Request submitted. Please check your inbox for the new code.</span>';
+            } finally {
+                btnResend.disabled = false;
+                resendIcon.className = "fa-solid fa-rotate-right mr-1";
+                resendText.textContent = "Resend OTP Code";
+            }
+        });
     }
 });
 </script>

@@ -159,7 +159,7 @@ $brand = branding();
         <?php endif; ?>
 
         <!-- Login Form -->
-        <form method="post" class="space-y-5">
+        <form method="post" id="login-form" class="space-y-5">
             <?=csrf_field()?>
 
             <div>
@@ -185,7 +185,7 @@ $brand = branding();
                 </div>
             </div>
 
-            <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-3.5 border border-transparent text-sm font-black rounded-xl text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg transition-all transform hover:-translate-y-0.5">
+            <button type="submit" id="btn-login" class="w-full inline-flex justify-center items-center px-4 py-3.5 border border-transparent text-sm font-black rounded-xl text-white bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg transition-all transform hover:-translate-y-0.5">
                 <i class="fa-solid fa-right-to-bracket mr-2"></i>Sign In to Dashboard
             </button>
         </form>
@@ -203,6 +203,15 @@ $brand = branding();
 document.addEventListener("DOMContentLoaded", () => {
     if (typeof gsap !== "undefined") {
         gsap.from(".relative.z-10", { opacity: 0, y: 20, duration: 0.5, ease: "power2.out" });
+    }
+
+    const form = document.getElementById("login-form");
+    const btn = document.getElementById("btn-login");
+    if (form && btn) {
+        form.addEventListener("submit", () => {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Verifying Credentials...';
+        });
     }
 });
 </script>

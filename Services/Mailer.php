@@ -52,7 +52,7 @@ class Mailer {
     private static function sendViaSmtp(string $host, int $port, string $encryption, string $username, string $password, string $fromEmail, string $fromName, string $toEmail, string $subject, string $htmlBody): bool {
         $prefix = ($encryption === 'ssl') ? 'ssl://' : '';
         $socketHost = $prefix . $host;
-        $timeout = 10;
+        $timeout = 3; // Fast 3s connection timeout
 
         $socket = @fsockopen($socketHost, $port, $errno, $errstr, $timeout);
         if (!$socket) {
