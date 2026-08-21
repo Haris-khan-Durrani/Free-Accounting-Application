@@ -1,5 +1,5 @@
 <?php
-// stripe_return.php - Stripe Fallback Return URL & Automatic Real-Time Payment Sync
+// stripe_return.php - Unified Payment Return URL & Instant Real-Time API Sync Engine
 require __DIR__ . '/bootstrap.php';
 
 $pdo = $GLOBALS['pdo'];
@@ -40,67 +40,203 @@ if (!$isAuthorizedUser && !$isValidToken) {
     exit('Access denied. Invalid or missing invoice access token.');
 }
 
-// Instant Direct Verification via Stripe API
-if ($inv['status'] !== 'paid' && !empty($sessionId) && str_starts_with($sessionId, 'cs_')) {
-    $secretKey = \Services\PaymentGatewayService::getSetting($pdo, 'stripe_secret_key', '', $tid);
-    if (!empty($secretKey)) {
-        $ch = curl_init("https://api.stripe.com/v1/checkout/sessions/" . urlencode($sessionId));
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $secretKey],
-            CURLOPT_TIMEOUT => 10
-        ]);
-        $res = curl_exec($ch);
-        curl_close($ch);
+/**
+ * Helper: Atomically record verified payment in DB and post to general ledger
+ */
+function record_instant_payment(PDO $pdo, array &$inv, string $gateway, string $transactionRef, float $amount, string $notes = '') {
+    $invId = (int)$inv['id'];
+    $tid = (int)$inv['tenant_id'];
+    
+    try {
+        $pdo->beginTransaction();
 
-        $sessionData = json_decode($res, true);
-        if (isset($sessionData['payment_status']) && ($sessionData['payment_status'] === 'paid' || ($sessionData['status'] ?? '') === 'complete')) {
-            $amount = ((float)($sessionData['amount_total'] ?? 0)) / 100;
-            if ($amount <= 0) {
-                $amount = (float)$inv['total'];
+        $stPayCheck = $pdo->prepare("SELECT id FROM payments WHERE invoice_id = ? AND tenant_id = ? AND (gateway_transaction_id = ? OR reference = ?)");
+        $stPayCheck->execute([$invId, $tid, $transactionRef, $transactionRef]);
+        $existingPayId = (int)$stPayCheck->fetchColumn();
+
+        if (!$existingPayId) {
+            $today = date('Y-m-d');
+            $stPay = $pdo->prepare("
+                INSERT INTO payments (tenant_id, invoice_id, amount, currency, payment_date, payment_method, gateway, gateway_transaction_id, reference, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stPay->execute([$tid, $invId, $amount, $inv['currency'], $today, $gateway, $gateway, $transactionRef, $transactionRef, $notes]);
+            $paymentId = (int)$pdo->lastInsertId();
+
+            $stSum = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ? AND tenant_id = ?");
+            $stSum->execute([$invId, $tid]);
+            $newPaid = (float)$stSum->fetchColumn();
+
+            $newStatus = ($newPaid >= (float)$inv['total'] - 0.01) ? 'paid' : 'partially_paid';
+
+            $stUpd = $pdo->prepare("UPDATE invoices SET paid_amount = ?, status = ? WHERE id = ? AND tenant_id = ?");
+            $stUpd->execute([$newPaid, $newStatus, $invId, $tid]);
+
+            $acctService = new \Services\AccountingService($pdo, $tid);
+            $acctService->postPaymentReceived($paymentId);
+
+            log_audit($pdo, "{$gateway}_return_payment", 'payments', $paymentId, "Instant Return verified payment {$inv['currency']} $amount via $gateway for Invoice #{$inv['invoice_number']}");
+        }
+
+        $pdo->commit();
+
+        $st = $pdo->prepare("SELECT * FROM invoices WHERE id = ?");
+        $st->execute([$invId]);
+        $inv = $st->fetch();
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+    }
+}
+
+// Check gateway & perform instant verification if invoice is not yet marked paid
+if ($inv['status'] !== 'paid') {
+    // 1. Stripe Checkout Session Verification
+    if (!empty($sessionId) && str_starts_with($sessionId, 'cs_')) {
+        $secretKey = \Services\PaymentGatewayService::getSetting($pdo, 'stripe_secret_key', '', $tid);
+        if (!empty($secretKey)) {
+            $ch = curl_init("https://api.stripe.com/v1/checkout/sessions/" . urlencode($sessionId));
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $secretKey],
+                CURLOPT_TIMEOUT => 10
+            ]);
+            $res = curl_exec($ch);
+            curl_close($ch);
+
+            $sessionData = json_decode($res, true);
+            if (isset($sessionData['payment_status']) && ($sessionData['payment_status'] === 'paid' || ($sessionData['status'] ?? '') === 'complete')) {
+                $amountVerified = ((float)($sessionData['amount_total'] ?? 0)) / 100 ?: (float)$inv['total'];
+                record_instant_payment($pdo, $inv, 'stripe', $sessionId, $amountVerified, 'Stripe Return Instant Verification');
             }
+        }
+    }
 
-            try {
-                $pdo->beginTransaction();
+    // 2. Ziina Payment Intent Verification
+    $ziinaId = trim($_GET['ziina_id'] ?? ($_GET['id'] ?? ''));
+    if ($inv['status'] !== 'paid' && !empty($ziinaId) && (str_starts_with($ziinaId, 'zi_') || str_starts_with($ziinaId, 'pi_'))) {
+        $token = \Services\PaymentGatewayService::getSetting($pdo, 'ziina_api_token', '', $tid);
+        if (!empty($token)) {
+            $ch = curl_init("https://api.ziina.com/v1/payment_intent/" . urlencode($ziinaId));
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $token],
+                CURLOPT_TIMEOUT => 10
+            ]);
+            $res = curl_exec($ch);
+            curl_close($ch);
+            $data = json_decode($res, true);
+            if (isset($data['status']) && strtolower($data['status']) === 'completed') {
+                $amountVerified = ((float)($data['amount'] ?? 0)) / 100 ?: (float)$inv['total'];
+                record_instant_payment($pdo, $inv, 'ziina', $ziinaId, $amountVerified, 'Ziina Return Instant Verification');
+            }
+        }
+    }
 
-                // Check for existing payment
-                $stPayCheck = $pdo->prepare("SELECT id FROM payments WHERE invoice_id = ? AND tenant_id = ? AND (gateway_transaction_id = ? OR reference = ?)");
-                $stPayCheck->execute([$invId, $tid, $sessionId, $sessionId]);
-                $existingPayId = (int)$stPayCheck->fetchColumn();
+    // 3. Tabby Payment Verification
+    $tabbyPaymentId = trim($_GET['tabby_payment_id'] ?? ($_GET['payment_id'] ?? ''));
+    if ($inv['status'] !== 'paid' && !empty($tabbyPaymentId)) {
+        $secretKey = \Services\PaymentGatewayService::getSetting($pdo, 'tabby_secret_key', '', $tid);
+        if (!empty($secretKey)) {
+            $ch = curl_init("https://api.tabby.ai/api/v2/payments/" . urlencode($tabbyPaymentId));
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $secretKey],
+                CURLOPT_TIMEOUT => 10
+            ]);
+            $res = curl_exec($ch);
+            curl_close($ch);
+            $data = json_decode($res, true);
+            $status = strtoupper($data['status'] ?? '');
+            if (in_array($status, ['AUTHORIZED', 'CLOSED', 'CAPTURED'], true)) {
+                $amountVerified = (float)($data['amount'] ?? $inv['total']);
+                record_instant_payment($pdo, $inv, 'tabby', $tabbyPaymentId, $amountVerified, 'Tabby Return Instant Verification');
+            }
+        }
+    }
 
-                if (!$existingPayId) {
-                    $today = date('Y-m-d');
-                    $notes = "Stripe Instant Return Verification (Session: $sessionId)";
-                    $stPay = $pdo->prepare("
-                        INSERT INTO payments (tenant_id, invoice_id, amount, currency, payment_date, payment_method, gateway, gateway_transaction_id, reference, notes)
-                        VALUES (?, ?, ?, ?, ?, 'stripe', 'stripe', ?, ?, ?)
-                    ");
-                    $stPay->execute([$tid, $invId, $amount, $inv['currency'], $today, $sessionId, $sessionId, $notes]);
-                    $paymentId = (int)$pdo->lastInsertId();
+    // 4. Tamara Order Verification
+    $tamaraOrderId = trim($_GET['tamara_order_id'] ?? ($_GET['orderId'] ?? ($_GET['order_id'] ?? '')));
+    if ($inv['status'] !== 'paid' && !empty($tamaraOrderId)) {
+        $apiToken = \Services\PaymentGatewayService::getSetting($pdo, 'tamara_api_token', '', $tid);
+        $apiUrl = \Services\PaymentGatewayService::getSetting($pdo, 'tamara_api_url', 'https://api-sandbox.tamara.co', $tid);
+        if (!empty($apiToken)) {
+            $ch = curl_init(rtrim($apiUrl, '/') . "/orders/" . urlencode($tamaraOrderId));
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $apiToken],
+                CURLOPT_TIMEOUT => 10
+            ]);
+            $res = curl_exec($ch);
+            curl_close($ch);
+            $data = json_decode($res, true);
+            $status = strtolower($data['status'] ?? '');
+            if (in_array($status, ['approved', 'fully_captured', 'authorised'], true)) {
+                $amountVerified = (float)($data['total_amount']['amount'] ?? $inv['total']);
+                record_instant_payment($pdo, $inv, 'tamara', $tamaraOrderId, $amountVerified, 'Tamara Return Instant Verification');
+            }
+        }
+    }
 
-                    $stSum = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ? AND tenant_id = ?");
-                    $stSum->execute([$invId, $tid]);
-                    $newPaid = (float)$stSum->fetchColumn();
+    // 5. Zbooni Order Verification
+    $zbooniOrderId = trim($_GET['zbooni_order_id'] ?? ($_GET['zbooni_id'] ?? ''));
+    if ($inv['status'] !== 'paid' && !empty($zbooniOrderId)) {
+        $apiKey = \Services\PaymentGatewayService::getSetting($pdo, 'zbooni_api_key', '', $tid);
+        if (!empty($apiKey)) {
+            $ch = curl_init("https://api.zbooni.com/v1/orders/" . urlencode($zbooniOrderId) . "/");
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => ['Authorization: Token ' . $apiKey],
+                CURLOPT_TIMEOUT => 10
+            ]);
+            $res = curl_exec($ch);
+            curl_close($ch);
+            $data = json_decode($res, true);
+            if (isset($data['status']) && strtolower($data['status']) === 'paid') {
+                $amountVerified = (float)($data['total'] ?? $inv['total']);
+                record_instant_payment($pdo, $inv, 'zbooni', $zbooniOrderId, $amountVerified, 'Zbooni Return Instant Verification');
+            }
+        }
+    }
 
-                    $newStatus = ($newPaid >= (float)$inv['total'] - 0.01) ? 'paid' : 'partially_paid';
-
-                    $stUpd = $pdo->prepare("UPDATE invoices SET paid_amount = ?, status = ? WHERE id = ? AND tenant_id = ?");
-                    $stUpd->execute([$newPaid, $newStatus, $invId, $tid]);
-
-                    $acctService = new \Services\AccountingService($pdo, $tid);
-                    $acctService->postPaymentReceived($paymentId);
-
-                    log_audit($pdo, 'stripe_return_payment', 'payments', $paymentId, "Stripe Return verified payment {$inv['currency']} $amount for Invoice #{$inv['invoice_number']}");
-                }
-
-                $pdo->commit();
-
-                // Refresh invoice details
-                $st->execute([$invId]);
-                $inv = $st->fetch();
-            } catch (Exception $e) {
-                if ($pdo->inTransaction()) {
-                    $pdo->rollBack();
+    // 6. Network International Verification
+    $networkRef = trim($_GET['network_ref'] ?? ($_GET['ref'] ?? ''));
+    if ($inv['status'] !== 'paid' && !empty($networkRef)) {
+        $apiKey = \Services\PaymentGatewayService::getSetting($pdo, 'network_api_key', '', $tid);
+        $outletId = \Services\PaymentGatewayService::getSetting($pdo, 'network_outlet_id', '', $tid);
+        $env = \Services\PaymentGatewayService::getSetting($pdo, 'network_environment', 'sandbox', $tid);
+        if (!empty($apiKey) && !empty($outletId)) {
+            $domain = ($env === 'live') ? 'api-gateway.ngenius-payments.com' : 'api-gateway.sandbox.ngenius-payments.com';
+            $chAuth = curl_init("https://{$domain}/identity/auth/access-token");
+            curl_setopt_array($chAuth, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => json_encode(['grant_type' => 'client_credentials']),
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Basic ' . base64_encode($apiKey),
+                    'Content-Type: application/vnd.ni-identity.v1+json',
+                    'Accept: application/vnd.ni-identity.v1+json'
+                ],
+                CURLOPT_TIMEOUT => 10
+            ]);
+            $authRes = curl_exec($chAuth);
+            curl_close($chAuth);
+            $accessToken = json_decode($authRes, true)['access_token'] ?? '';
+            if (!empty($accessToken)) {
+                $ch = curl_init("https://{$domain}/transactions/outlets/{$outletId}/orders/" . urlencode($networkRef));
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $accessToken],
+                    CURLOPT_TIMEOUT => 10
+                ]);
+                $res = curl_exec($ch);
+                curl_close($ch);
+                $data = json_decode($res, true);
+                $state = $data['_embedded']['payment'][0]['state'] ?? '';
+                if (in_array(strtoupper($state), ['CAPTURED', 'PURCHASED', 'AUTHORISED'], true)) {
+                    $amountVerified = ((float)($data['amount']['value'] ?? 0)) / 100 ?: (float)$inv['total'];
+                    record_instant_payment($pdo, $inv, 'network', $networkRef, $amountVerified, 'Network Return Instant Verification');
                 }
             }
         }
@@ -120,7 +256,7 @@ $brand = \Core\Branding::get($pdo, $tid);
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Payment Successful - Invoice <?=e($inv['invoice_number'])?></title>
+    <title>Payment Return - Invoice <?=e($inv['invoice_number'])?></title>
     <link rel="stylesheet" href="assets/css/style.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -128,26 +264,38 @@ $brand = \Core\Branding::get($pdo, $tid);
 <body class="h-full flex items-center justify-center p-4 bg-slate-950 text-slate-100">
 
 <div class="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-center space-y-6">
-    <div class="w-20 h-20 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-4xl mx-auto border border-emerald-500/40 shadow-xl animate-bounce">
-        <i class="fa-solid fa-circle-check"></i>
-    </div>
+    <?php if ($isPaid): ?>
+        <div class="w-20 h-20 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-4xl mx-auto border border-emerald-500/40 shadow-xl animate-bounce">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
 
-    <div>
-        <span class="px-3 py-1 bg-emerald-500/20 text-emerald-300 text-3xs font-extrabold uppercase tracking-widest rounded-full">Stripe Payment Return</span>
-        <h1 class="text-2xl font-black text-white mt-2">Payment Return Received</h1>
-        <p class="text-xs text-slate-400 mt-1">Payment confirmations are processed automatically via cryptographically verified Stripe webhooks.</p>
-    </div>
+        <div>
+            <span class="px-3 py-1 bg-emerald-500/20 text-emerald-300 text-3xs font-extrabold uppercase tracking-widest rounded-full">Payment Confirmed</span>
+            <h1 class="text-2xl font-black text-white mt-2">Payment Successful!</h1>
+            <p class="text-xs text-slate-400 mt-1">Thank you. Your payment has been verified and recorded directly into the general ledger.</p>
+        </div>
+    <?php else: ?>
+        <div class="w-20 h-20 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-4xl mx-auto border border-amber-500/40 shadow-xl">
+            <i class="fa-solid fa-clock"></i>
+        </div>
+
+        <div>
+            <span class="px-3 py-1 bg-amber-500/20 text-amber-300 text-3xs font-extrabold uppercase tracking-widest rounded-full">Payment Processing</span>
+            <h1 class="text-2xl font-black text-white mt-2">Payment Awaiting Final Confirmation</h1>
+            <p class="text-xs text-slate-400 mt-1">Your payment return was received. As soon as your payment gateway emits final clearance, this invoice will automatically mark as paid.</p>
+        </div>
+    <?php endif; ?>
 
     <div class="bg-slate-950/80 rounded-2xl p-4 border border-slate-800 text-left text-xs space-y-2 font-mono">
         <div class="flex justify-between"><span class="text-slate-400">Invoice Number:</span> <strong class="text-white"><?=e($inv['invoice_number'])?></strong></div>
         <div class="flex justify-between"><span class="text-slate-400">Invoice Total:</span> <strong class="text-white"><?=e($inv['currency'])?> <?=number_format($totalAmount, 2)?></strong></div>
         <div class="flex justify-between"><span class="text-slate-400">Amount Paid:</span> <strong class="text-emerald-400"><?=e($inv['currency'])?> <?=number_format($paidAmount, 2)?></strong></div>
-        <div class="flex justify-between"><span class="text-slate-400">Invoice Status:</span> <strong class="text-amber-400 uppercase"><?=e($inv['status'])?></strong></div>
+        <div class="flex justify-between"><span class="text-slate-400">Invoice Status:</span> <strong class="<?=$isPaid ? 'text-emerald-400' : 'text-amber-400'?> uppercase font-black"><?=e($inv['status'])?></strong></div>
     </div>
 
     <div class="pt-2 flex flex-col sm:flex-row gap-3">
         <a href="<?=e(get_public_invoice_url($inv))?>" class="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all">
-            <i class="fa-solid fa-file-invoice mr-1"></i>View Paid Invoice
+            <i class="fa-solid fa-file-invoice mr-1"></i>View Invoice
         </a>
         <a href="client_portal" class="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl transition-all border border-slate-700">
             <i class="fa-solid fa-arrow-left mr-1"></i>Client Portal
