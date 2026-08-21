@@ -78,9 +78,15 @@ page_start($expense ? 'Edit Expense Record' : 'Record New Expense');
                 <input type="text" name="vendor_name" value="<?=e($expense['vendor_name'] ?? '')?>" placeholder="e.g. AWS Amazon, Dewa, Du Telecom" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-base sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
             </div>
             <div>
-                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Expense Category</label>
-                <select name="category_id" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-base sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
+                <div class="flex items-center justify-between mb-2">
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider">Expense Category</label>
+                    <button type="button" onclick="openQuickCategoryModal()" class="text-xs font-extrabold text-amber-600 hover:text-amber-700 hover:underline flex items-center cursor-pointer">
+                        <i class="fa-solid fa-plus-circle mr-1 text-2xs"></i>+ New Category
+                    </button>
+                </div>
+                <select id="expense_category_select" name="category_id" onchange="if(this.value==='__add_new_cat__'){openQuickCategoryModal(); this.value='';}" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-base sm:text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
                     <option value="">-- General Expense --</option>
+                    <option value="__add_new_cat__" class="font-extrabold text-amber-600 bg-amber-50">+ Add New Category...</option>
                     <?php foreach ($categories as $cat): ?>
                         <option value="<?=$cat['id']?>" <?=($expense && $expense['category_id'] == $cat['id']) ? 'selected' : ''?>><?=e($cat['name'])?></option>
                     <?php endforeach; ?>
@@ -128,5 +134,87 @@ page_start($expense ? 'Edit Expense Record' : 'Record New Expense');
         </button>
     </div>
 </form>
+
+<!-- Quick Add Category Modal -->
+<div id="quick-category-modal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[200] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden transform transition-all">
+        <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+            <h3 class="font-extrabold text-sm flex items-center"><i class="fa-solid fa-tags text-amber-400 mr-2"></i>Add New Expense Category</h3>
+            <button type="button" onclick="closeQuickCategoryModal()" class="text-slate-400 hover:text-white font-bold text-lg">×</button>
+        </div>
+        <div class="p-6">
+            <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Category Name *</label>
+            <input type="text" id="quick_cat_name_input" placeholder="e.g. Subscriptions & Software, Logistics" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500">
+            <p id="quick_cat_error" class="text-xs text-rose-600 font-bold mt-2 hidden"></p>
+            <div class="mt-6 flex justify-end space-x-3">
+                <button type="button" onclick="closeQuickCategoryModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl">Cancel</button>
+                <button type="button" id="save_quick_cat_btn" onclick="saveQuickCategory()" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs rounded-xl shadow-md flex items-center">
+                    <i class="fa-solid fa-check mr-1.5"></i>Save Category
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openQuickCategoryModal() {
+    document.getElementById('quick-category-modal').classList.remove('hidden');
+    const input = document.getElementById('quick_cat_name_input');
+    input.value = '';
+    document.getElementById('quick_cat_error').classList.add('hidden');
+    setTimeout(() => input.focus(), 100);
+}
+function closeQuickCategoryModal() {
+    document.getElementById('quick-category-modal').classList.add('hidden');
+}
+async function saveQuickCategory() {
+    const input = document.getElementById('quick_cat_name_input');
+    const errEl = document.getElementById('quick_cat_error');
+    const btn = document.getElementById('save_quick_cat_btn');
+    const name = input.value.trim();
+
+    if (!name) {
+        errEl.textContent = 'Please enter a category name.';
+        errEl.classList.remove('hidden');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Saving...';
+
+    try {
+        const res = await fetch('api_create_category.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            const select = document.getElementById('expense_category_select');
+            
+            // Check if option already exists
+            let existingOpt = select.querySelector(`option[value="${data.id}"]`);
+            if (!existingOpt) {
+                const opt = document.createElement('option');
+                opt.value = data.id;
+                opt.textContent = data.name;
+                select.appendChild(opt);
+            }
+            select.value = data.id;
+            closeQuickCategoryModal();
+        } else {
+            errEl.textContent = data.error || 'Failed to save category.';
+            errEl.classList.remove('hidden');
+        }
+    } catch (e) {
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check mr-1.5"></i>Save Category';
+    }
+}
+</script>
 
 <?php page_end(); ?>
