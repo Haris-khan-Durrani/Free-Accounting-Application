@@ -150,9 +150,6 @@ $rows = $stRows->fetchAll();
 page_start('Dashboard');
 ?>
 
-<!-- Include Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <!-- Mobile-Optimized Page Header -->
 <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
     <div>
@@ -560,6 +557,10 @@ page_start('Dashboard');
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js failed to load from primary CDN.');
+        return;
+    }
     // Chart 1: 6-Month Revenue vs Cash vs Expenses
     const el1 = document.getElementById('financialTrendChart');
     if (el1) {
