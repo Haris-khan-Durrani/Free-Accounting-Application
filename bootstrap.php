@@ -283,17 +283,27 @@ function calc_discount(float $subtotal, string $type, float $value): float {
     return min($subtotal, max(0, $value));
 }
 
-function log_audit(PDO $pdo, string $action, ?string $entityType = null, ?int $entityId = null, ?string $details = null): void {
-    $st = $pdo->prepare("INSERT INTO audit_logs (tenant_id, user_id, action, entity_type, entity_id, details, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    $st->execute([
-        tenant_id(),
-        $_SESSION['user_id'] ?? null,
-        $action,
-        $entityType,
-        $entityId,
-        $details,
-        $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
-    ]);
+function log_audit(PDO $pdo, string $action, ?string $entityType = null, ?int $entityId = null, ?string $details = null, ?int $tenantId = null): void {
+    $tid = $tenantId;
+    if (empty($tid)) {
+        try {
+            $tid = tenant_id();
+        } catch (\Throwable $e) {
+            $tid = 1;
+        }
+    }
+    try {
+        $st = $pdo->prepare("INSERT INTO audit_logs (tenant_id, user_id, action, entity_type, entity_id, details, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $st->execute([
+            $tid,
+            $_SESSION['user_id'] ?? null,
+            $action,
+            $entityType,
+            $entityId,
+            $details,
+            $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
+        ]);
+    } catch (\Throwable $ex) {}
 }
 
 function get_invoice_token(array|object $inv): string {

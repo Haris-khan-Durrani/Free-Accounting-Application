@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['client_name']      = $client['company_name'];
             $_SESSION['client_email']     = $client['email'];
 
-            log_audit($pdo, 'client_portal_otp_login', 'clients', $client['id'], "Client logged into portal via Email OTP: {$client['company_name']}");
+            log_audit($pdo, 'client_portal_otp_login', 'clients', $client['id'], "Client logged into portal via Email OTP: {$client['company_name']}", $client['tenant_id']);
             redirect('client_portal.php');
         } else {
             $step = 'otp';

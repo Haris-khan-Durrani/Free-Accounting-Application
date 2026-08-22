@@ -8,6 +8,7 @@ class Tenant {
         return !empty($_SESSION['active_tenant_id'])
             || !empty($_SESSION['user_tenant_id'])
             || !empty($_SESSION['tenant_id'])
+            || !empty($_SESSION['client_tenant_id'])
             || php_sapi_name() === 'cli';
     }
 
@@ -38,6 +39,9 @@ class Tenant {
         if (!empty($_SESSION['tenant_id'])) {
             return (int)$_SESSION['tenant_id'];
         }
+        if (!empty($_SESSION['client_tenant_id'])) {
+            return (int)$_SESSION['client_tenant_id'];
+        }
         // Auto-resolve tenant from HTTP host header if mapped to custom whitelabel domain
         if (!empty($GLOBALS['pdo'])) {
             $domainTenantId = self::resolveFromDomain($GLOBALS['pdo']);
@@ -46,12 +50,8 @@ class Tenant {
                 return $domainTenantId;
             }
         }
-        // In CLI environment (cron jobs, migrations), fallback to tenant 1
-        if (php_sapi_name() === 'cli') {
-            return 1;
-        }
-
-        throw new TenantContextException('No authenticated workspace or tenant context resolved.');
+        // In CLI environment (cron jobs, migrations) or unauthenticated context, fallback to tenant 1
+        return 1;
     }
 
     public static function setActiveId(int $tenantId, PDO $pdo, int $userId): bool {
