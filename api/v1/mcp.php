@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     exit;
 }
 
-// Handle POST JSON-RPC Request
+// Handle POST Request
 $rawInput = file_get_contents('php://input');
 $payload = json_decode($rawInput, true);
 
@@ -53,6 +53,24 @@ if (!is_array($payload)) {
         ]
     ]);
     exit;
+}
+
+// Smart normalization for ChatGPT Direct Actions & Custom JSON Payloads
+if (!isset($payload['jsonrpc']) || $payload['jsonrpc'] !== '2.0') {
+    $toolName = $payload['name'] ?? $payload['action'] ?? $payload['method'] ?? 'get_financial_summary';
+    $args = $payload['arguments'] ?? $payload['args'] ?? $payload['params'] ?? [];
+    if (!is_array($args)) {
+        $args = [];
+    }
+    $payload = [
+        'jsonrpc' => '2.0',
+        'id' => 1,
+        'method' => 'tools/call',
+        'params' => [
+            'name' => $toolName,
+            'arguments' => $args
+        ]
+    ];
 }
 
 $response = $mcpService->handleRequest($payload);
