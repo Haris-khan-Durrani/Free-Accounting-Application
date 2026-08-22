@@ -364,39 +364,69 @@ function copyNewKey() {
             </div>
 
             <!-- Edit Key Scopes Modal for Key #<?= $k['id'] ?> -->
-            <div id="edit-key-modal-<?= $k['id'] ?>" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs hidden flex items-center justify-center p-4">
-                <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
-                    <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-                        <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
-                            <i class="fa-solid fa-pen-to-square text-indigo-600"></i> Edit Key Scopes: <?= e($k['name']) ?>
-                        </h3>
-                        <button type="button" onclick="document.getElementById('edit-key-modal-<?= $k['id'] ?>').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 text-lg cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            <div id="edit-key-modal-<?= $k['id'] ?>" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-7 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
+                    
+                    <!-- Header -->
+                    <div class="flex items-center justify-between pb-4 border-b border-slate-100 mb-5 flex-shrink-0">
+                        <div class="flex items-center gap-3">
+                            <span class="h-10 w-10 bg-gradient-to-tr from-indigo-600 to-purple-600 text-white rounded-2xl flex items-center justify-center text-base font-black shadow-md">
+                                <i class="fa-solid fa-user-shield"></i>
+                            </span>
+                            <div>
+                                <h3 class="text-base font-black text-slate-900">Edit Scopes: <?= e($k['name']) ?></h3>
+                                <p class="text-2xs text-slate-500">Toggle permissions assigned to this AI key.</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="document.getElementById('edit-key-modal-<?= $k['id'] ?>').classList.add('hidden')" class="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-base cursor-pointer transition-all">✕</button>
                     </div>
-                    <form method="post">
+
+                    <form method="post" class="flex flex-col flex-1 overflow-hidden">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="edit_key_scopes">
                         <input type="hidden" name="key_id" value="<?= $k['id'] ?>">
                         
-                        <p class="text-xs text-slate-500 mb-3 font-medium">Select permission scopes assigned to this key:</p>
+                        <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                            <span class="text-2xs font-extrabold text-slate-400 uppercase tracking-wider">Permission Scopes</span>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="const cks=this.closest('form').querySelectorAll('input[type=checkbox]'); cks.forEach(c=>c.checked=true)" class="text-2xs font-bold text-indigo-600 hover:text-indigo-800 hover:underline">Select All</button>
+                                <span class="text-slate-300 text-xs">•</span>
+                                <button type="button" onclick="const cks=this.closest('form').querySelectorAll('input[type=checkbox]'); cks.forEach(c=>c.checked=false)" class="text-2xs font-bold text-slate-500 hover:text-slate-700 hover:underline">Clear All</button>
+                            </div>
+                        </div>
 
-                        <div class="space-y-2 mb-6 max-h-60 overflow-y-auto">
-                            <?php foreach ($SCOPE_DEFS as $sKey => $sDef): 
+                        <!-- Scopes List -->
+                        <div class="space-y-2.5 mb-5 overflow-y-auto pr-1 flex-1">
+                            <?php 
+                            $badgeColors = [
+                                'amber'   => ['bg' => 'bg-amber-100', 'text' => 'text-amber-700'],
+                                'blue'    => ['bg' => 'bg-blue-100', 'text' => 'text-blue-700'],
+                                'emerald' => ['bg' => 'bg-emerald-100', 'text' => 'text-emerald-700'],
+                                'rose'    => ['bg' => 'bg-rose-100', 'text' => 'text-rose-700'],
+                                'purple'  => ['bg' => 'bg-purple-100', 'text' => 'text-purple-700'],
+                            ];
+                            foreach ($SCOPE_DEFS as $sKey => $sDef): 
                                 if ($sKey === 'tenants:write' && !has_role(['owner'])) continue;
                                 $hasThisScope = in_array($sKey, $scopes, true);
+                                $color = $badgeColors[$sDef['color']] ?? ['bg' => 'bg-slate-100', 'text' => 'text-slate-700'];
                             ?>
-                            <label class="flex items-start p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors">
-                                <input type="checkbox" name="scopes[]" value="<?= $sKey ?>" <?= $hasThisScope ? 'checked' : '' ?> class="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
-                                <div class="ml-3">
-                                    <span class="text-xs font-bold text-slate-900 block"><?= $sDef['label'] ?></span>
-                                    <span class="text-2xs text-slate-500 block"><?= $sDef['desc'] ?></span>
+                            <label class="flex items-center gap-3.5 p-3 rounded-2xl border border-slate-200/90 hover:border-indigo-300 hover:bg-indigo-50/30 cursor-pointer transition-all">
+                                <input type="checkbox" name="scopes[]" value="<?= $sKey ?>" <?= $hasThisScope ? 'checked' : '' ?> class="h-4 w-4 rounded-md border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                                <span class="h-8 w-8 rounded-xl <?= $color['bg'] ?> <?= $color['text'] ?> flex items-center justify-center text-xs font-black shrink-0">
+                                    <i class="fa-solid <?= $sDef['icon'] ?>"></i>
+                                </span>
+                                <div class="flex-1 min-w-0">
+                                    <span class="text-xs font-black text-slate-900 block leading-tight"><?= $sDef['label'] ?></span>
+                                    <span class="text-2xs text-slate-500 block mt-0.5 truncate"><?= $sDef['desc'] ?></span>
                                 </div>
                             </label>
                             <?php endforeach; ?>
                         </div>
 
-                        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-                            <button type="button" onclick="document.getElementById('edit-key-modal-<?= $k['id'] ?>').classList.add('hidden')" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-extrabold rounded-xl hover:bg-slate-200">Cancel</button>
-                            <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-xs font-black rounded-xl hover:bg-indigo-700 shadow-md">Save Permissions</button>
+                        <!-- Footer -->
+                        <div class="flex justify-end gap-2.5 pt-4 border-t border-slate-100 flex-shrink-0">
+                            <button type="button" onclick="document.getElementById('edit-key-modal-<?= $k['id'] ?>').classList.add('hidden')" class="px-4 py-2.5 bg-slate-100 text-slate-700 text-xs font-extrabold rounded-xl hover:bg-slate-200 transition-all cursor-pointer">Cancel</button>
+                            <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-black rounded-xl shadow-lg hover:scale-[1.02] transition-all cursor-pointer">Save Permissions</button>
                         </div>
                     </form>
                 </div>
