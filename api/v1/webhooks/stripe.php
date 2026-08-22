@@ -82,7 +82,7 @@ if ($eventType === 'checkout.session.completed' || $eventType === 'payment_inten
 
             if ($inv) {
                 $tid = (int)$inv['tenant_id'];
-                $today = date('Y-m-d');
+                $today = date('Y-m-d H:i:s');
 
                 // Check for duplicate payment record
                 $stPayCheck = $pdo->prepare("SELECT id FROM payments WHERE invoice_id = ? AND tenant_id = ? AND (gateway_transaction_id = ? OR reference = ?)");

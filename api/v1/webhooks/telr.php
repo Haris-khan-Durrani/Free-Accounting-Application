@@ -42,7 +42,7 @@ $tid = (int)$inv['tenant_id'];
 
 // Check status (3 = Paid/Authorised in Telr API)
 if ((string)$status === '3' || strtoupper((string)$status) === 'A') {
-    $today = date('Y-m-d');
+    $today = date('Y-m-d H:i:s');
     $pdo->beginTransaction();
 
     $stCheck = $pdo->prepare("SELECT id FROM payments WHERE invoice_id = ? AND tenant_id = ? AND (gateway_transaction_id = ? OR reference = ?)");

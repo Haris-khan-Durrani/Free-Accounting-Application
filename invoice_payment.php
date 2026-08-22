@@ -17,9 +17,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     $invId = (int)($_POST['invoice_id'] ?? 0);
     $amount = (float)($_POST['amount'] ?? 0);
-    $payDate = $_POST['payment_date'] ?? date('Y-m-d');
+    $payDate = $_POST['payment_date'] ?? date('Y-m-d H:i:s');
+    if (strlen($payDate) === 10) {
+        $payDate .= ' ' . date('H:i:s');
+    }
     $payMethod = $_POST['payment_method'] ?? 'Bank Transfer';
     $notes = trim($_POST['notes'] ?? '');
+    $reference = trim($_POST['reference'] ?? $_POST['transaction_id'] ?? $_POST['stripe_id'] ?? '');
+    $gateway = (str_contains(strtolower($payMethod), 'stripe')) ? 'stripe' : 'manual';
 
     $stInv = $pdo->prepare("SELECT * FROM invoices WHERE id = ? AND tenant_id = ?");
     $stInv->execute([$invId, $tid]);
@@ -39,8 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $pdo->beginTransaction();
 
         // Insert Payment Record into Ledger
-        $stPay = $pdo->prepare("INSERT INTO payments (tenant_id, invoice_id, amount, currency, payment_date, payment_method, notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-        $stPay->execute([$tid, $invId, $amount, $inv['currency'], $payDate, $payMethod, $notes, $_SESSION['user_id'] ?? null]);
+        $stPay = $pdo->prepare("INSERT INTO payments (tenant_id, invoice_id, amount, currency, payment_date, payment_method, gateway, gateway_transaction_id, reference, notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stPay->execute([$tid, $invId, $amount, $inv['currency'], $payDate, $payMethod, $gateway, $reference, $reference, $notes, $_SESSION['user_id'] ?? null]);
         $paymentId = (int)$pdo->lastInsertId();
 
         // Calculate New Cumulative Paid Total

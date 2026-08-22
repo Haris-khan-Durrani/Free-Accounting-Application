@@ -168,6 +168,7 @@ function run_migrations(PDO $pdo): string {
     ensure_column($pdo, 'payments', 'gateway_transaction_id', "VARCHAR(255) NULL AFTER gateway");
     ensure_column($pdo, 'payments', 'reference', "VARCHAR(100) NULL AFTER gateway_transaction_id");
     ensure_column($pdo, 'payments', 'created_by', "INT UNSIGNED NULL AFTER notes");
+    ensure_column($pdo, 'payments', 'created_at', "TIMESTAMP DEFAULT CURRENT_TIMESTAMP AFTER created_by");
 
     $output[] = "Database schema updated successfully with Scoped API Keys, Recurring Invoices & Webhook Events tables.";
 

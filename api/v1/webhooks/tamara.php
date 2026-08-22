@@ -69,7 +69,7 @@ if (in_array(strtolower($eventType), ['order_approved', 'approved', 'success', '
     try {
         $pdo->beginTransaction();
 
-        $today = date('Y-m-d');
+        $today = date('Y-m-d H:i:s');
         $notes = "Tamara BNPL Payment (Order: $externalEventId)";
 
         $stPayCheck = $pdo->prepare("SELECT id FROM payments WHERE invoice_id = ? AND tenant_id = ? AND (gateway_transaction_id = ? OR reference = ?)");

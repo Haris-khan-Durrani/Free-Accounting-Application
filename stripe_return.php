@@ -55,7 +55,7 @@ function record_instant_payment(PDO $pdo, array &$inv, string $gateway, string $
         $existingPayId = (int)$stPayCheck->fetchColumn();
 
         if (!$existingPayId) {
-            $today = date('Y-m-d');
+            $today = date('Y-m-d H:i:s');
             $stPay = $pdo->prepare("
                 INSERT INTO payments (tenant_id, invoice_id, amount, currency, payment_date, payment_method, gateway, gateway_transaction_id, reference, notes)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

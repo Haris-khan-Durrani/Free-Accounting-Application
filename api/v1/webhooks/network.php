@@ -66,7 +66,7 @@ if (in_array(strtoupper($eventType), ['ORDER_CLOSED', 'CAPTURED', 'PURCHASE_SUCC
     try {
         $pdo->beginTransaction();
 
-        $today = date('Y-m-d');
+        $today = date('Y-m-d H:i:s');
         $notes = "Network International Payment (Ref: $externalEventId)";
 
         $stPayCheck = $pdo->prepare("SELECT id FROM payments WHERE invoice_id = ? AND tenant_id = ? AND (gateway_transaction_id = ? OR reference = ?)");

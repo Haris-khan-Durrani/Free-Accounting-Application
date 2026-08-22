@@ -21,7 +21,7 @@ $stItems->execute([$id]);
 $items = $stItems->fetchAll();
 
 // Fetch Payment History
-$stPay = $pdo->prepare("SELECT * FROM payments WHERE invoice_id = ? ORDER BY id DESC");
+$stPay = $pdo->prepare("SELECT p.*, u.name as recorder_name FROM payments p LEFT JOIN users u ON u.id = p.created_by WHERE p.invoice_id = ? ORDER BY p.id DESC");
 $stPay->execute([$id]);
 $payments = $stPay->fetchAll();
 
@@ -142,29 +142,124 @@ page_start('View Invoice ' . $invoice['invoice_number']);
 <!-- Payment History Audit Trail Table -->
 <?php if (!empty($payments)): ?>
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm max-w-4xl mx-auto overflow-hidden mb-8">
-        <div class="p-5 border-b border-slate-100">
-            <h3 class="text-base font-bold text-slate-900">Payment Audit Trail History</h3>
+        <div class="p-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
+            <div>
+                <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-emerald-600"></i>
+                    <span>Payment Audit Trail History</span>
+                </h3>
+                <p class="text-xs text-slate-500 mt-0.5">Verified transaction ledger & gateway payment records</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="px-2.5 py-1 rounded-full text-3xs font-extrabold bg-slate-100 text-slate-700 border border-slate-200 uppercase tracking-wider">
+                    <?=count($payments)?> <?=count($payments) === 1 ? 'Transaction' : 'Transactions'?>
+                </span>
+                <span class="px-3 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono">
+                    Total Paid: <?=money((float)$invoice['paid_amount'], $invoice['currency'])?>
+                </span>
+            </div>
         </div>
-        <table class="w-full text-left border-collapse text-sm">
-            <thead>
-                <tr class="bg-slate-50 text-xs font-bold text-slate-400 uppercase border-b border-slate-200">
-                    <th class="px-6 py-3">Payment Date</th>
-                    <th class="px-6 py-3">Payment Method</th>
-                    <th class="px-6 py-3 text-right">Amount Received</th>
-                    <th class="px-6 py-3">Notes / Reference</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-100">
-                <?php foreach ($payments as $p): ?>
-                    <tr>
-                        <td class="px-6 py-3.5 text-xs font-semibold text-slate-600"><?=e(date('d M Y', strtotime($p['payment_date'])))?></td>
-                        <td class="px-6 py-3.5 font-bold text-slate-800"><?=e($p['payment_method'])?></td>
-                        <td class="px-6 py-3.5 text-right font-mono font-extrabold text-emerald-600"><?=money((float)$p['amount'], $invoice['currency'])?></td>
-                        <td class="px-6 py-3.5 text-xs text-slate-500"><?=e($p['notes'] ?: '--')?></td>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                    <tr class="bg-slate-100/70 text-3xs font-extrabold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                        <th class="px-5 py-3">Date & Time</th>
+                        <th class="px-5 py-3">Gateway / Stripe ID</th>
+                        <th class="px-5 py-3">Method & Source</th>
+                        <th class="px-5 py-3 text-center">Status</th>
+                        <th class="px-5 py-3 text-right">Amount Received</th>
+                        <th class="px-5 py-3">Notes / Reference</th>
                     </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <?php foreach ($payments as $p): 
+                        $rawTime = (!empty($p['created_at']) && $p['created_at'] !== '0000-00-00 00:00:00') ? $p['created_at'] : $p['payment_date'];
+                        $ts = strtotime($rawTime);
+                        $dateFormatted = date('d M Y', $ts);
+                        $hasTime = (date('H:i:s', $ts) !== '00:00:00');
+                        $timeFormatted = $hasTime ? date('h:i:s A', $ts) : date('h:i A', strtotime($p['created_at'] ?? $rawTime));
+
+                        $txnId = trim($p['gateway_transaction_id'] ?: ($p['reference'] ?: ''));
+                        $gwName = strtolower(trim($p['gateway'] ?: $p['payment_method']));
+                        $isStripe = ($gwName === 'stripe' || str_contains($gwName, 'stripe') || str_starts_with($txnId, 'pi_') || str_starts_with($txnId, 'cs_') || str_starts_with($txnId, 'ch_'));
+                    ?>
+                        <tr class="hover:bg-slate-50/80 transition-colors">
+                            <!-- Date & Time -->
+                            <td class="px-5 py-3.5 whitespace-nowrap">
+                                <div class="font-bold text-slate-800 text-xs"><?=e($dateFormatted)?></div>
+                                <div class="text-3xs text-slate-500 flex items-center gap-1 mt-0.5">
+                                    <i class="fa-regular fa-clock text-slate-400"></i>
+                                    <span><?=e($timeFormatted)?></span>
+                                </div>
+                            </td>
+
+                            <!-- Gateway / Stripe ID -->
+                            <td class="px-5 py-3.5 whitespace-nowrap">
+                                <?php if (!empty($txnId)): ?>
+                                    <?php if ($isStripe): ?>
+                                        <button type="button" onclick="navigator.clipboard.writeText('<?=e($txnId)?>'); alert('Stripe ID copied: <?=e($txnId)?>');" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/90 shadow-2xs hover:bg-indigo-100 transition-all cursor-pointer group" title="Click to copy Stripe Transaction ID">
+                                            <i class="fa-brands fa-stripe text-base text-indigo-600"></i>
+                                            <span><?=e($txnId)?></span>
+                                            <i class="fa-regular fa-copy text-3xs text-indigo-400 group-hover:text-indigo-600"></i>
+                                        </button>
+                                    <?php else: ?>
+                                        <button type="button" onclick="navigator.clipboard.writeText('<?=e($txnId)?>'); alert('Transaction ID copied: <?=e($txnId)?>');" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs hover:bg-slate-200 transition-all cursor-pointer group" title="Click to copy Transaction ID">
+                                            <i class="fa-solid fa-hashtag text-3xs text-slate-400"></i>
+                                            <span><?=e($txnId)?></span>
+                                            <i class="fa-regular fa-copy text-3xs text-slate-400 group-hover:text-slate-600"></i>
+                                        </button>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <span class="text-xs text-slate-400 font-mono italic">--</span>
+                                <?php endif; ?>
+                            </td>
+
+                            <!-- Method & Source -->
+                            <td class="px-5 py-3.5 whitespace-nowrap">
+                                <div class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                                    <?php if ($isStripe): ?>
+                                        <i class="fa-brands fa-stripe text-indigo-600 text-sm"></i>
+                                    <?php elseif (str_contains(strtolower($p['payment_method']), 'bank')): ?>
+                                        <i class="fa-solid fa-building-columns text-slate-500 text-xs"></i>
+                                    <?php else: ?>
+                                        <i class="fa-solid fa-credit-card text-slate-500 text-xs"></i>
+                                    <?php endif; ?>
+                                    <span><?=e(ucwords(str_replace('_', ' ', $p['payment_method'])))?></span>
+                                </div>
+                                <?php if (!empty($p['recorder_name'])): ?>
+                                    <span class="text-3xs text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+                                        <i class="fa-solid fa-user-check text-emerald-600"></i>
+                                        <span>Manual by <strong><?=e($p['recorder_name'])?></strong></span>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="text-3xs text-indigo-600 font-semibold flex items-center gap-1 mt-0.5">
+                                        <i class="fa-solid fa-bolt text-indigo-500"></i>
+                                        <span>Automated Gateway API</span>
+                                    </span>
+                                <?php endif; ?>
+                            </td>
+
+                            <!-- Status -->
+                            <td class="px-5 py-3.5 text-center whitespace-nowrap">
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-3xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase tracking-wider">
+                                    <i class="fa-solid fa-circle-check text-xs"></i> Verified & Paid
+                                </span>
+                            </td>
+
+                            <!-- Amount -->
+                            <td class="px-5 py-3.5 text-right font-mono font-black text-emerald-600 text-sm whitespace-nowrap">
+                                <?=money((float)$p['amount'], $invoice['currency'])?>
+                            </td>
+
+                            <!-- Notes -->
+                            <td class="px-5 py-3.5 text-xs text-slate-500 max-w-xs truncate" title="<?=e($p['notes'])?>">
+                                <?=e($p['notes'] ?: '--')?>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
 <?php endif; ?>
 
@@ -188,8 +283,8 @@ page_start('View Invoice ' . $invoice['invoice_number']);
             </div>
 
             <div>
-                <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Payment Date *</label>
-                <input type="date" name="payment_date" value="<?=date('Y-m-d')?>" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-900">
+                <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Payment Date & Time *</label>
+                <input type="datetime-local" name="payment_date" value="<?=date('Y-m-d\TH:i')?>" required class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-900">
             </div>
 
             <div>
@@ -204,8 +299,13 @@ page_start('View Invoice ' . $invoice['invoice_number']);
             </div>
 
             <div>
-                <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Payment Notes / Transaction Ref</label>
-                <textarea name="notes" rows="2" placeholder="e.g. Bank Ref #1029384" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-900"></textarea>
+                <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Stripe ID / Transaction Reference (Optional)</label>
+                <input type="text" name="reference" placeholder="e.g. pi_3Nx98127391... or Bank Ref #91823" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-mono font-semibold text-slate-900">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase mb-1.5">Payment Notes</label>
+                <textarea name="notes" rows="2" placeholder="e.g. Verified with bank statement" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3.5 py-2.5 text-sm font-semibold text-slate-900"></textarea>
             </div>
 
             <div class="pt-3 flex justify-end space-x-3">

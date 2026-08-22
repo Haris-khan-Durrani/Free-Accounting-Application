@@ -75,7 +75,7 @@ if (in_array($statusStr, ['payment_intent.completed', 'payment_intent.succeeded'
     try {
         $pdo->beginTransaction();
 
-        $today = date('Y-m-d');
+        $today = date('Y-m-d H:i:s');
         $notes = "Ziina Online Payment (Ref: $externalEventId)";
 
         $stPayCheck = $pdo->prepare("SELECT id FROM payments WHERE invoice_id = ? AND tenant_id = ? AND (gateway_transaction_id = ? OR reference = ?)");

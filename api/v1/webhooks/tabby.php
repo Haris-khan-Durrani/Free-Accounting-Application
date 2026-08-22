@@ -73,7 +73,7 @@ if (in_array(strtolower($status), ['authorized', 'captured', 'closed', 'success'
     try {
         $pdo->beginTransaction();
 
-        $today = date('Y-m-d');
+        $today = date('Y-m-d H:i:s');
         $notes = "Tabby BNPL Payment (Event: $externalEventId)";
 
         // Check for duplicate payment record

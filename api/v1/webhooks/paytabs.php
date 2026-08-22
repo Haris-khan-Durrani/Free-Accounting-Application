@@ -43,7 +43,7 @@ $tid = (int)$inv['tenant_id'];
 
 // Check status (A = Authorised / Paid)
 if (strtoupper($status) === 'A') {
-    $today = date('Y-m-d');
+    $today = date('Y-m-d H:i:s');
     $pdo->beginTransaction();
 
     $stCheck = $pdo->prepare("SELECT id FROM payments WHERE invoice_id = ? AND tenant_id = ? AND (gateway_transaction_id = ? OR reference = ?)");

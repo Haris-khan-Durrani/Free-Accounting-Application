@@ -28,6 +28,11 @@ $itemsSt = $pdo->prepare('SELECT * FROM invoice_items WHERE invoice_id = ? ORDER
 $itemsSt->execute([$id]);
 $items = $itemsSt->fetchAll();
 
+// Fetch Payment Audit Trail History
+$stPay = $pdo->prepare("SELECT p.*, u.name as recorder_name FROM payments p LEFT JOIN users u ON u.id = p.created_by WHERE p.invoice_id = ? ORDER BY p.id DESC");
+$stPay->execute([$id]);
+$payments = $stPay->fetchAll();
+
 // Get tenant branding & public link
 $brand = \Core\Branding::get($pdo, (int)$inv['tenant_id']);
 $templateId = $inv['template_id'] ?: $brand['default_invoice_template'];
@@ -264,6 +269,82 @@ $tamaraInstallment = number_format($remainingBalance / 3, 2);
     <div style="background:#fff; color:#0f172a; border-radius:12px; padding:20px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);">
         <?=\Services\InvoiceRenderer::render($inv, $items, $brand, $templateId)?>
     </div>
+
+    <!-- Payment History Audit Trail Table -->
+    <?php if (!empty($payments)): ?>
+        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; margin-top:24px; overflow:hidden; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div style="padding:16px 20px; border-bottom:1px solid #f1f5f9; background:#f8fafc; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="font-size:15px; font-weight:800; color:#0f172a; margin:0; display:flex; align-items:center; gap:8px;">
+                    <i class="fa-solid fa-shield-halved" style="color:#10b981;"></i>
+                    Payment Audit Trail History
+                </h3>
+                <span style="font-size:12px; font-weight:800; background:#dcfce7; color:#166534; padding:4px 12px; border-radius:999px; font-family:monospace;">
+                    Total Paid: <?=money((float)$inv['paid_amount'], $inv['currency'])?>
+                </span>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+                    <thead>
+                        <tr style="background:#f1f5f9; color:#64748b; font-size:11px; text-transform:uppercase; font-weight:800; border-bottom:1px solid #e2e8f0;">
+                            <th style="padding:12px 16px;">Date & Time</th>
+                            <th style="padding:12px 16px;">Gateway / Stripe ID</th>
+                            <th style="padding:12px 16px;">Method</th>
+                            <th style="padding:12px 16px; text-align:center;">Status</th>
+                            <th style="padding:12px 16px; text-align:right;">Amount Received</th>
+                            <th style="padding:12px 16px;">Reference</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($payments as $p): 
+                            $rawTime = (!empty($p['created_at']) && $p['created_at'] !== '0000-00-00 00:00:00') ? $p['created_at'] : $p['payment_date'];
+                            $ts = strtotime($rawTime);
+                            $dateFormatted = date('d M Y', $ts);
+                            $hasTime = (date('H:i:s', $ts) !== '00:00:00');
+                            $timeFormatted = $hasTime ? date('h:i:s A', $ts) : date('h:i A', strtotime($p['created_at'] ?? $rawTime));
+
+                            $txnId = trim($p['gateway_transaction_id'] ?: ($p['reference'] ?: ''));
+                            $gwName = strtolower(trim($p['gateway'] ?: $p['payment_method']));
+                            $isStripe = ($gwName === 'stripe' || str_contains($gwName, 'stripe') || str_starts_with($txnId, 'pi_') || str_starts_with($txnId, 'cs_') || str_starts_with($txnId, 'ch_'));
+                        ?>
+                            <tr style="border-bottom:1px solid #f1f5f9;">
+                                <td style="padding:12px 16px; white-space:nowrap;">
+                                    <strong style="color:#1e293b; display:block;"><?=e($dateFormatted)?></strong>
+                                    <span style="font-size:11px; color:#64748b; font-weight:600;">
+                                        <i class="fa-regular fa-clock" style="font-size:10px; margin-right:2px;"></i>
+                                        <?=e($timeFormatted)?>
+                                    </span>
+                                </td>
+                                <td style="padding:12px 16px; white-space:nowrap;">
+                                    <?php if (!empty($txnId)): ?>
+                                        <span style="font-family:monospace; font-weight:700; font-size:12px; background:#e0e7ff; color:#3730a3; padding:3px 8px; border-radius:6px; border:1px solid #c7d2fe;">
+                                            <?php if ($isStripe): ?><i class="fa-brands fa-stripe" style="margin-right:4px;"></i><?php endif; ?>
+                                            <?=e($txnId)?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span style="color:#94a3b8;">--</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="padding:12px 16px; font-weight:700; color:#334155; white-space:nowrap;">
+                                    <?=e(ucwords(str_replace('_', ' ', $p['payment_method'])))?>
+                                </td>
+                                <td style="padding:12px 16px; text-align:center; white-space:nowrap;">
+                                    <span style="background:#dcfce7; color:#15803d; font-weight:900; font-size:10px; text-transform:uppercase; padding:3px 10px; border-radius:999px; border:1px solid #86efac;">
+                                        <i class="fa-solid fa-circle-check"></i> Paid
+                                    </span>
+                                </td>
+                                <td style="padding:12px 16px; text-align:right; font-family:monospace; font-weight:900; color:#059669; font-size:14px; white-space:nowrap;">
+                                    <?=money((float)$p['amount'], $inv['currency'])?>
+                                </td>
+                                <td style="padding:12px 16px; font-size:12px; color:#64748b;">
+                                    <?=e($p['notes'] ?: '--')?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 </body>
 </html>

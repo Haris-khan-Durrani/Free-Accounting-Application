@@ -42,7 +42,7 @@ if (!$inv) {
 $tid = (int)$inv['tenant_id'];
 
 if ($eventType === 'payment_captured' || $eventType === 'payment_approved') {
-    $today = date('Y-m-d');
+    $today = date('Y-m-d H:i:s');
     $pdo->beginTransaction();
 
     $stCheck = $pdo->prepare("SELECT id FROM payments WHERE invoice_id = ? AND tenant_id = ? AND (gateway_transaction_id = ? OR reference = ?)");
