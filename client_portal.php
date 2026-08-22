@@ -184,6 +184,24 @@ $totalDue = max(0, (float)$summary['total_due']);
                                 'overdue' => 'bg-rose-500/20 text-rose-300 border-rose-500/30',
                                 default => 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                             };
+
+                            $actionText = match($status) {
+                                'paid' => 'View Receipt',
+                                'partially_paid' => 'Pay Balance',
+                                default => 'Pay Now'
+                            };
+
+                            $actionBtnClass = match($status) {
+                                'paid' => 'bg-emerald-500/20 hover:bg-emerald-600 text-emerald-300 hover:text-white border-emerald-500/30',
+                                'partially_paid' => 'bg-amber-500/20 hover:bg-amber-600 text-amber-300 hover:text-white border-amber-500/30',
+                                default => 'bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border-blue-500/30'
+                            };
+
+                            $actionIcon = match($status) {
+                                'paid' => 'fa-receipt',
+                                'partially_paid' => 'fa-credit-card',
+                                default => 'fa-arrow-right'
+                            };
                         ?>
                             <tr class="hover:bg-slate-800/40 transition-colors">
                                 <td class="px-6 py-4 text-white font-extrabold"><?=e($inv['invoice_number'])?></td>
@@ -198,9 +216,9 @@ $totalDue = max(0, (float)$summary['total_due']);
                                 <td class="px-6 py-4 text-right text-emerald-400 font-bold"><?=e($inv['currency'])?> <?=number_format((float)$inv['paid_amount'], 2)?></td>
                                 <td class="px-6 py-4 text-right text-amber-400 font-bold"><?=e($inv['currency'])?> <?=number_format($bal, 2)?></td>
                                 <td class="px-6 py-4 text-center">
-                                    <a href="<?=e(get_public_invoice_url($inv))?>" target="_blank" class="px-3.5 py-1.5 bg-blue-600/20 hover:bg-blue-600 text-blue-300 hover:text-white border border-blue-500/30 rounded-xl text-xs font-bold transition-all inline-flex items-center space-x-1">
-                                        <span>View & Pay</span>
-                                        <i class="fa-solid fa-arrow-right text-2xs"></i>
+                                    <a href="<?=e(get_public_invoice_url($inv))?>" target="_blank" class="px-3.5 py-1.5 border rounded-xl text-xs font-extrabold transition-all inline-flex items-center space-x-1.5 <?= $actionBtnClass ?>">
+                                        <i class="fa-solid <?= $actionIcon ?> text-2xs"></i>
+                                        <span><?= $actionText ?></span>
                                     </a>
                                 </td>
                             </tr>
