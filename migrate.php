@@ -114,6 +114,13 @@ function run_migrations(PDO $pdo): string {
         INDEX idx_active (is_active)
     ) ENGINE=InnoDB");
 
+    ensure_column($pdo, 'api_keys', 'created_by_user_id', 'INT UNSIGNED NULL AFTER tenant_id');
+    ensure_column($pdo, 'api_keys', 'key_hash', "VARCHAR(64) NULL COMMENT 'SHA256 hash of full key' AFTER name");
+    ensure_column($pdo, 'api_keys', 'key_prefix', "VARCHAR(20) NULL COMMENT 'First 12 chars for display' AFTER key_hash");
+    ensure_column($pdo, 'api_keys', 'scopes', "JSON NULL AFTER key_prefix");
+    ensure_column($pdo, 'api_keys', 'expires_at', 'DATE NULL AFTER scopes');
+    ensure_column($pdo, 'api_keys', 'revoked_at', 'DATETIME NULL AFTER is_active');
+
     // Recurring Invoices Subscription Table
     $pdo->exec("CREATE TABLE IF NOT EXISTS recurring_invoices (
         id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

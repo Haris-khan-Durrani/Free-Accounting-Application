@@ -141,6 +141,7 @@ function page_start(string $title): void {
         echo '<a href="clients" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['clients.php', 'clients', 'client_import.php']) . '"><i class="fa-solid fa-users text-emerald-400 text-2xs"></i><span>Clients</span></a>';
         echo '<a href="quotes" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['quotes.php', 'quotes', 'quote_view.php']) . '"><i class="fa-solid fa-file-signature text-sky-400 text-2xs"></i><span>Proposals</span></a>';
         echo '<a href="expenses" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all ' . $activeClass(['expenses.php', 'expenses', 'expense_form.php']) . '"><i class="fa-solid fa-receipt text-rose-400 text-2xs"></i><span>Expenses</span></a>';
+        echo '<a href="mcp_settings" class="inline-flex items-center space-x-1.5 px-2 py-1.5 rounded-xl text-xs font-extrabold text-purple-300 bg-purple-950/60 hover:bg-purple-900/80 border border-purple-700/50 shadow-xs transition-all ' . $activeClass(['mcp_settings.php', 'mcp_settings']) . '"><i class="fa-solid fa-brain text-amber-400 text-2xs animate-pulse"></i><span>AI & MCP Hub</span></a>';
         
         // Reports Dropdown Menu
         $isReportsActive = str_contains($currScript, 'reports_') || in_array($currScript, ['export_faf.php', 'accounts.php', 'journal.php']);
@@ -255,6 +256,7 @@ function page_start(string $title): void {
             echo '<a href="email_settings" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-server w-5 text-amber-500 text-center"></i><span>Custom SMTP</span></a>';
         }
         echo '<a href="security" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-indigo-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-shield-halved w-5 text-indigo-500 text-center"></i><span>2FA & Security</span></a>';
+        echo '<a href="mcp_settings" class="flex items-center px-2.5 py-1.5 text-xs font-bold text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-brain w-5 text-purple-600 text-center"></i><span>AI & MCP Integration</span></a>';
         echo '<a href="api_keys" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-amber-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-key w-5 text-amber-500 text-center"></i><span>API Key Manager</span></a>';
         echo '<a href="automation" class="flex items-center px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100/70 hover:text-purple-600 rounded-lg transition-colors cursor-pointer relative z-10"><i class="fa-solid fa-diagram-project w-5 text-purple-500 text-center"></i><span>n8n Automations</span></a>';
         echo '</div>';
@@ -619,6 +621,82 @@ function page_end(): void {
                 document.body.style.overflow = "auto";
             }
         }
+
+        function openInAppAiModal() {
+            const drawer = document.getElementById("inapp-ai-modal");
+            drawer.classList.toggle("hidden");
+            if (!drawer.classList.contains("hidden")) {
+                document.getElementById("ai-chat-input").focus();
+            }
+        }
+
+        function triggerAiQuickPrompt(tool, args) {
+            document.getElementById("ai-chat-input").value = tool + " " + JSON.stringify(args);
+            sendAiChatMessage(tool, args);
+        }
+
+        function sendAiChatMessage(presetTool = null, presetArgs = null) {
+            const input = document.getElementById("ai-chat-input");
+            const box = document.getElementById("ai-chat-messages");
+            let text = input.value.trim();
+
+            let toolName = presetTool || "get_financial_summary";
+            let toolArgs = presetArgs || { period: "month" };
+
+            if (!presetTool && text !== "") {
+                const lower = text.toLowerCase();
+                if (lower.includes("invoice") || lower.includes("unpaid")) {
+                    toolName = "list_invoices";
+                    toolArgs = { status: lower.includes("unpaid") ? "unpaid" : "all" };
+                } else if (lower.includes("client")) {
+                    toolName = "list_clients";
+                    toolArgs = { search: "" };
+                } else if (lower.includes("expense")) {
+                    toolName = "list_expenses";
+                    toolArgs = {};
+                } else if (lower.includes("quote")) {
+                    toolName = "list_quotes";
+                    toolArgs = {};
+                }
+            }
+
+            if (!presetTool && text === "") return;
+
+            const userDiv = document.createElement("div");
+            userDiv.className = "bg-purple-600/30 text-purple-200 p-2.5 rounded-2xl text-xs ml-8 border border-purple-500/30 self-end";
+            userDiv.innerText = text || "Execute " + toolName;
+            box.appendChild(userDiv);
+            input.value = "";
+            box.scrollTop = box.scrollHeight;
+
+            const botDiv = document.createElement("div");
+            botDiv.className = "bg-slate-800 text-slate-200 p-2.5 rounded-2xl text-xs mr-8 border border-slate-700 font-mono whitespace-pre-wrap";
+            botDiv.innerText = "⚡ Thinking & querying MCP tool [" + toolName + "]...";
+            box.appendChild(botDiv);
+            box.scrollTop = box.scrollHeight;
+
+            const formData = new FormData();
+            formData.append("ajax_action", "test_mcp_tool");
+            formData.append("tool_name", toolName);
+            formData.append("tool_args", JSON.stringify(toolArgs));
+
+            fetch("mcp_settings.php", { method: "POST", body: formData })
+                .then(r => r.json())
+                .then(res => {
+                    if (res && res.result && res.result.content && res.result.content[0]) {
+                        botDiv.innerText = res.result.content[0].text;
+                    } else if (res && res.error) {
+                        botDiv.innerText = "❌ Error: " + res.error.message;
+                    } else {
+                        botDiv.innerText = JSON.stringify(res, null, 2);
+                    }
+                    box.scrollTop = box.scrollHeight;
+                })
+                .catch(err => {
+                    botDiv.innerText = "⚠️ Network error connecting to MCP engine.";
+                });
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
             if (typeof gsap !== "undefined") {
                 gsap.from(".stat-card", { opacity: 0, y: 15, duration: 0.4, stagger: 0.06, ease: "power2.out" });
@@ -626,5 +704,46 @@ function page_end(): void {
             }
         });
     </script>';
+
+    // In-App AI Copilot Trigger Button & Chat Drawer Markup
+    echo '
+    <button onclick="openInAppAiModal()" class="no-print fixed bottom-5 right-5 z-40 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-4 py-3 rounded-full shadow-2xl font-extrabold text-xs flex items-center gap-2.5 border border-purple-400/40 hover:scale-105 transition-all">
+        <i class="fa-solid fa-brain text-amber-300 text-base animate-pulse"></i>
+        <span class="hidden sm:inline">AI Copilot</span>
+    </button>
+
+    <div id="inapp-ai-modal" class="no-print fixed bottom-20 right-5 z-50 w-96 max-w-[calc(100vw-2.5rem)] h-[480px] rounded-3xl bg-slate-950/95 backdrop-blur-2xl border border-purple-500/40 text-white shadow-2xl hidden flex flex-col overflow-hidden">
+        <div class="p-4 bg-gradient-to-r from-purple-950 to-indigo-950 border-b border-purple-800/40 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <span class="h-8 w-8 rounded-xl bg-purple-600 flex items-center justify-center text-amber-300 font-black text-sm">
+                    <i class="fa-solid fa-brain"></i>
+                </span>
+                <div>
+                    <h4 class="text-xs font-black text-white">OneSol AI Copilot</h4>
+                    <span class="text-[10px] text-purple-300 font-bold flex items-center gap-1">
+                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span> Tenant Isolated MCP
+                    </span>
+                </div>
+            </div>
+            <button onclick="openInAppAiModal()" class="text-slate-400 hover:text-white text-base"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div id="ai-chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col">
+            <div class="bg-slate-900 border border-slate-800 p-3 rounded-2xl text-xs text-slate-300">
+                👋 Hello! I am your AI Accounting Copilot for <strong>' . e(tenant()['name']) . '</strong>. I can query financial data, list invoices, search clients, or log expenses for you.
+            </div>
+            <div class="flex flex-wrap gap-1.5 my-1">
+                <button onclick="triggerAiQuickPrompt(\'get_financial_summary\', {period:\'month\'})" class="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-purple-900/60 text-purple-300 border border-purple-700/50 hover:bg-purple-800">📊 P&L Summary</button>
+                <button onclick="triggerAiQuickPrompt(\'list_invoices\', {status:\'unpaid\'})" class="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-amber-900/60 text-amber-300 border border-amber-700/50 hover:bg-amber-800">⚠️ Unpaid Invoices</button>
+                <button onclick="triggerAiQuickPrompt(\'list_clients\', {})" class="px-2.5 py-1 rounded-xl text-[10px] font-bold bg-emerald-900/60 text-emerald-300 border border-emerald-700/50 hover:bg-emerald-800">👥 Client List</button>
+            </div>
+        </div>
+
+        <div class="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2">
+            <input type="text" id="ai-chat-input" onkeydown="if(event.key===\'Enter\') sendAiChatMessage()" placeholder="Ask AI (e.g. Show P&L or unpaid invoices)..." class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-medium">
+            <button onclick="sendAiChatMessage()" class="p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs transition-all"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>';
+
     echo '</body></html>';
 }

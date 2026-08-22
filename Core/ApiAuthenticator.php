@@ -28,7 +28,38 @@ class ApiAuthenticator {
             self::respondJson(false, 'Unauthorized. Missing API Key header. Provide your API key via X-API-Key header or Authorization: Bearer header.', [], 401);
         }
 
-        $keyHash = hash('sha256', $apiKey);
+        return self::validateKeyHash($pdo, hash('sha256', $apiKey), $requiredScope);
+    }
+
+    /**
+     * Authenticate an MCP API request via Headers or URL token parameter (?token=os_live_... or ?api_key=os_live_...).
+     * Allows one-click AI connection URLs while strictly enforcing rate limits and tenant isolation.
+     */
+    public static function authenticateMcp(PDO $pdo, string $requiredScope = ''): array {
+        $headers = getallheaders();
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? $headers['Authorization'] ?? $headers['authorization'] ?? '';
+        $apiKey = $_SERVER['HTTP_X_API_KEY'] ?? $headers['X-API-Key'] ?? $headers['x-api-key'] ?? '';
+
+        if (preg_match('/Bearer\s+(\S+)/i', $authHeader, $matches)) {
+            $apiKey = trim($matches[1]);
+        }
+
+        if (empty($apiKey)) {
+            $apiKey = trim($_GET['token'] ?? $_GET['api_key'] ?? $_POST['token'] ?? $_POST['api_key'] ?? '');
+        }
+
+        if (empty($apiKey)) {
+            self::respondJson(false, 'Unauthorized. Missing API Key or Token. Provide key via Authorization header, X-API-Key header, or ?token= parameter.', [], 401);
+        }
+
+        $tenant = self::validateKeyHash($pdo, hash('sha256', $apiKey), $requiredScope);
+        $_SESSION['active_tenant_id'] = $tenant['id'];
+        $_SESSION['tenant_id'] = $tenant['id'];
+        $GLOBALS['current_tenant'] = $tenant;
+        return $tenant;
+    }
+
+    private static function validateKeyHash(PDO $pdo, string $keyHash, string $requiredScope = ''): array {
 
         // Enforce 120 req/min rate limit per API Key
         if (!\Core\SecurityThrottle::checkRateLimit('api_' . $keyHash, 120, 60)) {
