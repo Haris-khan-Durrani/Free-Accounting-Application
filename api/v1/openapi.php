@@ -13,7 +13,7 @@ $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
 $token = trim($_GET['token'] ?? $_GET['api_key'] ?? '');
 
 $serverHost = "{$protocol}://{$host}";
-$mcpPath = "{$scriptDir}/mcp.php" . ($token !== '' ? '?token=' . urlencode($token) : '');
+$mcpPath = "{$scriptDir}/mcp.php";
 
 $schema = [
     'openapi' => '3.1.0',
@@ -32,6 +32,18 @@ $schema = [
             'post' => [
                 'summary' => 'Execute MCP Tool or JSON-RPC Query',
                 'operationId' => 'executeMcpTool',
+                'parameters' => [
+                    [
+                        'name' => 'token',
+                        'in' => 'query',
+                        'required' => true,
+                        'description' => 'Tenant MCP Authentication Token',
+                        'schema' => [
+                            'type' => 'string',
+                            'default' => $token
+                        ]
+                    ]
+                ],
                 'requestBody' => [
                     'required' => true,
                     'content' => [
