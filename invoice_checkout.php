@@ -66,6 +66,12 @@ if ($gateway === 'tabby') {
     $result = \Services\PaymentGatewayService::createInvoiceZiinaCheckout($pdo, $inv, $items, $baseUrl);
 } elseif ($gateway === 'zbooni') {
     $result = \Services\PaymentGatewayService::createInvoiceZbooniCheckout($pdo, $inv, $items, $baseUrl);
+} elseif ($gateway === 'paytabs') {
+    $result = \Services\PaymentGatewayService::createInvoicePayTabsCheckout($pdo, $inv, $items, $baseUrl);
+} elseif ($gateway === 'telr') {
+    $result = \Services\PaymentGatewayService::createInvoiceTelrCheckout($pdo, $inv, $items, $baseUrl);
+} elseif ($gateway === 'checkout') {
+    $result = \Services\PaymentGatewayService::createInvoiceCheckoutComCheckout($pdo, $inv, $items, $baseUrl);
 }
 
 // Return JSON or Redirect

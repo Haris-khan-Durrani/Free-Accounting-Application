@@ -42,6 +42,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         'zbooni_api_key' => trim($_POST['zbooni_api_key'] ?? ''),
         'zbooni_secret_key' => trim($_POST['zbooni_secret_key'] ?? ''),
 
+        'paytabs_enabled' => $_POST['paytabs_enabled'] ?? '0',
+        'paytabs_profile_id' => trim($_POST['paytabs_profile_id'] ?? ''),
+        'paytabs_server_key' => trim($_POST['paytabs_server_key'] ?? ''),
+        'paytabs_region' => $_POST['paytabs_region'] ?? 'ARE',
+
+        'telr_enabled' => $_POST['telr_enabled'] ?? '0',
+        'telr_store_id' => trim($_POST['telr_store_id'] ?? ''),
+        'telr_api_key' => trim($_POST['telr_api_key'] ?? ''),
+        'telr_mode' => $_POST['telr_mode'] ?? '1',
+
+        'checkout_enabled' => $_POST['checkout_enabled'] ?? '0',
+        'checkout_secret_key' => trim($_POST['checkout_secret_key'] ?? ''),
+        'checkout_public_key' => trim($_POST['checkout_public_key'] ?? ''),
+        'checkout_environment' => $_POST['checkout_environment'] ?? 'sandbox',
+
         'network_enabled' => $_POST['network_enabled'] ?? '0',
         'network_outlet_id' => trim($_POST['network_outlet_id'] ?? ''),
         'network_api_key' => trim($_POST['network_api_key'] ?? ''),
@@ -71,7 +86,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         'ziina_api_token',
         'ziina_webhook_secret',
         'zbooni_api_key',
-        'zbooni_secret_key'
+        'zbooni_secret_key',
+        'paytabs_server_key',
+        'telr_api_key',
+        'checkout_secret_key'
     ];
 
     foreach ($settingsToSave as $k => $v) {
@@ -113,6 +131,21 @@ $ziinaWebhookSec = \Services\PaymentGatewayService::getSetting($pdo, 'ziina_webh
 $zbooniEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'zbooni_enabled', '0', $tid);
 $zbooniApiKey = \Services\PaymentGatewayService::getSetting($pdo, 'zbooni_api_key', '', $tid);
 $zbooniSecKey = \Services\PaymentGatewayService::getSetting($pdo, 'zbooni_secret_key', '', $tid);
+
+$paytabsEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'paytabs_enabled', '0', $tid);
+$paytabsProfileId = \Services\PaymentGatewayService::getSetting($pdo, 'paytabs_profile_id', '', $tid);
+$paytabsServerKey = \Services\PaymentGatewayService::getSetting($pdo, 'paytabs_server_key', '', $tid);
+$paytabsRegion = \Services\PaymentGatewayService::getSetting($pdo, 'paytabs_region', 'ARE', $tid);
+
+$telrEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'telr_enabled', '0', $tid);
+$telrStoreId = \Services\PaymentGatewayService::getSetting($pdo, 'telr_store_id', '', $tid);
+$telrApiKey = \Services\PaymentGatewayService::getSetting($pdo, 'telr_api_key', '', $tid);
+$telrMode = \Services\PaymentGatewayService::getSetting($pdo, 'telr_mode', '1', $tid);
+
+$checkoutComEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'checkout_enabled', '0', $tid);
+$checkoutSecKey = \Services\PaymentGatewayService::getSetting($pdo, 'checkout_secret_key', '', $tid);
+$checkoutPubKey = \Services\PaymentGatewayService::getSetting($pdo, 'checkout_public_key', '', $tid);
+$checkoutEnv = \Services\PaymentGatewayService::getSetting($pdo, 'checkout_environment', 'sandbox', $tid);
 
 $networkEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'network_enabled', '0', $tid);
 $networkOutletId = \Services\PaymentGatewayService::getSetting($pdo, 'network_outlet_id', '', $tid);
@@ -185,6 +218,24 @@ page_start('Workspace Payment Gateways');
                     <i class="fa-solid fa-bag-shopping text-emerald-400"></i>
                     <span>Zbooni</span>
                     <span class="ml-1 w-2 h-2 rounded-full <?=$zbooniEnabled === '1' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'?>"></span>
+                </button>
+
+                <button type="button" onclick="switchGatewayTab('paytabs')" id="tabBtn-paytabs" class="gateway-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all text-slate-400 hover:text-white hover:bg-slate-800">
+                    <i class="fa-solid fa-globe text-sky-400"></i>
+                    <span>PayTabs</span>
+                    <span class="ml-1 w-2 h-2 rounded-full <?=$paytabsEnabled === '1' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'?>"></span>
+                </button>
+
+                <button type="button" onclick="switchGatewayTab('telr')" id="tabBtn-telr" class="gateway-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all text-slate-400 hover:text-white hover:bg-slate-800">
+                    <i class="fa-solid fa-shield-halved text-amber-400"></i>
+                    <span>Telr</span>
+                    <span class="ml-1 w-2 h-2 rounded-full <?=$telrEnabled === '1' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'?>"></span>
+                </button>
+
+                <button type="button" onclick="switchGatewayTab('checkout')" id="tabBtn-checkout" class="gateway-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all text-slate-400 hover:text-white hover:bg-slate-800">
+                    <i class="fa-solid fa-credit-card text-indigo-400"></i>
+                    <span>Checkout.com</span>
+                    <span class="ml-1 w-2 h-2 rounded-full <?=$checkoutComEnabled === '1' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'?>"></span>
                 </button>
 
                 <button type="button" onclick="switchGatewayTab('network')" id="tabBtn-network" class="gateway-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all text-slate-400 hover:text-white hover:bg-slate-800">
@@ -710,6 +761,187 @@ page_start('Workspace Payment Gateways');
             </div>
         </div>
 
+        <!-- ================= TAB: PAYTABS ================= -->
+        <div id="tabPanel-paytabs" class="gateway-tab-panel hidden space-y-6">
+            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="h-12 w-12 bg-sky-100 text-sky-700 rounded-2xl flex items-center justify-center text-2xl font-bold">
+                            <i class="fa-solid fa-globe"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-extrabold text-slate-900">PayTabs Payment Gateway</h2>
+                            <p class="text-xs text-slate-500">Accept Visa, MasterCard, Mada, Apple Pay, KNET, OmanNet & local Middle East cards.</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="paytabs_enabled" value="1" <?=$paytabsEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
+                        <span class="ml-3 text-xs font-bold text-slate-700">Enable PayTabs</span>
+                    </label>
+                </div>
+
+                <div class="bg-sky-50/60 border border-sky-100 rounded-2xl p-5 mb-6 space-y-3">
+                    <h3 class="text-xs font-extrabold text-sky-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-info"></i> About PayTabs Gateway
+                    </h3>
+                    <p class="text-xs text-sky-950 leading-relaxed">
+                        PayTabs provides multi-currency MENA payment solutions across UAE, Saudi Arabia, Egypt, Oman, Jordan, and Bahrain with instant payment page redirects.
+                    </p>
+                    <div class="flex flex-wrap gap-2 pt-1 text-2xs">
+                        <span class="px-2.5 py-1 bg-white text-sky-800 rounded-lg font-bold border border-sky-200">💳 Visa & MasterCard</span>
+                        <span class="px-2.5 py-1 bg-white text-sky-800 rounded-lg font-bold border border-sky-200">🇸🇦 Mada (KSA)</span>
+                        <span class="px-2.5 py-1 bg-white text-sky-800 rounded-lg font-bold border border-sky-200">🍏 Apple Pay</span>
+                        <span class="px-2.5 py-1 bg-white text-sky-800 rounded-lg font-bold border border-sky-200">🇴🇲 OmanNet & 🇰🇼 KNET</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">PayTabs Profile ID</label>
+                        <input type="text" name="paytabs_profile_id" value="<?=e($paytabsProfileId)?>" placeholder="e.g. 98452" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Server Key</label>
+                        <input type="password" name="paytabs_server_key" value="" placeholder="<?=!empty($paytabsServerKey) ? '•••••••••••• (Configured - leave blank to keep)' : 'S2SK... Server Key'?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">PayTabs Region</label>
+                        <select name="paytabs_region" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-900">
+                            <option value="ARE" <?=$paytabsRegion === 'ARE' ? 'selected' : ''?>>UAE (secure.paytabs.com)</option>
+                            <option value="SAU" <?=$paytabsRegion === 'SAU' ? 'selected' : ''?>>Saudi Arabia (secure-saudi.paytabs.com)</option>
+                            <option value="EGY" <?=$paytabsRegion === 'EGY' ? 'selected' : ''?>>Egypt (secure-egypt.paytabs.com)</option>
+                            <option value="OMN" <?=$paytabsRegion === 'OMN' ? 'selected' : ''?>>Oman (secure-oman.paytabs.com)</option>
+                            <option value="JOR" <?=$paytabsRegion === 'JOR' ? 'selected' : ''?>>Jordan (secure-jordan.paytabs.com)</option>
+                            <option value="GLOBAL" <?=$paytabsRegion === 'GLOBAL' ? 'selected' : ''?>>Global / Rest of World</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-6 border-t border-slate-100">
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">PayTabs Callback IPN Webhook URL</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" readonly value="<?=e($baseUrl)?>/api/v1/webhooks/paytabs.php" class="w-full rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-xs font-mono text-slate-600">
+                        <button type="button" onclick="navigator.clipboard.writeText('<?=e($baseUrl)?>/api/v1/webhooks/paytabs.php'); alert('PayTabs Webhook URL copied!');" class="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-700">Copy</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB: TELR ================= -->
+        <div id="tabPanel-telr" class="gateway-tab-panel hidden space-y-6">
+            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="h-12 w-12 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center text-2xl font-bold">
+                            <i class="fa-solid fa-shield-halved"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-extrabold text-slate-900">Telr Payment Gateway</h2>
+                            <p class="text-xs text-slate-500">Accept online card payments and local bank transfers via Telr Middle East.</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="telr_enabled" value="1" <?=$telrEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                        <span class="ml-3 text-xs font-bold text-slate-700">Enable Telr</span>
+                    </label>
+                </div>
+
+                <div class="bg-amber-50/60 border border-amber-100 rounded-2xl p-5 mb-6 space-y-3">
+                    <h3 class="text-xs font-extrabold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-info"></i> About Telr Payment Gateway
+                    </h3>
+                    <p class="text-xs text-amber-950 leading-relaxed">
+                        Telr is an award-winning UAE payment gateway supporting multi-currency online credit/debit card processing and Apple Pay for merchants in the Middle East.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Telr Store ID</label>
+                        <input type="text" name="telr_store_id" value="<?=e($telrStoreId)?>" placeholder="e.g. 12345" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Remote Auth API Key</label>
+                        <input type="password" name="telr_api_key" value="" placeholder="<?=!empty($telrApiKey) ? '•••••••••••• (Configured - leave blank to keep)' : 'Authentication Key'?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Transaction Mode</label>
+                        <select name="telr_mode" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-900">
+                            <option value="1" <?=$telrMode === '1' ? 'selected' : ''?>>Test / Sandbox (Test Card)</option>
+                            <option value="0" <?=$telrMode === '0' ? 'selected' : ''?>>Live / Production</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-6 border-t border-slate-100">
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Telr Webhook IPN URL</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" readonly value="<?=e($baseUrl)?>/api/v1/webhooks/telr.php" class="w-full rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-xs font-mono text-slate-600">
+                        <button type="button" onclick="navigator.clipboard.writeText('<?=e($baseUrl)?>/api/v1/webhooks/telr.php'); alert('Telr Webhook URL copied!');" class="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-700">Copy</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB: CHECKOUT.COM ================= -->
+        <div id="tabPanel-checkout" class="gateway-tab-panel hidden space-y-6">
+            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="h-12 w-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-2xl font-bold">
+                            <i class="fa-solid fa-credit-card"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-extrabold text-slate-900">Checkout.com Hosted Payments</h2>
+                            <p class="text-xs text-slate-500">Enterprise global payment solution for credit/debit cards, Apple Pay, and local alternative payment methods.</p>
+                        </div>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="checkout_enabled" value="1" <?=$checkoutComEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        <span class="ml-3 text-xs font-bold text-slate-700">Enable Checkout.com</span>
+                    </label>
+                </div>
+
+                <div class="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-5 mb-6 space-y-3">
+                    <h3 class="text-xs font-extrabold text-indigo-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-info"></i> About Checkout.com
+                    </h3>
+                    <p class="text-xs text-indigo-950 leading-relaxed">
+                        Checkout.com provides hosted payment checkout pages with built-in 3D Secure authentication, Apple Pay integration, and international card processing across 150+ currencies.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Secret Key</label>
+                        <input type="password" name="checkout_secret_key" value="" placeholder="<?=!empty($checkoutSecKey) ? '•••••••••••• (Configured - leave blank to keep)' : 'sk_sbox_... or sk_...'?>" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Public Key (Optional)</label>
+                        <input type="text" name="checkout_public_key" value="<?=e($checkoutPubKey)?>" placeholder="pk_sbox_... or pk_..." class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold font-mono text-slate-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Environment</label>
+                        <select name="checkout_environment" class="w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-xs font-bold text-slate-900">
+                            <option value="sandbox" <?=$checkoutEnv === 'sandbox' ? 'selected' : ''?>>Sandbox (Testing)</option>
+                            <option value="live" <?=$checkoutEnv === 'live' ? 'selected' : ''?>>Live / Production</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mt-6 pt-6 border-t border-slate-100">
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Checkout.com Webhook Endpoint URL</label>
+                    <div class="flex items-center space-x-2">
+                        <input type="text" readonly value="<?=e($baseUrl)?>/api/v1/webhooks/checkout.php" class="w-full rounded-xl border border-slate-300 bg-slate-100 px-4 py-2 text-xs font-mono text-slate-600">
+                        <button type="button" onclick="navigator.clipboard.writeText('<?=e($baseUrl)?>/api/v1/webhooks/checkout.php'); alert('Checkout.com Webhook URL copied!');" class="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-700">Copy</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- ================= TAB 8: BANK WIRE TRANSFER ================= -->
         <div id="tabPanel-bank" class="gateway-tab-panel hidden space-y-6">
             <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
@@ -820,7 +1052,7 @@ function switchGatewayTab(tabId) {
 // Restore active tab from URL hash on load
 document.addEventListener('DOMContentLoaded', function() {
     let hash = window.location.hash.replace('#', '').toLowerCase();
-    const validTabs = ['stripe', 'tabby', 'tamara', 'ziina', 'zbooni', 'network', 'paypal', 'bank'];
+    const validTabs = ['stripe', 'tabby', 'tamara', 'ziina', 'zbooni', 'paytabs', 'telr', 'checkout', 'network', 'paypal', 'bank'];
     if (hash && validTabs.includes(hash)) {
         switchGatewayTab(hash);
     }

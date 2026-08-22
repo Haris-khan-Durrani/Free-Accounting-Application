@@ -63,15 +63,6 @@ function record_instant_payment(PDO $pdo, array &$inv, string $gateway, string $
             $stPay->execute([$tid, $invId, $amount, $inv['currency'], $today, $gateway, $gateway, $transactionRef, $transactionRef, $notes]);
             $paymentId = (int)$pdo->lastInsertId();
 
-            $stSum = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ? AND tenant_id = ?");
-            $stSum->execute([$invId, $tid]);
-            $newPaid = (float)$stSum->fetchColumn();
-
-            $newStatus = ($newPaid >= (float)$inv['total'] - 0.01) ? 'paid' : 'partially_paid';
-
-            $stUpd = $pdo->prepare("UPDATE invoices SET paid_amount = ?, status = ? WHERE id = ? AND tenant_id = ?");
-            $stUpd->execute([$newPaid, $newStatus, $invId, $tid]);
-
             try {
                 $acctService = new \Services\AccountingService($pdo, $tid);
                 $acctService->postPaymentReceived($paymentId);
@@ -79,12 +70,35 @@ function record_instant_payment(PDO $pdo, array &$inv, string $gateway, string $
                 error_log("Ledger post notice: " . $acctEx->getMessage());
             }
 
-            log_audit($pdo, "{$gateway}_return_payment", 'payments', $paymentId, "Instant Return verified payment {$inv['currency']} $amount via $gateway for Invoice #{$inv['invoice_number']}");
+            try {
+                log_audit($pdo, "{$gateway}_return_payment", 'payments', $paymentId, "Instant Return verified payment {$inv['currency']} $amount via $gateway for Invoice #{$inv['invoice_number']}");
+            } catch (Throwable $auditEx) {}
         }
+
+        // ALWAYS Recalculate Total Payments & Force Status Update to PAID
+        $stSum = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE invoice_id = ? AND tenant_id = ?");
+        $stSum->execute([$invId, $tid]);
+        $newPaid = (float)$stSum->fetchColumn();
+
+        if ($newPaid <= 0 && $amount > 0) {
+            $newPaid = $amount;
+        }
+
+        $newStatus = ($newPaid >= (float)$inv['total'] - 0.01) ? 'paid' : ($newPaid > 0 ? 'partially_paid' : $inv['status']);
+
+        $stUpd = $pdo->prepare("UPDATE invoices SET paid_amount = ?, status = ? WHERE id = ? AND tenant_id = ?");
+        $stUpd->execute([$newPaid, $newStatus, $invId, $tid]);
 
         $pdo->commit();
 
-        $st = $pdo->prepare("SELECT * FROM invoices WHERE id = ?");
+        // Re-fetch complete updated invoice details
+        $st = $pdo->prepare("
+            SELECT i.*, c.company_name, c.email as client_email, b.company_name as brand_name
+            FROM invoices i
+            JOIN clients c ON c.id = i.client_id
+            LEFT JOIN branding_settings b ON b.tenant_id = i.tenant_id
+            WHERE i.id = ?
+        ");
         $st->execute([$invId]);
         $inv = $st->fetch();
     } catch (Exception $e) {
@@ -129,7 +143,7 @@ if ($inv['status'] !== 'paid') {
     }
 
     // 2. Ziina Payment Intent Verification
-    $ziinaId = trim($_GET['ziina_id'] ?? ($_GET['id'] ?? ''));
+    $ziinaId = trim($_GET['ziina_id'] ?? '');
     if ($inv['status'] !== 'paid' && !empty($ziinaId) && (str_starts_with($ziinaId, 'zi_') || str_starts_with($ziinaId, 'pi_'))) {
         $tokenKey = \Services\PaymentGatewayService::getSetting($pdo, 'ziina_api_token', '', $tid);
         $verified = false;
@@ -291,6 +305,112 @@ if ($inv['status'] !== 'paid') {
         }
         if (!$verified && $inv['status'] !== 'paid' && $isValidToken) {
             record_instant_payment($pdo, $inv, 'network', $networkRef, (float)$inv['total'], 'Network Return Verification');
+        }
+    }
+
+    // 7. PayTabs Verification
+    $paytabsRef = trim($_GET['paytabs_ref'] ?? ($_GET['tranRef'] ?? ($_GET['tran_ref'] ?? '')));
+    $gatewayParam = trim($_GET['gateway'] ?? '');
+    if ($inv['status'] !== 'paid' && (!empty($paytabsRef) || $gatewayParam === 'paytabs')) {
+        $serverKey = \Services\PaymentGatewayService::getSetting($pdo, 'paytabs_server_key', '', $tid);
+        $profileId = \Services\PaymentGatewayService::getSetting($pdo, 'paytabs_profile_id', '', $tid);
+        $region = \Services\PaymentGatewayService::getSetting($pdo, 'paytabs_region', 'ARE', $tid);
+        $verified = false;
+        if (!empty($serverKey) && !empty($profileId) && !empty($paytabsRef)) {
+            $endpoints = [
+                'ARE' => 'https://secure.paytabs.com',
+                'SAU' => 'https://secure-saudi.paytabs.com',
+                'EGY' => 'https://secure-egypt.paytabs.com',
+                'OMN' => 'https://secure-oman.paytabs.com',
+                'JOR' => 'https://secure-jordan.paytabs.com',
+                'GLOBAL' => 'https://secure.paytabs.com'
+            ];
+            $baseUrl = $endpoints[$region] ?? 'https://secure.paytabs.com';
+            $ch = curl_init("{$baseUrl}/payment/query");
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => json_encode(['profile_id' => $profileId, 'tran_ref' => $paytabsRef]),
+                CURLOPT_HTTPHEADER => ['Authorization: ' . trim($serverKey), 'Content-Type: application/json'],
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0
+            ]);
+            $res = curl_exec($ch);
+            curl_close($ch);
+            $data = json_decode($res, true);
+            if (strtoupper($data['payment_result']['response_status'] ?? '') === 'A') {
+                $amountVerified = (float)($data['cart_amount'] ?? $inv['total']);
+                record_instant_payment($pdo, $inv, 'paytabs', $paytabsRef, $amountVerified, 'PayTabs API Return Verification');
+                $verified = true;
+            }
+        }
+        if (!$verified && $inv['status'] !== 'paid' && $isValidToken) {
+            record_instant_payment($pdo, $inv, 'paytabs', $paytabsRef ?: ('pt_' . time()), (float)$inv['total'], 'PayTabs Return Checkout Verification');
+        }
+    }
+
+    // 8. Telr Verification
+    $telrRef = trim($_GET['telr_ref'] ?? '');
+    if ($inv['status'] !== 'paid' && (!empty($telrRef) || $gatewayParam === 'telr')) {
+        $storeId = \Services\PaymentGatewayService::getSetting($pdo, 'telr_store_id', '', $tid);
+        $apiKey = \Services\PaymentGatewayService::getSetting($pdo, 'telr_api_key', '', $tid);
+        $verified = false;
+        if (!empty($storeId) && !empty($apiKey) && !empty($telrRef)) {
+            $ch = curl_init("https://secure.telr.com/gateway/order.json");
+            $payload = ['method' => 'check', 'store' => (int)$storeId, 'authkey' => $apiKey, 'order' => ['ref' => $telrRef]];
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => json_encode($payload),
+                CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0
+            ]);
+            $res = curl_exec($ch);
+            curl_close($ch);
+            $data = json_decode($res, true);
+            $code = (string)($data['order']['status']['code'] ?? '');
+            if ($code === '3' || strtoupper($code) === 'A') {
+                $amountVerified = (float)($data['order']['amount'] ?? $inv['total']);
+                record_instant_payment($pdo, $inv, 'telr', $telrRef, $amountVerified, 'Telr API Return Verification');
+                $verified = true;
+            }
+        }
+        if (!$verified && $inv['status'] !== 'paid' && $isValidToken) {
+            record_instant_payment($pdo, $inv, 'telr', $telrRef ?: ('tlr_' . time()), (float)$inv['total'], 'Telr Return Verification');
+        }
+    }
+
+    // 9. Checkout.com Verification
+    $checkoutSessionId = trim($_GET['checkout_session_id'] ?? ($_GET['cko-session-id'] ?? ''));
+    if ($inv['status'] !== 'paid' && (!empty($checkoutSessionId) || $gatewayParam === 'checkout')) {
+        $secretKey = \Services\PaymentGatewayService::getSetting($pdo, 'checkout_secret_key', '', $tid);
+        $env = \Services\PaymentGatewayService::getSetting($pdo, 'checkout_environment', 'sandbox', $tid);
+        $verified = false;
+        if (!empty($secretKey) && !empty($checkoutSessionId)) {
+            $domain = ($env === 'live') ? 'https://api.checkout.com' : 'https://api.sandbox.checkout.com';
+            $ch = curl_init("{$domain}/hosted-payments/" . urlencode($checkoutSessionId));
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . trim($secretKey)],
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => 0
+            ]);
+            $res = curl_exec($ch);
+            curl_close($ch);
+            $data = json_decode($res, true);
+            $status = strtolower($data['status'] ?? '');
+            if (in_array($status, ['captured', 'paid', 'approved'], true)) {
+                $amountVerified = ((float)($data['amount'] ?? 0)) / 100 ?: (float)$inv['total'];
+                record_instant_payment($pdo, $inv, 'checkout', $checkoutSessionId, $amountVerified, 'Checkout.com API Return Verification');
+                $verified = true;
+            }
+        }
+        if (!$verified && $inv['status'] !== 'paid' && $isValidToken) {
+            record_instant_payment($pdo, $inv, 'checkout', $checkoutSessionId ?: ('cko_' . time()), (float)$inv['total'], 'Checkout.com Return Verification');
         }
     }
 }

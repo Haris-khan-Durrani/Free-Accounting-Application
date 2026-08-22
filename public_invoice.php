@@ -45,6 +45,9 @@ $tabbyEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'tabby_enabled
 $tamaraEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'tamara_enabled', '0', $tid);
 $ziinaEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'ziina_enabled', '0', $tid);
 $zbooniEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'zbooni_enabled', '0', $tid);
+$paytabsEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'paytabs_enabled', '0', $tid);
+$telrEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'telr_enabled', '0', $tid);
+$checkoutComEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'checkout_enabled', '0', $tid);
 $bankEnabled = \Services\PaymentGatewayService::getSetting($pdo, 'bank_transfer_enabled', '1', $tid);
 
 $isPaid = ($inv['status'] === 'paid');
@@ -82,6 +85,12 @@ $tamaraInstallment = number_format($remainingBalance / 3, 2);
         .pay-btn-ziina:hover { background: #7c3aed; }
         .pay-btn-zbooni { background: #10b981; color: #fff; font-weight: 900; }
         .pay-btn-zbooni:hover { background: #059669; }
+        .pay-btn-paytabs { background: #0284c7; color: #fff; font-weight: 900; }
+        .pay-btn-paytabs:hover { background: #0369a1; }
+        .pay-btn-telr { background: #d97706; color: #fff; font-weight: 900; }
+        .pay-btn-telr:hover { background: #b45309; }
+        .pay-btn-checkout { background: #0f172a; color: #fff; font-weight: 900; border: 1px solid #334155; }
+        .pay-btn-checkout:hover { background: #1e293b; }
     </style>
 </head>
 <body>
@@ -156,6 +165,24 @@ $tamaraInstallment = number_format($remainingBalance / 3, 2);
                 <?php if ($zbooniEnabled === '1'): ?>
                     <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=zbooni" class="pay-btn pay-btn-zbooni" title="Pay via Zbooni">
                         <i class="fa-solid fa-bag-shopping"></i> Pay via Zbooni
+                    </a>
+                <?php endif; ?>
+
+                <?php if ($paytabsEnabled === '1'): ?>
+                    <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=paytabs" class="pay-btn pay-btn-paytabs" title="Pay via PayTabs">
+                        <i class="fa-solid fa-globe"></i> Pay via PayTabs
+                    </a>
+                <?php endif; ?>
+
+                <?php if ($telrEnabled === '1'): ?>
+                    <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=telr" class="pay-btn pay-btn-telr" title="Pay via Telr">
+                        <i class="fa-solid fa-shield-halved"></i> Pay via Telr
+                    </a>
+                <?php endif; ?>
+
+                <?php if ($checkoutComEnabled === '1'): ?>
+                    <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=checkout" class="pay-btn pay-btn-checkout" title="Pay via Checkout.com">
+                        <i class="fa-solid fa-credit-card"></i> Pay via Checkout.com
                     </a>
                 <?php endif; ?>
 

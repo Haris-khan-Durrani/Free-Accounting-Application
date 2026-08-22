@@ -18,6 +18,9 @@ class PaymentGatewayService {
         'ziina_webhook_secret',
         'zbooni_api_key',
         'zbooni_secret_key',
+        'paytabs_server_key',
+        'telr_api_key',
+        'checkout_secret_key',
         'smtp_password',
         'meta_whatsapp_token',
         'twilio_auth_token',
@@ -704,6 +707,221 @@ class PaymentGatewayService {
         }
 
         return ['error' => 'Zbooni Checkout Error: ' . ($data['detail'] ?? ($data['message'] ?? 'Unable to create Zbooni order.'))];
+    }
+
+    /**
+     * Create PayTabs Checkout Session
+     */
+    public static function createInvoicePayTabsCheckout(PDO $pdo, array $inv, array $items, string $appUrl): array {
+        $tid = (int)$inv['tenant_id'];
+        $profileId = self::getSetting($pdo, 'paytabs_profile_id', '', $tid);
+        $serverKey = self::getSetting($pdo, 'paytabs_server_key', '', $tid);
+        $region = self::getSetting($pdo, 'paytabs_region', 'ARE', $tid);
+        $isEnabled = self::getSetting($pdo, 'paytabs_enabled', '0', $tid);
+
+        if ($isEnabled === '0' || empty($profileId) || empty($serverKey)) {
+            return ['error' => 'PayTabs payment gateway is disabled or missing Profile ID / Server Key for this workspace.'];
+        }
+
+        $invId = (int)$inv['id'];
+        $token = function_exists('get_invoice_token') ? get_invoice_token($inv) : '';
+        $currency = strtoupper($inv['currency'] ?? 'AED');
+        $totalAmount = (float)$inv['total'];
+
+        $endpoints = [
+            'ARE' => 'https://secure.paytabs.com',
+            'SAU' => 'https://secure-saudi.paytabs.com',
+            'EGY' => 'https://secure-egypt.paytabs.com',
+            'OMN' => 'https://secure-oman.paytabs.com',
+            'JOR' => 'https://secure-jordan.paytabs.com',
+            'GLOBAL' => 'https://secure.paytabs.com'
+        ];
+        $baseUrl = $endpoints[$region] ?? 'https://secure.paytabs.com';
+
+        $payload = [
+            'profile_id' => $profileId,
+            'tran_type' => 'sale',
+            'tran_class' => 'ecom',
+            'cart_id' => 'inv_' . $invId,
+            'cart_description' => 'Tax Invoice #' . ($inv['invoice_number'] ?? $invId),
+            'cart_currency' => $currency,
+            'cart_amount' => $totalAmount,
+            'callback' => $appUrl . "/api/v1/webhooks/paytabs.php",
+            'return' => $appUrl . "/stripe_return.php?invoice_id={$invId}&token={$token}&gateway=paytabs",
+            'customer_details' => [
+                'name' => $inv['contact_name'] ?? ($inv['company_name'] ?? 'Valued Customer'),
+                'email' => $inv['email'] ?? 'customer@example.com',
+                'phone' => $inv['phone'] ?? '',
+                'street1' => $inv['address'] ?? 'Street Address',
+                'city' => 'Dubai',
+                'state' => 'Dubai',
+                'country' => 'AE'
+            ]
+        ];
+
+        $ch = curl_init($baseUrl . "/payment/request");
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => [
+                'Authorization: ' . $serverKey,
+                'Content-Type: application/json'
+            ],
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0
+        ]);
+
+        $res = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) {
+            return ['error' => 'PayTabs API Connection Error: ' . $err];
+        }
+
+        $data = json_decode($res, true);
+        if (isset($data['redirect_url'])) {
+            return ['redirect_url' => $data['redirect_url']];
+        }
+
+        return ['error' => 'PayTabs Order Error: ' . ($data['message'] ?? 'Unable to generate PayTabs checkout link.')];
+    }
+
+    /**
+     * Create Telr Payment Gateway Checkout Session
+     */
+    public static function createInvoiceTelrCheckout(PDO $pdo, array $inv, array $items, string $appUrl): array {
+        $tid = (int)$inv['tenant_id'];
+        $storeId = self::getSetting($pdo, 'telr_store_id', '', $tid);
+        $apiKey = self::getSetting($pdo, 'telr_api_key', '', $tid);
+        $mode = self::getSetting($pdo, 'telr_mode', '1', $tid);
+        $isEnabled = self::getSetting($pdo, 'telr_enabled', '0', $tid);
+
+        if ($isEnabled === '0' || empty($storeId) || empty($apiKey)) {
+            return ['error' => 'Telr payment gateway is disabled or missing Store ID / API Key for this workspace.'];
+        }
+
+        $invId = (int)$inv['id'];
+        $token = function_exists('get_invoice_token') ? get_invoice_token($inv) : '';
+        $currency = strtoupper($inv['currency'] ?? 'AED');
+        $totalAmount = (float)$inv['total'];
+
+        $payload = [
+            'method' => 'create',
+            'store' => (int)$storeId,
+            'authkey' => $apiKey,
+            'order' => [
+                'cartid' => 'inv_' . $invId,
+                'test' => (int)$mode,
+                'amount' => number_format($totalAmount, 2, '.', ''),
+                'currency' => $currency,
+                'description' => 'Tax Invoice #' . ($inv['invoice_number'] ?? $invId)
+            ],
+            'customer' => [
+                'email' => $inv['email'] ?? 'customer@example.com',
+                'name' => [
+                    'forenames' => $inv['contact_name'] ?? ($inv['company_name'] ?? 'Customer')
+                ]
+            ],
+            'return' => [
+                'authorised' => $appUrl . "/stripe_return.php?invoice_id={$invId}&token={$token}&gateway=telr",
+                'declined'   => $appUrl . "/public_invoice.php?id={$invId}&token={$token}&error=Telr+Payment+Declined",
+                'cancelled'  => $appUrl . "/public_invoice.php?id={$invId}&token={$token}&status=cancel"
+            ]
+        ];
+
+        $ch = curl_init("https://secure.telr.com/gateway/order.json");
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0
+        ]);
+
+        $res = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) {
+            return ['error' => 'Telr API Connection Error: ' . $err];
+        }
+
+        $data = json_decode($res, true);
+        if (isset($data['order']['url'])) {
+            return ['redirect_url' => $data['order']['url']];
+        }
+
+        return ['error' => 'Telr Order Error: ' . ($data['error']['message'] ?? ($data['order']['ref'] ?? 'Unable to create Telr payment checkout.'))];
+    }
+
+    /**
+     * Create Checkout.com Hosted Checkout Session
+     */
+    public static function createInvoiceCheckoutComCheckout(PDO $pdo, array $inv, array $items, string $appUrl): array {
+        $tid = (int)$inv['tenant_id'];
+        $secretKey = self::getSetting($pdo, 'checkout_secret_key', '', $tid);
+        $env = self::getSetting($pdo, 'checkout_environment', 'sandbox', $tid);
+        $isEnabled = self::getSetting($pdo, 'checkout_enabled', '0', $tid);
+
+        if ($isEnabled === '0' || empty($secretKey)) {
+            return ['error' => 'Checkout.com payment gateway is disabled or Secret Key is missing for this workspace.'];
+        }
+
+        $invId = (int)$inv['id'];
+        $token = function_exists('get_invoice_token') ? get_invoice_token($inv) : '';
+        $currency = strtoupper($inv['currency'] ?? 'AED');
+        $totalAmount = (float)$inv['total'];
+        $amountInMinorUnits = (int)round($totalAmount * 100);
+
+        $domain = ($env === 'live') ? 'https://api.checkout.com' : 'https://api.sandbox.checkout.com';
+
+        $payload = [
+            'amount' => $amountInMinorUnits,
+            'currency' => $currency,
+            'reference' => 'inv_' . $invId,
+            'description' => 'Tax Invoice #' . ($inv['invoice_number'] ?? $invId),
+            'customer' => [
+                'email' => $inv['email'] ?? 'customer@example.com',
+                'name' => $inv['contact_name'] ?? ($inv['company_name'] ?? 'Customer')
+            ],
+            'success_url' => $appUrl . "/stripe_return.php?invoice_id={$invId}&token={$token}&gateway=checkout",
+            'cancel_url'  => $appUrl . "/public_invoice.php?id={$invId}&token={$token}&status=cancel",
+            'failure_url' => $appUrl . "/public_invoice.php?id={$invId}&token={$token}&error=Checkout.com+Payment+Failed"
+        ];
+
+        $ch = curl_init("{$domain}/hosted-payments");
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . trim($secretKey),
+                'Content-Type: application/json'
+            ],
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0
+        ]);
+
+        $res = curl_exec($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($err) {
+            return ['error' => 'Checkout.com API Connection Error: ' . $err];
+        }
+
+        $data = json_decode($res, true);
+        if (isset($data['_links']['redirect']['href'])) {
+            return ['redirect_url' => $data['_links']['redirect']['href']];
+        }
+
+        return ['error' => 'Checkout.com Error: ' . ($data['error_type'] ?? 'Unable to create Checkout.com session.')];
     }
 }
 
