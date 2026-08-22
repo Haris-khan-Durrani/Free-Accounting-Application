@@ -13,6 +13,30 @@ if (!has_role(['owner', 'admin'])) {
     redirect('index');
 }
 
+// Test Payment Gateway API Credentials
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    $act = is_array($_POST['action']) ? end($_POST['action']) : $_POST['action'];
+    if ($act === 'test_connection') {
+        while (ob_get_level()) { ob_end_clean(); }
+        
+        if (!isset($_POST['csrf']) || !hash_equals($_SESSION['csrf'] ?? '', (string)$_POST['csrf'])) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'CSRF token mismatch or session expired. Please refresh the page.']);
+            exit;
+        }
+        // Rotate CSRF token & return new token
+        $_SESSION['csrf'] = bin2hex(random_bytes(24));
+
+        $gateway = trim($_POST['gateway'] ?? '');
+        $result = \Services\PaymentGatewayService::testGatewayConnection($pdo, $gateway, $_POST, $tid);
+        $result['new_csrf'] = $_SESSION['csrf'];
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($result);
+        exit;
+    }
+}
+
 // Save Payment Gateway Settings for Current Active Tenant/Subaccount
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_gateways') {
     verify_csrf();
@@ -169,6 +193,7 @@ $baseUrl = $protocol . "://" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . rtrim(di
 
 page_start('Workspace Payment Gateways');
 ?>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <div class="max-w-6xl mx-auto space-y-6">
     <!-- Header Title -->
@@ -273,11 +298,16 @@ page_start('Workspace Payment Gateways');
                             <p class="text-xs text-slate-500 mt-0.5">Credit/Debit Cards, Apple Pay, Google Pay & Payment Links</p>
                         </div>
                     </div>
-                    <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
-                        <input type="checkbox" name="stripe_enabled" value="1" <?=$stripeEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        <span class="ml-3 text-xs font-extrabold text-slate-800">Enable Stripe Gateway</span>
-                    </label>
+                    <div class="flex items-center space-x-3">
+                        <button type="button" onclick="testGatewayConnection('stripe')" id="testBtn-stripe" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all border border-slate-700">
+                            <i class="fa-solid fa-plug text-emerald-400"></i> Test Connection
+                        </button>
+                        <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                            <input type="checkbox" name="stripe_enabled" value="1" <?=$stripeEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                            <span class="ml-3 text-xs font-extrabold text-slate-800">Enable Stripe Gateway</span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Detailed Gateway Overview Box -->
@@ -363,11 +393,16 @@ page_start('Workspace Payment Gateways');
                             <p class="text-xs text-slate-500 mt-0.5">Split payments into 4 interest-free monthly payments for GCC clients</p>
                         </div>
                     </div>
-                    <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
-                        <input type="checkbox" name="tabby_enabled" value="1" <?=$tabbyEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
-                        <span class="ml-3 text-xs font-extrabold text-slate-800">Enable Tabby BNPL</span>
-                    </label>
+                    <div class="flex items-center space-x-3">
+                        <button type="button" onclick="testGatewayConnection('tabby')" id="testBtn-tabby" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all border border-slate-700">
+                            <i class="fa-solid fa-plug text-emerald-400"></i> Test Connection
+                        </button>
+                        <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                            <input type="checkbox" name="tabby_enabled" value="1" <?=$tabbyEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                            <span class="ml-3 text-xs font-extrabold text-slate-800">Enable Tabby BNPL</span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Detailed Gateway Overview Box -->
@@ -435,11 +470,16 @@ page_start('Workspace Payment Gateways');
                             <p class="text-xs text-slate-500 mt-0.5">Top GCC Buy Now Pay Later solution for Saudi Arabia, UAE & Kuwait</p>
                         </div>
                     </div>
-                    <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
-                        <input type="checkbox" name="tamara_enabled" value="1" <?=$tamaraEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
-                        <span class="ml-3 text-xs font-extrabold text-slate-800">Enable Tamara BNPL</span>
-                    </label>
+                    <div class="flex items-center space-x-3">
+                        <button type="button" onclick="testGatewayConnection('tamara')" id="testBtn-tamara" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all border border-slate-700">
+                            <i class="fa-solid fa-plug text-emerald-400"></i> Test Connection
+                        </button>
+                        <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                            <input type="checkbox" name="tamara_enabled" value="1" <?=$tamaraEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-600"></div>
+                            <span class="ml-3 text-xs font-extrabold text-slate-800">Enable Tamara BNPL</span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Detailed Gateway Overview Box -->
@@ -514,11 +554,16 @@ page_start('Workspace Payment Gateways');
                             <p class="text-xs text-slate-500 mt-0.5">UAE Cards, Apple Pay & Instant Payment Links</p>
                         </div>
                     </div>
-                    <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
-                        <input type="checkbox" name="ziina_enabled" value="1" <?=$ziinaEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        <span class="ml-3 text-xs font-extrabold text-slate-800">Enable Ziina Gateway</span>
-                    </label>
+                    <div class="flex items-center space-x-3">
+                        <button type="button" onclick="testGatewayConnection('ziina')" id="testBtn-ziina" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all border border-slate-700">
+                            <i class="fa-solid fa-plug text-emerald-400"></i> Test Connection
+                        </button>
+                        <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                            <input type="checkbox" name="ziina_enabled" value="1" <?=$ziinaEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                            <span class="ml-3 text-xs font-extrabold text-slate-800">Enable Ziina Gateway</span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Detailed Gateway Overview Box -->
@@ -585,11 +630,16 @@ page_start('Workspace Payment Gateways');
                             <p class="text-xs text-slate-500 mt-0.5">Payment links and digital checkout across UAE, Saudi Arabia & Jordan</p>
                         </div>
                     </div>
-                    <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
-                        <input type="checkbox" name="zbooni_enabled" value="1" <?=$zbooniEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                        <span class="ml-3 text-xs font-extrabold text-slate-800">Enable Zbooni Gateway</span>
-                    </label>
+                    <div class="flex items-center space-x-3">
+                        <button type="button" onclick="testGatewayConnection('zbooni')" id="testBtn-zbooni" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all border border-slate-700">
+                            <i class="fa-solid fa-plug text-emerald-400"></i> Test Connection
+                        </button>
+                        <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                            <input type="checkbox" name="zbooni_enabled" value="1" <?=$zbooniEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                            <span class="ml-3 text-xs font-extrabold text-slate-800">Enable Zbooni Gateway</span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Detailed Gateway Overview Box -->
@@ -657,11 +707,16 @@ page_start('Workspace Payment Gateways');
                             <p class="text-xs text-slate-500 mt-0.5">Direct merchant acquiring & card payments across Middle East & Africa</p>
                         </div>
                     </div>
-                    <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
-                        <input type="checkbox" name="network_enabled" value="1" <?=$networkEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
-                        <span class="ml-3 text-xs font-extrabold text-slate-800">Enable Network Int.</span>
-                    </label>
+                    <div class="flex items-center space-x-3">
+                        <button type="button" onclick="testGatewayConnection('network')" id="testBtn-network" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all border border-slate-700">
+                            <i class="fa-solid fa-plug text-emerald-400"></i> Test Connection
+                        </button>
+                        <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                            <input type="checkbox" name="network_enabled" value="1" <?=$networkEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
+                            <span class="ml-3 text-xs font-extrabold text-slate-800">Enable Network Int.</span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Detailed Gateway Overview Box -->
@@ -737,11 +792,16 @@ page_start('Workspace Payment Gateways');
                             <p class="text-xs text-slate-500 mt-0.5">International PayPal account & card payments across 200+ countries</p>
                         </div>
                     </div>
-                    <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
-                        <input type="checkbox" name="paypal_enabled" value="1" <?=$paypalEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                        <span class="ml-3 text-xs font-extrabold text-slate-800">Enable PayPal</span>
-                    </label>
+                    <div class="flex items-center space-x-3">
+                        <button type="button" onclick="testGatewayConnection('paypal')" id="testBtn-paypal" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all border border-slate-700">
+                            <i class="fa-solid fa-plug text-emerald-400"></i> Test Connection
+                        </button>
+                        <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                            <input type="checkbox" name="paypal_enabled" value="1" <?=$paypalEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            <span class="ml-3 text-xs font-extrabold text-slate-800">Enable PayPal</span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Detailed Gateway Overview Box -->
@@ -796,11 +856,16 @@ page_start('Workspace Payment Gateways');
                             <p class="text-xs text-slate-500">Accept Visa, MasterCard, Mada, Apple Pay, KNET, OmanNet & local Middle East cards.</p>
                         </div>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="paytabs_enabled" value="1" <?=$paytabsEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
-                        <span class="ml-3 text-xs font-bold text-slate-700">Enable PayTabs</span>
-                    </label>
+                    <div class="flex items-center space-x-3">
+                        <button type="button" onclick="testGatewayConnection('paytabs')" id="testBtn-paytabs" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all border border-slate-700">
+                            <i class="fa-solid fa-plug text-emerald-400"></i> Test Connection
+                        </button>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="paytabs_enabled" value="1" <?=$paytabsEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
+                            <span class="ml-3 text-xs font-bold text-slate-700">Enable PayTabs</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="bg-sky-50/60 border border-sky-100 rounded-2xl p-5 mb-6 space-y-3">
@@ -866,11 +931,16 @@ page_start('Workspace Payment Gateways');
                             <p class="text-xs text-slate-500">Accept online card payments and local bank transfers via Telr Middle East.</p>
                         </div>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="telr_enabled" value="1" <?=$telrEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
-                        <span class="ml-3 text-xs font-bold text-slate-700">Enable Telr</span>
-                    </label>
+                    <div class="flex items-center space-x-3">
+                        <button type="button" onclick="testGatewayConnection('telr')" id="testBtn-telr" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all border border-slate-700">
+                            <i class="fa-solid fa-plug text-emerald-400"></i> Test Connection
+                        </button>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="telr_enabled" value="1" <?=$telrEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                            <span class="ml-3 text-xs font-bold text-slate-700">Enable Telr</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="bg-amber-50/60 border border-amber-100 rounded-2xl p-5 mb-6 space-y-3">
@@ -926,11 +996,16 @@ page_start('Workspace Payment Gateways');
                             <p class="text-xs text-slate-500">Enterprise global payment solution for credit/debit cards, Apple Pay, and local alternative payment methods.</p>
                         </div>
                     </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" name="checkout_enabled" value="1" <?=$checkoutComEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                        <span class="ml-3 text-xs font-bold text-slate-700">Enable Checkout.com</span>
-                    </label>
+                    <div class="flex items-center space-x-3">
+                        <button type="button" onclick="testGatewayConnection('checkout')" id="testBtn-checkout" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all border border-slate-700">
+                            <i class="fa-solid fa-plug text-emerald-400"></i> Test Connection
+                        </button>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="checkout_enabled" value="1" <?=$checkoutComEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            <span class="ml-3 text-xs font-bold text-slate-700">Enable Checkout.com</span>
+                        </label>
+                    </div>
                 </div>
 
                 <div class="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-5 mb-6 space-y-3">
@@ -987,11 +1062,16 @@ page_start('Workspace Payment Gateways');
                             <p class="text-xs text-slate-500 mt-0.5">Display direct wire transfer instructions on invoice client portals</p>
                         </div>
                     </div>
-                    <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
-                        <input type="checkbox" name="bank_transfer_enabled" value="1" <?=$bankTransferEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
-                        <span class="ml-3 text-xs font-extrabold text-slate-800">Enable Bank Wire</span>
-                    </label>
+                    <div class="flex items-center space-x-3">
+                        <button type="button" onclick="testGatewayConnection('bank')" id="testBtn-bank" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all border border-slate-700">
+                            <i class="fa-solid fa-plug text-emerald-400"></i> Test Setup
+                        </button>
+                        <label class="flex items-center cursor-pointer bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                            <input type="checkbox" name="bank_transfer_enabled" value="1" <?=$bankTransferEnabled === '1' ? 'checked' : ''?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                            <span class="ml-3 text-xs font-extrabold text-slate-800">Enable Bank Wire</span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Detailed Overview Box -->
@@ -1089,6 +1169,121 @@ document.addEventListener('DOMContentLoaded', function() {
         switchGatewayTab(hash);
     }
 });
+
+// Test Connection AJAX Helper with SweetAlert2 & Auto-Enable Toggle Switch
+function testGatewayConnection(gateway) {
+    const btn = document.getElementById('testBtn-' + gateway);
+    const originalText = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-amber-300"></i> Testing API...';
+    }
+
+    try {
+        const form = document.getElementById('gatewaySettingsForm');
+        let formData = form ? new FormData(form) : new FormData();
+
+        const csrfInput = document.querySelector('input[name="csrf"]');
+        if (csrfInput) {
+            formData.set('csrf', csrfInput.value);
+        }
+
+        formData.set('action', 'test_connection');
+        formData.set('gateway', gateway);
+
+        fetch('api/v1/test_gateway.php', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(r => r.text())
+        .then(text => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                console.error("Non-JSON Server Response:", text);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'API Test Response Error',
+                        text: 'Server returned: ' + text.substring(0, 180),
+                        icon: 'warning'
+                    });
+                } else {
+                    alert('Server error: ' + text.substring(0, 180));
+                }
+                return;
+            }
+
+            // Sync updated CSRF token back to DOM inputs
+            if (data.new_csrf) {
+                document.querySelectorAll('input[name="csrf"]').forEach(i => i.value = data.new_csrf);
+            }
+
+            if (data.success) {
+                // Automatically enable the gateway toggle switch when connection succeeds!
+                const cbName = (gateway === 'bank') ? 'bank_transfer_enabled' : (gateway === 'checkout' ? 'checkout_enabled' : gateway + '_enabled');
+                const checkbox = document.querySelector(`input[name="${cbName}"]`);
+                if (checkbox && !checkbox.checked) {
+                    checkbox.checked = true;
+                }
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Connection Successful! ⚡',
+                        text: data.message,
+                        icon: 'success',
+                        confirmButtonColor: '#10b981',
+                        confirmButtonText: 'Great, Keep Enabled!'
+                    });
+                } else {
+                    alert('✅ Connection Successful!\n\n' + data.message);
+                }
+            } else {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Connection Failed ❌',
+                        text: data.message,
+                        icon: 'error',
+                        confirmButtonColor: '#ef4444',
+                        confirmButtonText: 'Check Credentials'
+                    });
+                } else {
+                    alert('❌ Connection Failed!\n\n' + data.message);
+                }
+            }
+        })
+        .catch(err => {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'API Test Error',
+                    text: err.message,
+                    icon: 'warning',
+                    confirmButtonColor: '#f59e0b'
+                });
+            } else {
+                alert('API Test Error: ' + err.message);
+            }
+        });
+    } catch (errEx) {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+        alert('JS Exception: ' + errEx.message);
+    }
+}
 </script>
 
 <?php page_end(); ?>

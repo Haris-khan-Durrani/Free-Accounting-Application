@@ -923,6 +923,302 @@ class PaymentGatewayService {
 
         return ['error' => 'Checkout.com Error: ' . ($data['error_type'] ?? 'Unable to create Checkout.com session.')];
     }
+
+    /**
+     * Test real-time API connection and credentials for a payment gateway
+     */
+    public static function testGatewayConnection(PDO $pdo, string $gateway, array $overrideParams = [], ?int $tenantId = null): array {
+        $tid = $tenantId ?: (function_exists('tenant_id') ? tenant_id() : 1);
+
+        try {
+            switch (strtolower($gateway)) {
+                case 'stripe':
+                    $secKey = !empty($overrideParams['stripe_secret_key']) ? $overrideParams['stripe_secret_key'] : self::getSetting($pdo, 'stripe_secret_key', '', $tid);
+                    if (empty($secKey)) {
+                        return ['success' => false, 'message' => 'Stripe Secret Key is missing or empty.'];
+                    }
+                    $ch = curl_init('https://api.stripe.com/v1/balance');
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . trim($secKey)]);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    $res = curl_exec($ch);
+                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+
+                    if ($code === 200) {
+                        $data = json_decode($res, true);
+                        $currency = strtoupper($data['available'][0]['currency'] ?? 'USD');
+                        return ['success' => true, 'message' => 'Stripe API connection successful! Account active (Default Currency: ' . $currency . ').'];
+                    } else {
+                        $err = json_decode($res, true);
+                        $msg = $err['error']['message'] ?? 'Authentication failed (HTTP ' . $code . ').';
+                        return ['success' => false, 'message' => 'Stripe connection failed: ' . $msg];
+                    }
+
+                case 'tabby':
+                    $secKey = !empty($overrideParams['tabby_secret_key']) ? $overrideParams['tabby_secret_key'] : self::getSetting($pdo, 'tabby_secret_key', '', $tid);
+                    $pubKey = !empty($overrideParams['tabby_public_key']) ? $overrideParams['tabby_public_key'] : self::getSetting($pdo, 'tabby_public_key', '', $tid);
+                    if (empty($secKey) || empty($pubKey)) {
+                        return ['success' => false, 'message' => 'Tabby Secret Key or Public Key is missing.'];
+                    }
+                    $ch = curl_init('https://api.tabby.ai/api/v2/checkout');
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_POST, true);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['payment' => ['amount' => '1.00', 'currency' => 'AED']]));
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                        'Authorization: Bearer ' . trim($secKey),
+                        'Content-Type: application/json'
+                    ]);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    $res = curl_exec($ch);
+                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+
+                    if ($code !== 401 && $code !== 403 && $code > 0) {
+                        return ['success' => true, 'message' => 'Tabby API connection successful! Credentials authorized.'];
+                    } else {
+                        return ['success' => false, 'message' => 'Tabby connection failed: Invalid Secret Key or Public Key (HTTP ' . $code . ').'];
+                    }
+
+                case 'tamara':
+                    $token = !empty($overrideParams['tamara_api_token']) ? $overrideParams['tamara_api_token'] : self::getSetting($pdo, 'tamara_api_token', '', $tid);
+                    $envUrl = !empty($overrideParams['tamara_api_url']) ? $overrideParams['tamara_api_url'] : self::getSetting($pdo, 'tamara_api_url', 'https://api.tamara.co', $tid);
+                    if (empty($token)) {
+                        return ['success' => false, 'message' => 'Tamara API Token is missing.'];
+                    }
+                    $apiUrl = rtrim($envUrl, '/') . '/checkout/types';
+                    $ch = curl_init($apiUrl);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . trim($token)]);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    $res = curl_exec($ch);
+                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+
+                    if ($code === 200) {
+                        return ['success' => true, 'message' => 'Tamara API connection successful! Merchant account active.'];
+                    } else {
+                        $err = json_decode($res, true);
+                        $msg = $err['message'] ?? 'Authentication failed (HTTP ' . $code . ').';
+                        return ['success' => false, 'message' => 'Tamara connection failed: ' . $msg];
+                    }
+
+                case 'ziina':
+                    $token = !empty($overrideParams['ziina_api_token']) ? $overrideParams['ziina_api_token'] : self::getSetting($pdo, 'ziina_api_token', '', $tid);
+                    if (empty($token)) {
+                        return ['success' => false, 'message' => 'Ziina API Secret Token is missing.'];
+                    }
+                    $ch = curl_init('https://api-v2.ziina.com/api/payment_intents');
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                        'Authorization: Bearer ' . trim($token),
+                        'Content-Type: application/json'
+                    ]);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    $res = curl_exec($ch);
+                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+
+                    if ($code !== 401 && $code !== 403 && $code > 0) {
+                        return ['success' => true, 'message' => 'Ziina API connection successful! Secret Token authorized.'];
+                    } else {
+                        return ['success' => false, 'message' => 'Ziina connection failed: Unauthorized Secret Token (HTTP ' . $code . ').'];
+                    }
+
+                case 'zbooni':
+                    $apiKey = !empty($overrideParams['zbooni_api_key']) ? $overrideParams['zbooni_api_key'] : self::getSetting($pdo, 'zbooni_api_key', '', $tid);
+                    if (empty($apiKey)) {
+                        return ['success' => false, 'message' => 'Zbooni API Key is missing.'];
+                    }
+                    $ch = curl_init('https://api.zbooni.com/v1/orders/');
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . trim($apiKey)]);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    $res = curl_exec($ch);
+                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+
+                    if ($code === 200 || $code === 404 || $code === 400) {
+                        return ['success' => true, 'message' => 'Zbooni API connection successful! Merchant token authorized.'];
+                    } else {
+                        return ['success' => false, 'message' => 'Zbooni connection failed: Invalid API Key (HTTP ' . $code . ').'];
+                    }
+
+                case 'paytabs':
+                    $profileId = !empty($overrideParams['paytabs_profile_id']) ? $overrideParams['paytabs_profile_id'] : self::getSetting($pdo, 'paytabs_profile_id', '', $tid);
+                    $serverKey = !empty($overrideParams['paytabs_server_key']) ? $overrideParams['paytabs_server_key'] : self::getSetting($pdo, 'paytabs_server_key', '', $tid);
+                    $region = !empty($overrideParams['paytabs_region']) ? $overrideParams['paytabs_region'] : self::getSetting($pdo, 'paytabs_region', 'ARE', $tid);
+                    if (empty($profileId) || empty($serverKey)) {
+                        return ['success' => false, 'message' => 'PayTabs Profile ID or Server Key is missing.'];
+                    }
+                    $endpoint = 'https://secure.paytabs.com/payment/query';
+                    if ($region === 'SAU') $endpoint = 'https://secure-saudi.paytabs.com/payment/query';
+                    elseif ($region === 'EGY') $endpoint = 'https://secure-egypt.paytabs.com/payment/query';
+                    elseif ($region === 'OMN') $endpoint = 'https://secure-oman.paytabs.com/payment/query';
+                    elseif ($region === 'JOR') $endpoint = 'https://secure-jordan.paytabs.com/payment/query';
+
+                    $ch = curl_init($endpoint);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_POST, true);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+                        'profile_id' => (int)$profileId,
+                        'tran_ref' => 'TST000000000'
+                    ]));
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                        'authorization: ' . trim($serverKey),
+                        'content-type: application/json'
+                    ]);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    $res = curl_exec($ch);
+                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+
+                    if ($code === 200 || $code === 400) {
+                        $json = json_decode($res, true);
+                        if (isset($json['message']) && strpos(strtolower($json['message']), 'unauthorized') !== false) {
+                            return ['success' => false, 'message' => 'PayTabs connection failed: Server Key or Profile ID unauthorized.'];
+                        }
+                        return ['success' => true, 'message' => 'PayTabs API connection successful! Profile ID ' . $profileId . ' authorized.'];
+                    } else {
+                        return ['success' => false, 'message' => 'PayTabs connection failed: HTTP ' . $code . '.'];
+                    }
+
+                case 'telr':
+                    $storeId = !empty($overrideParams['telr_store_id']) ? $overrideParams['telr_store_id'] : self::getSetting($pdo, 'telr_store_id', '', $tid);
+                    $apiKey = !empty($overrideParams['telr_api_key']) ? $overrideParams['telr_api_key'] : self::getSetting($pdo, 'telr_api_key', '', $tid);
+                    if (empty($storeId) || empty($apiKey)) {
+                        return ['success' => false, 'message' => 'Telr Store ID or Remote Auth API Key is missing.'];
+                    }
+                    $ch = curl_init('https://secure.telr.com/gateway/order.json');
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_POST, true);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+                        'method' => 'check',
+                        'store' => $storeId,
+                        'auth' => $apiKey,
+                        'order' => ['ref' => 'TST00000000']
+                    ]));
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    $res = curl_exec($ch);
+                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+
+                    $json = json_decode($res, true);
+                    if (isset($json['error'])) {
+                        $msg = $json['error']['message'] ?? $json['error']['note'] ?? 'Authentication failed.';
+                        if (strpos(strtolower($msg), 'not found') !== false) {
+                            return ['success' => true, 'message' => 'Telr API connection successful! Store ID ' . $storeId . ' authorized.'];
+                        }
+                        return ['success' => false, 'message' => 'Telr connection failed: ' . $msg];
+                    }
+                    return ['success' => true, 'message' => 'Telr API connection successful! Store ID ' . $storeId . ' authorized.'];
+
+                case 'checkout':
+                    $secKey = !empty($overrideParams['checkout_secret_key']) ? $overrideParams['checkout_secret_key'] : self::getSetting($pdo, 'checkout_secret_key', '', $tid);
+                    $env = !empty($overrideParams['checkout_environment']) ? $overrideParams['checkout_environment'] : self::getSetting($pdo, 'checkout_environment', 'sandbox', $tid);
+                    if (empty($secKey)) {
+                        return ['success' => false, 'message' => 'Checkout.com Secret Key is missing.'];
+                    }
+                    $host = ($env === 'live') ? 'https://api.checkout.com' : 'https://api.sandbox.checkout.com';
+                    $ch = curl_init($host . '/events');
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                        'Authorization: Bearer ' . trim($secKey),
+                        'Content-Type: application/json'
+                    ]);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    $res = curl_exec($ch);
+                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+
+                    if ($code === 200 || $code === 400) {
+                        return ['success' => true, 'message' => 'Checkout.com API connection successful! (' . ucfirst($env) . ' Mode).'];
+                    } else {
+                        return ['success' => false, 'message' => 'Checkout.com connection failed: Invalid Secret Key (HTTP ' . $code . ').'];
+                    }
+
+                case 'network':
+                    $outletId = !empty($overrideParams['network_outlet_id']) ? $overrideParams['network_outlet_id'] : self::getSetting($pdo, 'network_outlet_id', '', $tid);
+                    $apiKey = !empty($overrideParams['network_api_key']) ? $overrideParams['network_api_key'] : self::getSetting($pdo, 'network_api_key', '', $tid);
+                    $env = !empty($overrideParams['network_environment']) ? $overrideParams['network_environment'] : self::getSetting($pdo, 'network_environment', 'sandbox', $tid);
+                    if (empty($outletId) || empty($apiKey)) {
+                        return ['success' => false, 'message' => 'Network Outlet ID or NGenius API Key is missing.'];
+                    }
+                    $host = ($env === 'live') ? 'https://identity.ngenius-payments.com' : 'https://identity-uat.ngenius-payments.com';
+                    $ch = curl_init($host . '/auth/realms/ngenius/protocol/openid-connect/token');
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_POST, true);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['grant_type' => 'client_credentials']));
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                        'Authorization: Basic ' . base64_encode($apiKey),
+                        'Content-Type: application/vnd.ni-identity.v1+json',
+                        'Accept: application/vnd.ni-identity.v1+json'
+                    ]);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    $res = curl_exec($ch);
+                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+
+                    if ($code === 200) {
+                        $json = json_decode($res, true);
+                        if (!empty($json['access_token'])) {
+                            return ['success' => true, 'message' => 'Network International (NGenius) API connection successful! Access Token generated (' . ucfirst($env) . ' Mode).'];
+                        }
+                    }
+                    return ['success' => false, 'message' => 'Network International connection failed: Invalid Outlet ID or NGenius API Key (HTTP ' . $code . ').'];
+
+                case 'paypal':
+                    $clientId = !empty($overrideParams['paypal_client_id']) ? $overrideParams['paypal_client_id'] : self::getSetting($pdo, 'paypal_client_id', '', $tid);
+                    $secKey = !empty($overrideParams['paypal_secret_key']) ? $overrideParams['paypal_secret_key'] : self::getSetting($pdo, 'paypal_secret_key', '', $tid);
+                    $mode = !empty($overrideParams['paypal_mode']) ? $overrideParams['paypal_mode'] : self::getSetting($pdo, 'paypal_mode', 'sandbox', $tid);
+                    if (empty($clientId) || empty($secKey)) {
+                        return ['success' => false, 'message' => 'PayPal Client ID or Secret Key is missing.'];
+                    }
+                    $host = ($mode === 'live') ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+                    $ch = curl_init($host . '/v1/oauth2/token');
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_POST, true);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, 'grant_type=client_credentials');
+                    curl_setopt($ch, CURLOPT_USERPWD, $clientId . ':' . $secKey);
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Accept: application/json', 'Accept-Language: en_US']);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    $res = curl_exec($ch);
+                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+
+                    if ($code === 200) {
+                        $json = json_decode($res, true);
+                        if (!empty($json['access_token'])) {
+                            return ['success' => true, 'message' => 'PayPal Express connection successful! Client Credentials authorized (' . ucfirst($mode) . ' Mode).'];
+                        }
+                    }
+                    return ['success' => false, 'message' => 'PayPal connection failed: Invalid Client ID or Secret Key (HTTP ' . $code . ').'];
+
+                case 'bank':
+                    $bankName = !empty($overrideParams['bank_name']) ? $overrideParams['bank_name'] : self::getSetting($pdo, 'bank_name', '', $tid);
+                    $iban = !empty($overrideParams['bank_iban']) ? $overrideParams['bank_iban'] : self::getSetting($pdo, 'bank_iban', '', $tid);
+                    if (empty($bankName) || empty($iban)) {
+                        return ['success' => false, 'message' => 'Bank Name or IBAN is missing.'];
+                    }
+                    return ['success' => true, 'message' => 'Bank Transfer setup validated! Bank: ' . $bankName . ' (IBAN configured).'];
+
+                default:
+                    return ['success' => false, 'message' => 'Unknown gateway: ' . $gateway];
+            }
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => 'Connection test error: ' . $e->getMessage()];
+        }
+    }
 }
 
 
