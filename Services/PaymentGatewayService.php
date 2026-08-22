@@ -143,6 +143,39 @@ class PaymentGatewayService {
 
         $invId = (int)$inv['id'];
         $token = function_exists('get_invoice_token') ? get_invoice_token($inv) : '';
+
+        // Safeguard: Check if Stripe API already has a completed payment session for this invoice before creating a new one
+        try {
+            $chCheck = curl_init('https://api.stripe.com/v1/checkout/sessions?limit=10');
+            curl_setopt_array($chCheck, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $secretKey],
+                CURLOPT_TIMEOUT => 5
+            ]);
+            $resCheck = curl_exec($chCheck);
+            curl_close($chCheck);
+
+            if ($resCheck) {
+                $checkData = json_decode($resCheck, true);
+                if (!empty($checkData['data'])) {
+                    foreach ($checkData['data'] as $sData) {
+                        if (isset($sData['metadata']['invoice_id']) && (string)$sData['metadata']['invoice_id'] === (string)$invId) {
+                            if (($sData['payment_status'] ?? '') === 'paid' || ($sData['status'] ?? '') === 'complete') {
+                                // Auto-reconcile database state immediately
+                                if (file_exists(__DIR__ . '/../stripe_return.php')) {
+                                    require_once __DIR__ . '/../stripe_return.php';
+                                    if (function_exists('record_instant_payment')) {
+                                        record_instant_payment($pdo, $inv, 'stripe', $sData['id'], ((float)($sData['amount_total'] ?? 0)) / 100, 'On-Demand Pre-Checkout Reconciliation');
+                                    }
+                                }
+                                return ['redirect_url' => $appUrl . "/public_invoice.php?id={$invId}&token={$token}"];
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $eEx) {}
+
         $currency = strtolower($inv['currency'] ?? 'aed');
         $totalAmount = (float)$inv['total'];
         $amountInCents = (int)round($totalAmount * 100);

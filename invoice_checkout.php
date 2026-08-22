@@ -40,8 +40,13 @@ if (!$isAuthorizedUser && !$isValidToken) {
 }
 
 if (in_array($inv['status'], ['paid', 'void'], true)) {
-    http_response_code(400);
-    exit(json_encode(['error' => 'Invoice is already ' . strtoupper($inv['status']) . ' and cannot receive online payments.']));
+    if (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json')) {
+        header('Content-Type: application/json');
+        http_response_code(400);
+        exit(json_encode(['error' => 'Invoice is already ' . strtoupper($inv['status']) . ' and cannot receive online payments.']));
+    }
+    flash('info', 'Invoice #' . $inv['invoice_number'] . ' is already fully paid and settled.');
+    redirect("public_invoice.php?id={$invId}&token={$token}");
 }
 
 $stItems = $pdo->prepare("SELECT * FROM invoice_items WHERE invoice_id = ? ORDER BY sort_order, id");
