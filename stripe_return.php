@@ -62,6 +62,9 @@ function record_instant_payment(PDO $pdo, array &$inv, string $gateway, string $
             ");
             $stPay->execute([$tid, $invId, $amount, $inv['currency'], $today, $gateway, $gateway, $transactionRef, $transactionRef, $notes]);
             $paymentId = (int)$pdo->lastInsertId();
+            try {
+                send_payment_receipt_email($pdo, $paymentId);
+            } catch (\Throwable $mEx) {}
 
             try {
                 $acctService = new \Services\AccountingService($pdo, $tid);

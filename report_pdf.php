@@ -1,13 +1,16 @@
 <?php
 require __DIR__ . '/bootstrap.php';
-require_login();
 
-use Services\PdfReportService;
+if (!empty($_SESSION['client_id'])) {
+    $tid = (int)$_SESSION['client_tenant_id'];
+    $clientId = (int)$_SESSION['client_id'];
+} else {
+    require_login();
+    $tid = tenant_id();
+}
 
-$pdo = $GLOBALS['pdo'];
-$tid = tenant_id();
-$brand = branding();
-$tenant = tenant();
+$brand = branding($tid);
+$tenant = tenant($tid);
 
 $type = $_GET['type'] ?? 'pnl';
 $preset = $_GET['preset'] ?? 'custom';
@@ -15,7 +18,9 @@ $startDate = $_GET['start_date'] ?? date('Y-01-01');
 $endDate   = $_GET['end_date'] ?? date('Y-m-d');
 $asOfDate  = $_GET['as_of_date'] ?? date('Y-m-d');
 $method    = in_array($_GET['method'] ?? '', ['accrual', 'cash'], true) ? $_GET['method'] : 'accrual';
-$clientId  = (int)($_GET['client_id'] ?? 0);
+if (empty($_SESSION['client_id'])) {
+    $clientId  = (int)($_GET['client_id'] ?? 0);
+}
 $categoryId = (int)($_GET['category_id'] ?? 0);
 
 $reportTitle = 'Financial Report';

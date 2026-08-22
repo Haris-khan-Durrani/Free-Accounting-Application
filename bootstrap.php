@@ -335,6 +335,137 @@ function get_public_invoice_url(array|object $inv): string {
     return "{$scheme}://{$host}{$dir}/public_invoice.php?id={$id}&token={$token}";
 }
 
+function send_payment_receipt_email(PDO $pdo, int $paymentId): bool {
+    try {
+        $st = $pdo->prepare("
+            SELECT p.*, i.invoice_number, i.total invoice_total, i.paid_amount invoice_paid_amount, i.currency invoice_currency, i.status invoice_status, 
+                   c.company_name, c.contact_name, c.email client_email
+            FROM payments p 
+            JOIN invoices i ON i.id = p.invoice_id
+            JOIN clients c ON c.id = i.client_id
+            WHERE p.id = ?
+        ");
+        $st->execute([$paymentId]);
+        $pay = $st->fetch();
+
+        if (!$pay || empty($pay['client_email'])) {
+            return false;
+        }
+
+        $tid = (int)$pay['tenant_id'];
+
+        // Check if tenant has enabled automated payment receipt emails (Default: Enabled '1')
+        $autoSend = \Services\PaymentGatewayService::getSetting($pdo, 'auto_send_payment_receipt_email', '1', $tid);
+        if ($autoSend !== '1') {
+            return false;
+        }
+
+        $brand = \Core\Branding::get($pdo, $tid);
+        $companyName = $brand['company_name'] ?? 'OneSol Solutions';
+        $logoUrl = $brand['logo_url'] ?? '';
+        $primaryColor = $brand['primary_color'] ?? '#0f172a';
+
+        // Fetch full invoice record to generate secure public URL
+        $stInvFull = $pdo->prepare("SELECT * FROM invoices WHERE id = ?");
+        $stInvFull->execute([$pay['invoice_id']]);
+        $invFull = $stInvFull->fetch();
+        $publicUrl = get_public_invoice_url($invFull);
+
+        $currency = $pay['currency'] ?: $pay['invoice_currency'];
+        $amountStr = function_exists('money') ? money((float)$pay['amount'], $currency) : ($currency . ' ' . number_format((float)$pay['amount'], 2));
+        $payDateStr = date('d M Y, h:i A', strtotime($pay['created_at'] ?: $pay['payment_date']));
+        $gatewayTxnId = $pay['gateway_transaction_id'] ?: ($pay['reference'] ?: 'N/A');
+        $payMethodStr = ucwords(str_replace('_', ' ', $pay['payment_method']));
+
+        $balanceRemaining = max(0, (float)$pay['invoice_total'] - (float)$pay['invoice_paid_amount']);
+        $balanceStr = function_exists('money') ? money($balanceRemaining, $currency) : ($currency . ' ' . number_format($balanceRemaining, 2));
+
+        $subject = "Payment Receipt for Invoice {$pay['invoice_number']} - {$companyName}";
+
+        // Branded Email Header Logo / Text
+        $logoHtml = !empty($logoUrl) 
+            ? '<img src="' . e($logoUrl) . '" alt="' . e($companyName) . '" style="max-height: 48px; width: auto; display: block; margin: 0 auto;">'
+            : '<h2 style="color:#ffffff; margin:0; font-size:22px; font-weight:900;">' . e($companyName) . '</h2>';
+
+        $htmlBody = '
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; }
+                .email-container { max-width: 600px; margin: 30px auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
+                .header { background: ' . e($primaryColor) . '; color: #ffffff; padding: 32px 24px; text-align: center; }
+                .content { padding: 32px 24px; }
+                .receipt-card { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 24px; }
+                .amount-badge { font-size: 28px; font-weight: 900; color: #166534; font-family: monospace; margin: 8px 0; }
+                .details-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+                .details-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+                .label { color: #64748b; font-weight: 600; }
+                .val { color: #0f172a; font-weight: 800; text-align: right; }
+                .btn { display: inline-block; background: #10b981; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 800; font-size: 14px; text-align: center; box-shadow: 0 4px 6px -1px rgba(16,185,129,0.3); }
+                .footer { background: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b; }
+            </style>
+        </head>
+        <body>
+            <div class="email-container">
+                <div class="header">
+                    ' . $logoHtml . '
+                    <p style="margin: 8px 0 0 0; font-size: 13px; opacity: 0.85; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Official Payment Confirmation</p>
+                </div>
+                <div class="content">
+                    <h3 style="margin-top: 0; font-size: 18px; color: #0f172a;">Dear ' . e($pay['contact_name'] ?: $pay['company_name']) . ',</h3>
+                    <p style="font-size: 14px; color: #475569; line-height: 1.6;">Thank you for your payment. We have successfully received and processed your payment for Invoice <strong>' . e($pay['invoice_number']) . '</strong>.</p>
+                    
+                    <div class="receipt-card">
+                        <div style="font-size: 12px; font-weight: 800; color: #15803d; text-transform: uppercase; letter-spacing: 1px;">✔ Payment Confirmed & Received</div>
+                        <div class="amount-badge">' . $amountStr . '</div>
+                        <div style="font-size: 12px; color: #166534; font-weight: 600;">Processed via ' . e($payMethodStr) . '</div>
+                    </div>
+
+                    <table class="details-table">
+                        <tr>
+                            <td class="label">Invoice Number</td>
+                            <td class="val">' . e($pay['invoice_number']) . '</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Payment Date & Time</td>
+                            <td class="val">' . e($payDateStr) . '</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Transaction / Stripe ID</td>
+                            <td class="val" style="font-family: monospace;">' . e($gatewayTxnId) . '</td>
+                        </tr>
+                        <tr>
+                            <td class="label">Remaining Balance Due</td>
+                            <td class="val" style="color: ' . ($balanceRemaining > 0 ? '#b45309' : '#059669') . ';">' . $balanceStr . '</td>
+                        </tr>
+                    </table>
+
+                    <div style="text-align: center; margin-top: 28px;">
+                        <a href="' . e($publicUrl) . '" class="btn" target="_blank">View Official Tax Invoice & Receipt →</a>
+                    </div>
+                </div>
+                <div class="footer">
+                    <strong>' . e($companyName) . '</strong><br>
+                    ' . e($brand['company_email'] ?? '') . ' | ' . e($brand['company_phone'] ?? '') . '<br>
+                    ' . e($brand['company_website'] ?? '') . '
+                </div>
+            </div>
+        </body>
+        </html>';
+
+        $sent = \Services\Mailer::send($pdo, $tid, $pay['client_email'], $subject, $htmlBody);
+        if ($sent) {
+            log_audit($pdo, 'payment_receipt_email_sent', 'payments', $paymentId, "Automated payment receipt emailed to {$pay['client_email']} for Invoice #{$pay['invoice_number']}", $tid);
+        }
+        return $sent;
+    } catch (\Throwable $e) {
+        error_log("Failed to send automated payment receipt email for payment #{$paymentId}: " . $e->getMessage());
+        return false;
+    }
+}
+
 function get_custom_wording(PDO $pdo, int $tenantId): array {
     $defaults = [
         'title'        => 'TAX INVOICE',
