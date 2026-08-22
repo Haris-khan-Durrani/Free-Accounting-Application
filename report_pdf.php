@@ -1,6 +1,8 @@
 <?php
 require __DIR__ . '/bootstrap.php';
 
+use Services\PdfReportService;
+
 if (!empty($_SESSION['client_id'])) {
     $tid = (int)$_SESSION['client_tenant_id'];
     $clientId = (int)$_SESSION['client_id'];
