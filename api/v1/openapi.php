@@ -4,15 +4,18 @@ require __DIR__ . '/../../bootstrap.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 
-$protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? "https" : "http";
+$protocol = (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] === 'on' || $_SERVER['HTTPS'] === '1')) ? "https" : "http";
+if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+    $protocol = "https";
+}
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$scriptDir = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\');
-$baseUrl = "{$protocol}://{$host}{$scriptDir}/api/v1/mcp.php";
+$scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+$baseUrl = "{$protocol}://{$host}{$scriptDir}/mcp.php";
 
 $token = trim($_GET['token'] ?? $_GET['api_key'] ?? '');
 
 $schema = [
-    'openapi' => '3.0.1',
+    'openapi' => '3.1.0',
     'info' => [
         'title' => 'OneSol Invoice Manager AI API',
         'description' => 'Tenant-Isolated Financial Accounting and Invoicing API for ChatGPT Custom Actions.',

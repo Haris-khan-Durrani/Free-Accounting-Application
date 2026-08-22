@@ -98,6 +98,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // UPDATE / EDIT KEY PERMISSIONS
+    if ($action === 'edit_key_scopes') {
+        $keyId       = (int)($_POST['key_id'] ?? 0);
+        $inputScopes = $_POST['scopes'] ?? [];
+        $validScopes = array_intersect(is_array($inputScopes) ? $inputScopes : [], array_keys($SCOPE_DEFS));
+        if (!has_role('owner')) {
+            $validScopes = array_values(array_diff($validScopes, ['tenants:write']));
+        }
+
+        if (empty($validScopes)) {
+            flash('error', 'Select at least one permission scope.');
+        } else {
+            $st = $pdo->prepare("UPDATE api_keys SET scopes = ? WHERE id = ? AND tenant_id = ?");
+            $st->execute([json_encode(array_values($validScopes)), $keyId, $tid]);
+            flash('success', 'API key permissions updated successfully.');
+            redirect('api_keys');
+        }
+    }
+
     // REVOKE KEY
     if ($action === 'revoke_key') {
         $keyId = (int)($_POST['key_id'] ?? 0);
@@ -320,6 +339,9 @@ function copyNewKey() {
                 <!-- Actions -->
                 <div class="flex items-center space-x-2 mt-4 sm:mt-0 flex-shrink-0">
                     <?php if ($k['is_active'] && !$isExpired): ?>
+                    <button type="button" onclick="document.getElementById('edit-key-modal-<?= $k['id'] ?>').classList.remove('hidden')" class="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all cursor-pointer">
+                        <i class="fa-solid fa-pen-to-square mr-1"></i>Edit Scopes
+                    </button>
                     <form method="post" onsubmit="return confirm('Revoke this API key? All applications using it will lose access immediately.')">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="revoke_key">
@@ -340,6 +362,46 @@ function copyNewKey() {
                     <?php endif; ?>
                 </div>
             </div>
+
+            <!-- Edit Key Scopes Modal for Key #<?= $k['id'] ?> -->
+            <div id="edit-key-modal-<?= $k['id'] ?>" class="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs hidden flex items-center justify-center p-4">
+                <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                        <h3 class="text-base font-black text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-pen-to-square text-indigo-600"></i> Edit Key Scopes: <?= e($k['name']) ?>
+                        </h3>
+                        <button type="button" onclick="document.getElementById('edit-key-modal-<?= $k['id'] ?>').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 text-lg cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <form method="post">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="edit_key_scopes">
+                        <input type="hidden" name="key_id" value="<?= $k['id'] ?>">
+                        
+                        <p class="text-xs text-slate-500 mb-3 font-medium">Select permission scopes assigned to this key:</p>
+
+                        <div class="space-y-2 mb-6 max-h-60 overflow-y-auto">
+                            <?php foreach ($SCOPE_DEFS as $sKey => $sDef): 
+                                if ($sKey === 'tenants:write' && !has_role('owner')) continue;
+                                $hasThisScope = in_array($sKey, $scopes, true);
+                            ?>
+                            <label class="flex items-start p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors">
+                                <input type="checkbox" name="scopes[]" value="<?= $sKey ?>" <?= $hasThisScope ? 'checked' : '' ?> class="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                                <div class="ml-3">
+                                    <span class="text-xs font-bold text-slate-900 block"><?= $sDef['label'] ?></span>
+                                    <span class="text-2xs text-slate-500 block"><?= $sDef['desc'] ?></span>
+                                </div>
+                            </label>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                            <button type="button" onclick="document.getElementById('edit-key-modal-<?= $k['id'] ?>').classList.add('hidden')" class="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-extrabold rounded-xl hover:bg-slate-200">Cancel</button>
+                            <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-xs font-black rounded-xl hover:bg-indigo-700 shadow-md">Save Permissions</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
         </div>
         <?php endforeach; ?>
     </div>
