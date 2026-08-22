@@ -131,67 +131,91 @@ $tamaraInstallment = number_format($remainingBalance / 3, 2);
                 </div>
             </div>
 
-            <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-                <?php if ($stripeEnabled === '1'): ?>
-                    <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=stripe" class="pay-btn pay-btn-stripe">
-                        <i class="fa-solid fa-credit-card"></i> Pay via Credit Card / Apple Pay
-                    </a>
-                <?php endif; ?>
+            <!-- Group 1: Credit Cards & Direct Wallets -->
+            <?php 
+            $hasCardGateways = ($stripeEnabled === '1' || $ziinaEnabled === '1' || $zbooniEnabled === '1' || $networkEnabled === '1' || $paytabsEnabled === '1' || $telrEnabled === '1' || $checkoutComEnabled === '1');
+            $hasBnplGateways = ($tabbyEnabled === '1' || $tamaraEnabled === '1');
+            $hasBankTransfer = ($bankEnabled === '1' && !empty($brand['bank_name']));
+            ?>
 
-                <?php if ($tabbyEnabled === '1'): ?>
-                    <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=tabby" class="pay-btn pay-btn-tabby" title="Pay in 4 interest-free payments with Tabby">
-                        <span>tabby</span> Pay 4x <?=e($currency)?> <?=$tabbyInstallment?> / mo
-                    </a>
-                <?php endif; ?>
+            <?php if ($hasCardGateways): ?>
+                <div style="margin-bottom: 18px;">
+                    <span style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 8px;">💳 Credit & Debit Cards / Instant Wallets</span>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                        <?php if ($stripeEnabled === '1'): ?>
+                            <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=stripe" class="pay-btn pay-btn-stripe">
+                                <i class="fa-solid fa-credit-card"></i> Pay via Credit Card / Apple Pay
+                            </a>
+                        <?php endif; ?>
 
-                <?php if ($tamaraEnabled === '1'): ?>
-                    <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=tamara" class="pay-btn pay-btn-tamara" title="Pay in 3 interest-free payments with Tamara">
-                        <span>tamara</span> Pay 3x <?=e($currency)?> <?=$tamaraInstallment?> / mo
-                    </a>
-                <?php endif; ?>
+                        <?php if ($ziinaEnabled === '1'): ?>
+                            <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=ziina" class="pay-btn pay-btn-ziina" title="Pay via Ziina (Apple Pay / Credit Card)">
+                                <i class="fa-solid fa-bolt"></i> Pay via Ziina
+                            </a>
+                        <?php endif; ?>
 
-                <?php if ($networkEnabled === '1'): ?>
-                    <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=network" class="pay-btn pay-btn-network">
-                        <i class="fa-solid fa-lock"></i> Pay via NGenius Card
-                    </a>
-                <?php endif; ?>
+                        <?php if ($networkEnabled === '1'): ?>
+                            <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=network" class="pay-btn pay-btn-network">
+                                <i class="fa-solid fa-lock"></i> Pay via NGenius Card
+                            </a>
+                        <?php endif; ?>
 
-                <?php if ($ziinaEnabled === '1'): ?>
-                    <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=ziina" class="pay-btn pay-btn-ziina" title="Pay via Ziina (Apple Pay / Credit Card)">
-                        <i class="fa-solid fa-bolt"></i> Pay via Ziina
-                    </a>
-                <?php endif; ?>
+                        <?php if ($paytabsEnabled === '1'): ?>
+                            <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=paytabs" class="pay-btn pay-btn-paytabs" title="Pay via PayTabs">
+                                <i class="fa-solid fa-globe"></i> Pay via PayTabs
+                            </a>
+                        <?php endif; ?>
 
-                <?php if ($zbooniEnabled === '1'): ?>
-                    <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=zbooni" class="pay-btn pay-btn-zbooni" title="Pay via Zbooni">
-                        <i class="fa-solid fa-bag-shopping"></i> Pay via Zbooni
-                    </a>
-                <?php endif; ?>
+                        <?php if ($telrEnabled === '1'): ?>
+                            <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=telr" class="pay-btn pay-btn-telr" title="Pay via Telr">
+                                <i class="fa-solid fa-shield-halved"></i> Pay via Telr
+                            </a>
+                        <?php endif; ?>
 
-                <?php if ($paytabsEnabled === '1'): ?>
-                    <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=paytabs" class="pay-btn pay-btn-paytabs" title="Pay via PayTabs">
-                        <i class="fa-solid fa-globe"></i> Pay via PayTabs
-                    </a>
-                <?php endif; ?>
+                        <?php if ($checkoutComEnabled === '1'): ?>
+                            <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=checkout" class="pay-btn pay-btn-checkout" title="Pay via Checkout.com">
+                                <i class="fa-solid fa-credit-card"></i> Pay via Checkout.com
+                            </a>
+                        <?php endif; ?>
 
-                <?php if ($telrEnabled === '1'): ?>
-                    <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=telr" class="pay-btn pay-btn-telr" title="Pay via Telr">
-                        <i class="fa-solid fa-shield-halved"></i> Pay via Telr
-                    </a>
-                <?php endif; ?>
+                        <?php if ($zbooniEnabled === '1'): ?>
+                            <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=zbooni" class="pay-btn pay-btn-zbooni" title="Pay via Zbooni">
+                                <i class="fa-solid fa-bag-shopping"></i> Pay via Zbooni
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
 
-                <?php if ($checkoutComEnabled === '1'): ?>
-                    <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=checkout" class="pay-btn pay-btn-checkout" title="Pay via Checkout.com">
-                        <i class="fa-solid fa-credit-card"></i> Pay via Checkout.com
-                    </a>
-                <?php endif; ?>
+            <?php if ($hasBnplGateways): ?>
+                <div style="margin-bottom: 18px;">
+                    <span style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 8px;">🛍️ Buy Now Pay Later (Installments)</span>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                        <?php if ($tabbyEnabled === '1'): ?>
+                            <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=tabby" class="pay-btn pay-btn-tabby" title="Pay in 4 interest-free payments with Tabby">
+                                <span>tabby</span> Pay 4x <?=e($currency)?> <?=$tabbyInstallment?> / mo
+                            </a>
+                        <?php endif; ?>
 
-                <?php if ($bankEnabled === '1' && !empty($brand['bank_name'])): ?>
-                    <button class="pay-btn" style="background:#334155; color:#fff;" onclick="alert('Wire Transfer Details:\n\nBank: <?=e($brand['bank_name'])?>\nAccount Name: <?=e($brand['bank_account_name'])?>\nIBAN: <?=e($brand['bank_iban'])?>\nSWIFT: <?=e($brand['bank_swift'])?>')">
-                        <i class="fa-solid fa-building-columns"></i> Wire Transfer Details
-                    </button>
-                <?php endif; ?>
-            </div>
+                        <?php if ($tamaraEnabled === '1'): ?>
+                            <a href="invoice_checkout.php?invoice_id=<?=$inv['id']?>&token=<?=e($token)?>&gateway=tamara" class="pay-btn pay-btn-tamara" title="Pay in 3 interest-free payments with Tamara">
+                                <span>tamara</span> Pay 3x <?=e($currency)?> <?=$tamaraInstallment?> / mo
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($hasBankTransfer): ?>
+                <div>
+                    <span style="font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; display: block; margin-bottom: 8px;">🏛️ Direct Wire Transfer</span>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                        <button class="pay-btn" style="background:#334155; color:#fff;" onclick="alert('Wire Transfer Details:\n\nBank: <?=e($brand['bank_name'])?>\nAccount Name: <?=e($brand['bank_account_name'])?>\nIBAN: <?=e($brand['bank_iban'])?>\nSWIFT: <?=e($brand['bank_swift'])?>')">
+                            <i class="fa-solid fa-building-columns"></i> Wire Transfer Details
+                        </button>
+                    </div>
+                </div>
+            <?php endif; ?>
         </div>
     <?php elseif ($isPaid): ?>
         <div style="background:#064e3b; border:1px solid #10b981; padding:16px; border-radius:12px; margin-bottom:20px; text-align:center; color:#a7f3d0; font-weight:bold;">
