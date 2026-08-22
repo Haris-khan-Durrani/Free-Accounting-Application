@@ -188,22 +188,22 @@ page_start('Workspace Payment Gateways');
         <input type="hidden" name="active_tab" id="activeTabInput" value="stripe">
 
         <!-- Modern Pill Tabs Navigation Header -->
-        <div class="bg-slate-900 p-2 rounded-2xl border border-slate-800 shadow-lg overflow-x-auto scrollbar-none">
+        <div class="bg-slate-900 p-2 rounded-2xl border border-slate-800 shadow-lg overflow-x-auto gateway-tab-container" style="-ms-overflow-style: none; scrollbar-width: none;">
             <div class="flex space-x-2 min-w-max">
-                <button type="button" onclick="switchGatewayTab('stripe')" id="tabBtn-stripe" class="gateway-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all bg-purple-600 text-white shadow-lg">
+                <button type="button" onclick="switchGatewayTab('stripe')" id="tabBtn-stripe" class="gateway-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all bg-slate-800 text-white shadow-md ring-2 ring-indigo-500/80">
                     <i class="fa-brands fa-stripe-s text-sm"></i>
                     <span>Stripe</span>
                     <span class="ml-1 w-2 h-2 rounded-full <?=$stripeEnabled === '1' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'?>"></span>
                 </button>
 
-                <button type="button" onclick="switchGatewayTab('tabby')" id="tabBtn-tabby" class="gateway-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all text-slate-400 hover:text-white hover:bg-slate-800">
-                    <span class="font-black text-emerald-400">tabby</span>
+                <button type="button" onclick="switchGatewayTab('tabby')" id="tabBtn-tabby" class="gateway-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+                    <img src="assets/images/gateways/tabby.png" onerror="this.onerror=null; this.src='https://media.uaelogos.ae/1950/conversions/Tabby-thumb.png';" class="h-4 w-auto inline-block rounded" alt="Tabby">
                     <span>Tabby BNPL</span>
                     <span class="ml-1 w-2 h-2 rounded-full <?=$tabbyEnabled === '1' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'?>"></span>
                 </button>
 
-                <button type="button" onclick="switchGatewayTab('tamara')" id="tabBtn-tamara" class="gateway-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all text-slate-400 hover:text-white hover:bg-slate-800">
-                    <span class="font-black text-pink-400">tamara</span>
+                <button type="button" onclick="switchGatewayTab('tamara')" id="tabBtn-tamara" class="gateway-tab-btn flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all text-slate-400 hover:text-white hover:bg-slate-800/60">
+                    <img src="assets/images/gateways/tamara.png" onerror="this.onerror=null; this.src='https://media.uaelogos.ae/1958/conversions/Tamara-En-thumb.png';" class="h-4 w-auto inline-block rounded" style="filter: brightness(0) invert(1);" alt="Tamara">
                     <span>Tamara BNPL</span>
                     <span class="ml-1 w-2 h-2 rounded-full <?=$tamaraEnabled === '1' ? 'bg-emerald-400 animate-pulse' : 'bg-slate-500'?>"></span>
                 </button>
@@ -263,8 +263,10 @@ page_start('Workspace Payment Gateways');
             <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
                     <div class="flex items-center space-x-4">
-                        <div class="h-12 w-12 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center text-2xl font-bold">
-                            <i class="fa-brands fa-stripe-s"></i>
+                        <div class="h-12 w-auto min-w-[3.5rem] px-3.5 bg-indigo-50 rounded-2xl flex items-center justify-center border border-indigo-100 shadow-sm">
+                            <svg style="height:22px; width:auto;" viewBox="0 0 60 25" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" clip-rule="evenodd" d="M59.64 14.28c0-4.52-2.18-7.98-6.38-7.98-4.22 0-6.8 3.46-6.8 7.94 0 5.3 3.12 7.84 7.36 7.84 2.12 0 3.76-.48 4.96-1.16v-2.92c-1.2.6-2.52.92-4.14.92-1.74 0-3.26-.64-3.52-2.62h8.48c.02-.38.04-1.24.04-2.02zm-8.48-1.54c.14-1.84 1.34-2.68 2.58-2.68 1.22 0 2.44.84 2.54 2.68h-5.12zM38.8 6.3h-4.3v15.5h4.3V6.3zm-.12-3.8c0-1.28-1.04-2.32-2.32-2.32s-2.32 1.04-2.32 2.32c0 1.28 1.04 2.32 2.32 2.32s2.32-1.04 2.32-2.32zM45.54 9.18c0-1.12-.9-1.58-2.16-1.58-1.44 0-3.24.58-4.42 1.28V5.6c1.38-.6 3.18-1.04 4.88-1.04 3.48 0 5.86 1.76 5.86 5.28v11.96h-4.16v-1.88c-1.1 1.22-2.8 2.14-4.88 2.14-3.08 0-5.32-1.92-5.32-4.82 0-3.9 3.44-5.34 8.2-5.34v-.72zm-4.16 7.74c0 1.48 1.04 2.34 2.42 2.34 1.42 0 2.76-.84 3.44-2.06v-3.76c-3.14 0-5.86.6-5.86 3.48zM24.28 9.38v12.42h-4.3V9.38h4.3zm0-3.08h-4.3V2.5h4.3v3.8zM17.48 14.16c0-2.32-1.68-3.48-3.48-3.48-1.84 0-3.5 1.16-3.5 3.48v7.64H6.2V6.3h4.14v1.88c1.1-1.2 2.74-2.14 4.84-2.14 3.32 0 6.6 2.38 6.6 7.2v8.56h-4.3v-7.64zM4.46 9.8c0-.74-.62-1.06-1.64-1.06-1.48 0-3.32.58-4.48 1.26V6.74c1.36-.58 3.14-1.02 4.84-1.02 3.4 0 5.6 1.7 5.6 5.08v11H4.62v-1.74c-1.06 1.14-2.62 2-4.62 2C-2.88 22.06-5 20.2-5 17.38c0-3.66 3.22-5.02 7.68-5.02v-.72c.04-.64-.42-.98-1.4-1.04z" fill="#6366F1"/>
+                            </svg>
                         </div>
                         <div>
                             <h2 class="text-xl font-extrabold text-slate-900">Stripe Online Payments</h2>
@@ -353,8 +355,8 @@ page_start('Workspace Payment Gateways');
             <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
                     <div class="flex items-center space-x-4">
-                        <div class="h-12 w-12 bg-emerald-100 text-emerald-800 rounded-2xl flex items-center justify-center text-xl font-black">
-                            tabby
+                        <div class="h-12 w-auto min-w-[4rem] px-3.5 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-200 shadow-sm">
+                            <img src="assets/images/gateways/tabby.png" onerror="this.onerror=null; this.src='https://media.uaelogos.ae/1950/conversions/Tabby-thumb.png';" class="h-8 w-auto object-contain" alt="Tabby Official Logo">
                         </div>
                         <div>
                             <h2 class="text-xl font-extrabold text-slate-900">Tabby (Pay in 4 Installments)</h2>
@@ -425,8 +427,8 @@ page_start('Workspace Payment Gateways');
             <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
                     <div class="flex items-center space-x-4">
-                        <div class="h-12 w-12 bg-pink-100 text-pink-700 rounded-2xl flex items-center justify-center text-xl font-black">
-                            tamara
+                        <div class="h-12 w-auto min-w-[4rem] px-3.5 bg-pink-50 rounded-2xl flex items-center justify-center border border-pink-200 shadow-sm">
+                            <img src="assets/images/gateways/tamara.png" onerror="this.onerror=null; this.src='https://media.uaelogos.ae/1958/conversions/Tamara-En-thumb.png';" class="h-8 w-auto object-contain" alt="Tamara Official Logo">
                         </div>
                         <div>
                             <h2 class="text-xl font-extrabold text-slate-900">Tamara (Pay in 3/4 Installments)</h2>
@@ -500,8 +502,12 @@ page_start('Workspace Payment Gateways');
             <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
                     <div class="flex items-center space-x-4">
-                        <div class="h-12 w-12 bg-purple-100 text-purple-700 rounded-2xl flex items-center justify-center text-2xl font-black">
-                            <i class="fa-solid fa-bolt"></i>
+                        <div class="h-12 w-auto min-w-[3.5rem] px-3.5 bg-purple-50 rounded-2xl flex items-center justify-center border border-purple-200 shadow-sm">
+                            <svg style="height:24px; width:auto;" viewBox="0 0 90 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="90" height="32" rx="6" fill="#8B5CF6"/>
+                                <path d="M22 8L12 18H18L14 24L24 14H18L22 8Z" fill="#F59E0B"/>
+                                <text x="60%" y="68%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="18" fill="#FFFFFF">Ziina</text>
+                            </svg>
                         </div>
                         <div>
                             <h2 class="text-xl font-extrabold text-slate-900">Ziina Payment Gateway</h2>
@@ -568,8 +574,11 @@ page_start('Workspace Payment Gateways');
             <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
                     <div class="flex items-center space-x-4">
-                        <div class="h-12 w-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center text-2xl font-black">
-                            <i class="fa-solid fa-bag-shopping"></i>
+                        <div class="h-12 w-auto min-w-[3.5rem] px-3.5 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-200 shadow-sm">
+                            <svg style="height:24px; width:auto;" viewBox="0 0 100 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="100" height="32" rx="6" fill="#10B981"/>
+                                <text x="50%" y="68%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="18" fill="#FFFFFF">zbooni</text>
+                            </svg>
                         </div>
                         <div>
                             <h2 class="text-xl font-extrabold text-slate-900">Zbooni Conversational Commerce</h2>
@@ -636,8 +645,12 @@ page_start('Workspace Payment Gateways');
             <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
                     <div class="flex items-center space-x-4">
-                        <div class="h-12 w-12 bg-sky-100 text-sky-700 rounded-2xl flex items-center justify-center text-2xl font-black">
-                            <i class="fa-solid fa-building-columns"></i>
+                        <div class="h-12 w-auto min-w-[3.5rem] px-3.5 bg-sky-50 rounded-2xl flex items-center justify-center border border-sky-200 shadow-sm">
+                            <svg style="height:24px; width:auto;" viewBox="0 0 120 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="120" height="32" rx="6" fill="#0284C7"/>
+                                <circle cx="20" cy="16" r="7" fill="#38BDF8"/>
+                                <text x="68%" y="68%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="15" fill="#FFFFFF">NGenius</text>
+                            </svg>
                         </div>
                         <div>
                             <h2 class="text-xl font-extrabold text-slate-900">Network International (NGenius)</h2>
@@ -711,8 +724,13 @@ page_start('Workspace Payment Gateways');
             <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
                     <div class="flex items-center space-x-4">
-                        <div class="h-12 w-12 bg-blue-100 text-blue-700 rounded-2xl flex items-center justify-center text-2xl font-bold">
-                            <i class="fa-brands fa-paypal"></i>
+                        <div class="h-12 w-auto min-w-[3.5rem] px-3.5 bg-blue-50 rounded-2xl flex items-center justify-center border border-blue-200 shadow-sm">
+                            <svg style="height:24px; width:auto;" viewBox="0 0 100 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="100" height="32" rx="6" fill="#003087"/>
+                                <path d="M18 9h6c3 0 5 1.5 4.5 4.5-.5 3-3 4.5-6 4.5h-2.5L18 23h-3L18 9z" fill="#0079C1"/>
+                                <path d="M22 12h6c3 0 5 1.5 4.5 4.5-.5 3-3 4.5-6 4.5h-2.5L22 26h-3L22 12z" fill="#00457C"/>
+                                <text x="65%" y="68%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="16" fill="#FFFFFF">PayPal</text>
+                            </svg>
                         </div>
                         <div>
                             <h2 class="text-xl font-extrabold text-slate-900">PayPal Express Checkout</h2>
@@ -766,8 +784,12 @@ page_start('Workspace Payment Gateways');
             <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
                     <div class="flex items-center space-x-4">
-                        <div class="h-12 w-12 bg-sky-100 text-sky-700 rounded-2xl flex items-center justify-center text-2xl font-bold">
-                            <i class="fa-solid fa-globe"></i>
+                        <div class="h-12 w-auto min-w-[3.5rem] px-3.5 bg-sky-50 rounded-2xl flex items-center justify-center border border-sky-200 shadow-sm">
+                            <svg style="height:24px; width:auto;" viewBox="0 0 110 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="110" height="32" rx="6" fill="#0284C7"/>
+                                <path d="M16 10H26M16 16H24M16 22H21" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+                                <text x="65%" y="68%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="16" fill="#FFFFFF">paytabs</text>
+                            </svg>
                         </div>
                         <div>
                             <h2 class="text-xl font-extrabold text-slate-900">PayTabs Payment Gateway</h2>
@@ -833,8 +855,11 @@ page_start('Workspace Payment Gateways');
             <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
                     <div class="flex items-center space-x-4">
-                        <div class="h-12 w-12 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center text-2xl font-bold">
-                            <i class="fa-solid fa-shield-halved"></i>
+                        <div class="h-12 w-auto min-w-[3.5rem] px-3.5 bg-amber-50 rounded-2xl flex items-center justify-center border border-amber-200 shadow-sm">
+                            <svg style="height:24px; width:auto;" viewBox="0 0 90 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="90" height="32" rx="6" fill="#D97706"/>
+                                <text x="50%" y="68%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="19" fill="#FFFFFF">telr</text>
+                            </svg>
                         </div>
                         <div>
                             <h2 class="text-xl font-extrabold text-slate-900">Telr Payment Gateway</h2>
@@ -890,8 +915,11 @@ page_start('Workspace Payment Gateways');
             <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
                     <div class="flex items-center space-x-4">
-                        <div class="h-12 w-12 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center text-2xl font-bold">
-                            <i class="fa-solid fa-credit-card"></i>
+                        <div class="h-12 w-auto min-w-[3.5rem] px-3.5 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-300 shadow-sm">
+                            <svg style="height:24px; width:auto;" viewBox="0 0 140 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="140" height="32" rx="6" fill="#0F172A"/>
+                                <text x="50%" y="68%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="15" fill="#FFFFFF">checkout.com</text>
+                            </svg>
                         </div>
                         <div>
                             <h2 class="text-xl font-extrabold text-slate-900">Checkout.com Hosted Payments</h2>
@@ -947,8 +975,12 @@ page_start('Workspace Payment Gateways');
             <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
                     <div class="flex items-center space-x-4">
-                        <div class="h-12 w-12 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center text-2xl font-bold">
-                            <i class="fa-solid fa-building-columns"></i>
+                        <div class="h-12 w-auto min-w-[3.5rem] px-3.5 bg-slate-100 rounded-2xl flex items-center justify-center border border-slate-300 shadow-sm">
+                            <svg style="height:24px; width:auto;" viewBox="0 0 130 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="130" height="32" rx="6" fill="#334155"/>
+                                <path d="M18 11L24 7L30 11V13H18V11ZM19 14H21V21H19V14ZM23 14H25V21H23V14ZM27 14H29V21H27V14ZM17 22H31V24H17V22Z" fill="#F1F5F9"/>
+                                <text x="68%" y="68%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="13" fill="#FFFFFF">Bank Wire</text>
+                            </svg>
                         </div>
                         <div>
                             <h2 class="text-xl font-extrabold text-slate-900">Bank Wire Transfer & IBAN Details</h2>
@@ -1018,8 +1050,8 @@ function switchGatewayTab(tabId) {
     // Reset all tab button styles
     const tabBtns = document.querySelectorAll('.gateway-tab-btn');
     tabBtns.forEach(btn => {
-        btn.classList.remove('bg-purple-600', 'text-white', 'shadow-lg');
-        btn.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-800');
+        btn.classList.remove('bg-slate-800', 'text-white', 'shadow-md', 'ring-2', 'ring-indigo-500/80', 'bg-purple-600', 'shadow-lg');
+        btn.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-800/60');
     });
 
     // Show target panel
@@ -1028,11 +1060,11 @@ function switchGatewayTab(tabId) {
         targetPanel.classList.remove('hidden');
     }
 
-    // Highlight target button
+    // Highlight target button with modern active ring
     const targetBtn = document.getElementById('tabBtn-' + tabId);
     if (targetBtn) {
-        targetBtn.classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-slate-800');
-        targetBtn.classList.add('bg-purple-600', 'text-white', 'shadow-lg');
+        targetBtn.classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-slate-800/60');
+        targetBtn.classList.add('bg-slate-800', 'text-white', 'shadow-md', 'ring-2', 'ring-indigo-500/80');
     }
 
     // Update hidden active tab input
