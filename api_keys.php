@@ -13,6 +13,10 @@ if (!has_role(['owner', 'admin'])) {
     redirect('index');
 }
 
+// Get active tenant direct MCP token for key reveal capability
+$mcpDirectToken = \Services\McpService::getOrCreateDirectToken($pdo, $tid);
+$mcpDirectHash  = hash('sha256', $mcpDirectToken);
+
 // ── Scope Definitions ──────────────────────────────────────────────
 $SCOPE_DEFS = [
     'invoices:read'   => ['label' => 'Read Invoices',      'icon' => 'fa-file-invoice',    'color' => 'amber',   'desc' => 'List and view all invoices.'],
@@ -293,12 +297,25 @@ function copyNewKey() {
                         <?php endif; ?>
                     </div>
 
-                    <!-- Key Prefix -->
-                    <div class="flex items-center space-x-2 mb-3">
-                        <code class="bg-slate-100 text-slate-600 font-mono text-xs px-3 py-1 rounded-lg border border-slate-200">
+                    <?php 
+                        $isMcpKey = (!empty($k['key_hash']) && $k['key_hash'] === $mcpDirectHash) || ($k['name'] === 'One-Click AI Connection Key');
+                        $fullTokenSecret = $isMcpKey ? $mcpDirectToken : null;
+                    ?>
+                    <!-- Key Prefix / Token Display with Reveal Option -->
+                    <div class="flex items-center space-x-2 mb-3 flex-wrap gap-y-1">
+                        <code id="key-code-<?= $k['id'] ?>" data-prefix="<?= e($keyPrefix) ?>••••••••••••••••••••••••••" data-full="<?= e($fullTokenSecret ?: '') ?>" class="bg-slate-100 text-slate-800 font-mono text-xs px-3 py-1 rounded-lg border border-slate-200 shadow-2xs">
                             <?= e($keyPrefix) ?>••••••••••••••••••••••••••
                         </code>
-                        <span class="text-2xs text-slate-400">Full key stored as SHA-256 hash</span>
+                        <?php if ($fullTokenSecret): ?>
+                        <button type="button" onclick="toggleRevealKey(<?= $k['id'] ?>)" class="inline-flex items-center px-2.5 py-1 text-2xs font-extrabold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 rounded-lg shadow-2xs transition-all cursor-pointer">
+                            <i id="eye-icon-<?= $k['id'] ?>" class="fa-solid fa-eye mr-1 text-indigo-600"></i><span id="eye-text-<?= $k['id'] ?>">Reveal Key</span>
+                        </button>
+                        <button type="button" onclick="navigator.clipboard.writeText('<?= e($fullTokenSecret) ?>'); alert('API Key copied to clipboard!')" class="inline-flex items-center px-2.5 py-1 text-2xs font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-lg shadow-2xs transition-all cursor-pointer">
+                            <i class="fa-solid fa-copy mr-1"></i>Copy Key
+                        </button>
+                        <?php else: ?>
+                        <span class="text-2xs text-slate-400">Full key stored as secure SHA-256 hash</span>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Scopes -->
@@ -565,6 +582,23 @@ function copyNewKey() {
 </div>
 
 <script>
+function toggleRevealKey(id) {
+    const codeEl = document.getElementById('key-code-' + id);
+    const eyeIcon = document.getElementById('eye-icon-' + id);
+    const eyeText = document.getElementById('eye-text-' + id);
+    if (!codeEl) return;
+
+    if (codeEl.innerText.includes('•')) {
+        codeEl.innerText = codeEl.getAttribute('data-full');
+        if (eyeIcon) eyeIcon.className = 'fa-solid fa-eye-slash mr-1 text-rose-600';
+        if (eyeText) eyeText.innerText = 'Hide Key';
+    } else {
+        codeEl.innerText = codeEl.getAttribute('data-prefix');
+        if (eyeIcon) eyeIcon.className = 'fa-solid fa-eye mr-1 text-indigo-600';
+        if (eyeText) eyeText.innerText = 'Reveal Key';
+    }
+}
+
 function setExpiry(days) {
     const input = document.getElementById('expires_at_input');
     if (!input) return;
