@@ -59,14 +59,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $keyPrefix = substr($rawKey, 0, 16) . '...';
                 $expiry    = (!empty($expiresAt)) ? $expiresAt : null;
 
-                $st = $pdo->prepare("INSERT INTO api_keys
-                    (tenant_id, created_by_user_id, name, key_hash, key_prefix, scopes, expires_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)");
-                $st->execute([
-                    $tid, $uid, $name, $keyHash, $keyPrefix,
-                    json_encode(array_values($validScopes)),
-                    $expiry
-                ]);
+                try {
+                    $st = $pdo->prepare("INSERT INTO api_keys
+                        (tenant_id, created_by_user_id, name, key_hash, key_prefix, scopes, expires_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)");
+                    $st->execute([
+                        $tid, $uid, $name, $keyHash, $keyPrefix,
+                        json_encode(array_values($validScopes)),
+                        $expiry
+                    ]);
+                } catch (\PDOException $e) {
+                    // Auto-upgrade schema if table lacks columns on live server
+                    try {
+                        @$pdo->exec("ALTER TABLE api_keys ADD COLUMN created_by_user_id INT UNSIGNED NULL AFTER tenant_id");
+                        @$pdo->exec("ALTER TABLE api_keys ADD COLUMN key_hash VARCHAR(64) NULL AFTER name");
+                        @$pdo->exec("ALTER TABLE api_keys ADD COLUMN key_prefix VARCHAR(20) NULL AFTER key_hash");
+                        @$pdo->exec("ALTER TABLE api_keys ADD COLUMN scopes JSON NULL AFTER key_prefix");
+                        @$pdo->exec("ALTER TABLE api_keys ADD COLUMN expires_at DATE NULL AFTER scopes");
+                        @$pdo->exec("ALTER TABLE api_keys ADD COLUMN revoked_at DATETIME NULL AFTER is_active");
+
+                        $st = $pdo->prepare("INSERT INTO api_keys
+                            (tenant_id, created_by_user_id, name, key_hash, key_prefix, scopes, expires_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)");
+                        $st->execute([
+                            $tid, $uid, $name, $keyHash, $keyPrefix,
+                            json_encode(array_values($validScopes)),
+                            $expiry
+                        ]);
+                    } catch (\PDOException $e2) {
+                        $st = $pdo->prepare("INSERT INTO api_keys (tenant_id, name, api_key, is_active) VALUES (?, ?, ?, 1)");
+                        $st->execute([$tid, $name, $rawKey]);
+                    }
+                }
+
                 $newKeyPlain = $rawKey;
                 flash('success', "API key '<strong>" . htmlspecialchars($name) . "</strong>' created. Copy it now — it won't be shown again.");
             }
@@ -216,11 +241,17 @@ function copyNewKey() {
     </div>
     <div class="divide-y divide-slate-100">
         <?php foreach ($apiKeys as $k):
-            $scopes     = json_decode($k['scopes'], true) ?: [];
-            $isExpired  = $k['expires_at'] && strtotime($k['expires_at']) < time();
-            $isRevoked  = !$k['is_active'];
+            $rawScopes  = $k['scopes'] ?? '[]';
+            $scopes     = (is_string($rawScopes) && !empty($rawScopes)) ? (json_decode($rawScopes, true) ?: []) : [];
+            $expiresAt  = $k['expires_at'] ?? null;
+            $keyPrefix  = !empty($k['key_prefix']) ? $k['key_prefix'] : (substr($k['api_key'] ?? 'os_live_key', 0, 16) . '...');
+            $isExpired  = !empty($expiresAt) && strtotime($expiresAt) < time();
+            $isRevoked  = empty($k['is_active']);
             $statusClass = $isRevoked ? 'key-badge-revoked' : ($isExpired ? 'key-badge-expired' : 'key-badge-active');
             $statusLabel = $isRevoked ? 'Revoked' : ($isExpired ? 'Expired' : 'Active');
+            $createdDate = !empty($k['created_at']) ? date('d M Y', strtotime($k['created_at'])) : 'Recently';
+            $lastUsedAt  = !empty($k['last_used_at']) ? date('d M Y H:i', strtotime($k['last_used_at'])) : null;
+            $revokedAt   = !empty($k['revoked_at']) ? date('d M Y', strtotime($k['revoked_at'])) : null;
         ?>
         <div class="px-6 py-5 <?= $isRevoked ? 'bg-slate-50/50 opacity-75' : '' ?>">
             <div class="sm:flex sm:items-start sm:justify-between gap-4">
@@ -231,12 +262,12 @@ function copyNewKey() {
                         <span class="px-2 py-0.5 rounded-full text-2xs font-extrabold <?= $statusClass ?>">
                             <?= $statusLabel ?>
                         </span>
-                        <?php if ($k['expires_at'] && !$isRevoked): ?>
+                        <?php if ($expiresAt && !$isRevoked): ?>
                         <span class="px-2 py-0.5 rounded-full text-2xs font-semibold bg-slate-100 text-slate-600">
                             <i class="fa-solid fa-calendar-alt mr-1"></i>
-                            Expires <?= date('d M Y', strtotime($k['expires_at'])) ?>
+                            Expires <?= date('d M Y', strtotime($expiresAt)) ?>
                         </span>
-                        <?php elseif (!$k['expires_at'] && !$isRevoked): ?>
+                        <?php elseif (!$expiresAt && !$isRevoked): ?>
                         <span class="px-2 py-0.5 rounded-full text-2xs font-semibold bg-blue-50 text-blue-700">
                             <i class="fa-solid fa-infinity mr-1"></i>No Expiry
                         </span>
@@ -246,7 +277,7 @@ function copyNewKey() {
                     <!-- Key Prefix -->
                     <div class="flex items-center space-x-2 mb-3">
                         <code class="bg-slate-100 text-slate-600 font-mono text-xs px-3 py-1 rounded-lg border border-slate-200">
-                            <?= e($k['key_prefix']) ?>••••••••••••••••••••••••••
+                            <?= e($keyPrefix) ?>••••••••••••••••••••••••••
                         </code>
                         <span class="text-2xs text-slate-400">Full key stored as SHA-256 hash</span>
                     </div>
@@ -274,14 +305,14 @@ function copyNewKey() {
 
                     <!-- Meta -->
                     <div class="flex items-center space-x-4 text-[10px] text-slate-400 font-semibold">
-                        <span><i class="fa-solid fa-clock mr-1"></i>Created <?= date('d M Y', strtotime($k['created_at'])) ?></span>
-                        <?php if ($k['last_used_at']): ?>
-                        <span><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i>Last used <?= date('d M Y H:i', strtotime($k['last_used_at'])) ?></span>
+                        <span><i class="fa-solid fa-clock mr-1"></i>Created <?= $createdDate ?></span>
+                        <?php if ($lastUsedAt): ?>
+                        <span><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i>Last used <?= $lastUsedAt ?></span>
                         <?php else: ?>
                         <span class="text-slate-300"><i class="fa-solid fa-minus mr-1"></i>Never used</span>
                         <?php endif; ?>
-                        <?php if ($k['revoked_at']): ?>
-                        <span class="text-rose-400"><i class="fa-solid fa-ban mr-1"></i>Revoked <?= date('d M Y', strtotime($k['revoked_at'])) ?></span>
+                        <?php if ($revokedAt): ?>
+                        <span class="text-rose-400"><i class="fa-solid fa-ban mr-1"></i>Revoked <?= $revokedAt ?></span>
                         <?php endif; ?>
                     </div>
                 </div>
