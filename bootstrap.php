@@ -204,9 +204,12 @@ function require_login(): void {
     }
 }
 
-function has_role(array $allowedRoles): bool {
+function has_role($allowedRoles): bool {
+    if (is_string($allowedRoles)) {
+        $allowedRoles = [$allowedRoles];
+    }
     $userRole = $_SESSION['user_role'] ?? 'viewer'; // Default to least-privilege on missing session key
-    return in_array($userRole, $allowedRoles, true);
+    return in_array($userRole, (array)$allowedRoles, true);
 }
 
 function require_role(array $allowedRoles): void {

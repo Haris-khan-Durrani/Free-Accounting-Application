@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $keyId       = (int)($_POST['key_id'] ?? 0);
         $inputScopes = $_POST['scopes'] ?? [];
         $validScopes = array_intersect(is_array($inputScopes) ? $inputScopes : [], array_keys($SCOPE_DEFS));
-        if (!has_role('owner')) {
+        if (!has_role(['owner'])) {
             $validScopes = array_values(array_diff($validScopes, ['tenants:write']));
         }
 
@@ -381,7 +381,7 @@ function copyNewKey() {
 
                         <div class="space-y-2 mb-6 max-h-60 overflow-y-auto">
                             <?php foreach ($SCOPE_DEFS as $sKey => $sDef): 
-                                if ($sKey === 'tenants:write' && !has_role('owner')) continue;
+                                if ($sKey === 'tenants:write' && !has_role(['owner'])) continue;
                                 $hasThisScope = in_array($sKey, $scopes, true);
                             ?>
                             <label class="flex items-start p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors">
