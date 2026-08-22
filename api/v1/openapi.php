@@ -10,9 +10,10 @@ if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROT
 }
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
-$baseUrl = "{$protocol}://{$host}{$scriptDir}/mcp.php";
-
 $token = trim($_GET['token'] ?? $_GET['api_key'] ?? '');
+
+$serverHost = "{$protocol}://{$host}";
+$mcpPath = "{$scriptDir}/mcp.php" . ($token !== '' ? '?token=' . urlencode($token) : '');
 
 $schema = [
     'openapi' => '3.1.0',
@@ -23,11 +24,11 @@ $schema = [
     ],
     'servers' => [
         [
-            'url' => $baseUrl . ($token !== '' ? '?token=' . urlencode($token) : '')
+            'url' => $serverHost
         ]
     ],
     'paths' => [
-        '/' => [
+        $mcpPath => [
             'post' => [
                 'summary' => 'Execute MCP Tool or JSON-RPC Query',
                 'operationId' => 'executeMcpTool',
