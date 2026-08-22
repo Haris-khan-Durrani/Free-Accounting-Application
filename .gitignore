@@ -1,4 +1,5 @@
 config.php
 storage/cache/*
+storage/app_key.txt
 !.gitkeep
 
